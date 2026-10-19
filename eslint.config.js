@@ -7,7 +7,7 @@ export default [
   { ignores: ['**/node_modules/', 'client/dist/'] },
   js.configs.recommended,
   {
-    files: ['server/**/*.js', 'e2e/**/*.js', '*.js', 'client/vite.config.js'],
+    files: ['server/**/*.js', 'e2e/**/*.js', '.claude/**/*.mjs', '*.js', 'client/vite.config.js'],
     languageOptions: { globals: globals.node },
   },
   {

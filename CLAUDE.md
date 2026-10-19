@@ -24,6 +24,16 @@ The API uses port **4000** (not 3001) so it can run next to the user's task-mana
 
 Project skills in `.claude/skills/`: **run-store** (launch and check the app in the browser), **add-feature** (conventions and checklist for new stages), **atlas-troubleshooting** (diagnose the Atlas connection without revealing `server/.env`). Project agent in `.claude/agents/`: **demo-verifier** (read-only tester that runs the demo, checks the UI and reports PASS/FAIL).
 
+## Hooks
+
+`.claude/settings.json` runs these scripts from `.claude/hooks/` (Node, no dependencies):
+
+- **guard-env.mjs** (before Read, Grep, Bash): blocks reading or printing `server/.env` and its copies (`cat`/`head`/plain `grep`/Read tool, `echo $MONGODB_URI`, `console.log(…MONGODB_URI…)`), `git add` of an env file, and any `git commit`/`push` while an env file is staged or tracked. Count-only and masked checks (`grep -c`, `wc`, `test -f`, awk structure listings) stay allowed for the atlas-troubleshooting skill. It is a guardrail for common commands, not a sandbox.
+- **confirm-destructive.mjs** (before Bash): asks the user before `npm run seed -- --force` (replaces the Atlas catalog), force pushes (`--force`, `-f`, `--force-with-lease`, `+refspec`) and `git reset --hard`.
+- **format-file.mjs** (after Edit, Write): runs the repo's Prettier on the changed file; on a syntax error it reports Prettier's message back instead of failing silently.
+
+If a hook blocks something you need, explain why to the user rather than working around it. Review or disable hooks with `/hooks`.
+
 ## Architecture
 
 The store is being built in stages (see README): catalog is done; accounts/cart/checkout, admin, Razorpay payments, reviews/wishlist follow.
