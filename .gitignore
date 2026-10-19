@@ -1,0 +1,8 @@
+node_modules/
+client/dist/
+server/.env
+test-results/
+playwright-report/
+.playwright-mcp/
+*.log
+.DS_Store
