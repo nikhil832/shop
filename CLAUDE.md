@@ -22,6 +22,8 @@ CI runs lint → format:check → test → build → test:e2e. Prettier: single 
 
 The API uses port **4000** (not 3001) so it can run next to the user's task-manager project.
 
+Project skills in `.claude/skills/`: **run-store** (launch and check the app in the browser), **add-feature** (conventions and checklist for new stages), **atlas-troubleshooting** (diagnose the Atlas connection without revealing `server/.env`).
+
 ## Architecture
 
 The store is being built in stages (see README): catalog is done; accounts/cart/checkout, admin, Razorpay payments, reviews/wishlist follow.
