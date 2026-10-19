@@ -8,18 +8,20 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      # Where mongodb-memory-server keeps its MongoDB binary (cached below).
+      MONGOMS_DOWNLOAD_DIR: /home/runner/.cache/mongodb-binaries
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
-      # MongoDB binary for mongodb-memory-server (tests). Restored after npm ci, which clears node_modules.
       - uses: actions/cache@v4
         with:
-          path: node_modules/.cache/mongodb-memory-server
+          path: /home/runner/.cache/mongodb-binaries
           key: mongodb-binary-${{ runner.os }}-${{ hashFiles('package.json') }}
+      - run: npm ci
       - run: npm run lint
       - run: npm run format:check
       - run: npm test

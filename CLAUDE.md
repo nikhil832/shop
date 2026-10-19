@@ -35,7 +35,7 @@ The store is being built in stages (see README): catalog is done; accounts/cart/
 - **Inactive products** (`active: false`) are hidden from listing and detail endpoints.
 - **Transactions:** order placement will use multi-document transactions, which need a replica set. Atlas is one; tests and demo use `MongoMemoryReplSet`.
 
-**Tests never touch Atlas.** `server/test/helpers.js` starts a fresh `MongoMemoryReplSet` per test file, seeded with the sample catalog (MongoDB version pinned under `config.mongodbMemoryServer` in the root `package.json`). The e2e webServer runs `server/src/demo.js` on port 4100 (in-memory replica set + seed). `demo.js` sets `MONGODB_URI` before `config.js` loads `.env`, and env vars take precedence over the file, so a real URI in `.env` is never used there.
+**Tests never touch Atlas.** `server/test/helpers.js` starts a fresh `MongoMemoryReplSet` per test file, seeded with the sample catalog (MongoDB version pinned under `config.mongodbMemoryServer` in the root `package.json` to match the Atlas cluster, currently 8.0.34; binaries cache in `~/.cache/mongodb-binaries`). The e2e webServer runs `server/src/demo.js` on port 4100 (in-memory replica set + seed). `demo.js` sets `MONGODB_URI` before `config.js` loads `.env`, and env vars take precedence over the file, so a real URI in `.env` is never used there.
 
 **Seed data** (`server/src/seed.js`): 6 categories and 38 products with fictional brands; 5 products are out of stock. Images are inline SVG data URIs (category icon + brand), so nothing depends on the network. Tests rely on these exact counts.
 

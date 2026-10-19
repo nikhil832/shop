@@ -1,6 +1,8 @@
 node_modules/
 client/dist/
-server/.env
+# Any local env file or copy (.env, .env.rtf, .env.backup …), but keep the template.
+server/.env*
+!server/.env.example
 test-results/
 playwright-report/
 .playwright-mcp/
