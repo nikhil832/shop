@@ -173,6 +173,9 @@ test('admin pages fit a phone screen without sideways scrolling', async ({ page 
     '/admin/products/new',
   ]) {
     await page.goto(path);
+    // A wide font (Verdana on macOS, DejaVu Sans on CI's Linux), so text that only just fits on one system
+    // doesn't pass here and fail on the other.
+    await page.addStyleTag({ content: "* { font-family: Verdana, 'DejaVu Sans', sans-serif !important; }" });
     await expect(page.locator('.panel').first()).toBeVisible();
     expect(await page.locator('html').evaluate((html) => html.scrollWidth), path).toBeLessThanOrEqual(390);
   }

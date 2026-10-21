@@ -896,8 +896,12 @@ address {
   display: flex;
   gap: 4px;
   border-bottom: 1px solid var(--border);
+  /* On a narrow screen the row scrolls sideways by itself rather than widening the page. */
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 .admin-tabs a {
+  white-space: nowrap;
   padding: 8px 14px;
   color: var(--muted);
   font-weight: 600;
@@ -1466,6 +1470,7 @@ textarea {
 }
 @media (max-width: 480px) {
   .admin-tabs a {
-    padding: 8px 10px;
+    padding: 8px 9px;
+    font-size: 0.9rem;
   }
 }
