@@ -103,7 +103,8 @@ test('places a COD order: snapshots prices, takes stock and remembers the addres
   assert.equal(res.status, 201);
   const order = res.body;
   assert.equal(order.status, 'placed');
-  assert.equal(order.payment, 'cod');
+  assert.deepEqual(order.payment, { method: 'cod' });
+  assert.equal(order.checkout, null);
   assert.equal(order.number, 100001); // the first order in this database
   assert.deepEqual(
     order.items.map((i) => [i.slug, i.price, i.qty]),
@@ -277,4 +278,17 @@ test('numbers orders in sequence, and a failed order uses up no number', async (
   // Concurrent orders get distinct numbers too (the counter update conflicts and the transaction retries).
   const many = await Promise.all([1, 2, 3].map(() => placeOrder(call, [{ productId: book, qty: 1 }])));
   assert.deepEqual(many.map((r) => r.body.number).sort(), [last.number + 3, last.number + 4, last.number + 5]);
+});
+
+test('without Razorpay keys only Cash on Delivery is offered', async () => {
+  assert.deepEqual((await t.call('GET', '/payments/options')).body, { cod: true, online: false });
+  const call = await loggedIn('nokeys@example.com');
+  const res = await call('POST', '/orders', {
+    items: [{ productId: await idOf(BOOK), qty: 2 }],
+    address,
+    expectedTotal: 69800,
+    paymentMethod: 'razorpay',
+  });
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, 'Online payment is not available. Choose Cash on Delivery.');
 });

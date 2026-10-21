@@ -774,12 +774,6 @@ a:focus-visible {
 .address-grid .wide {
   grid-column: 1 / -1;
 }
-.payment-option {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin: 0;
-}
 .checkout-items {
   list-style: none;
   margin: 0;
@@ -1168,6 +1162,64 @@ textarea {
   display: flex;
   gap: 6px;
   margin-left: auto;
+}
+
+/* ---- Payments ---- */
+.payment-options {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.payment-options legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 4px;
+}
+.payment-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+.payment-option input {
+  margin-top: 4px;
+}
+.notice.awaiting {
+  background: #fef3c7;
+  border-color: #d97706;
+  color: #78350f;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.notice.awaiting p {
+  margin: 0;
+}
+.notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.status.awaiting_payment {
+  background: #fef3c7;
+  color: #92400e;
+}
+.payment-info p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (prefers-color-scheme: dark) {
+  .notice.awaiting {
+    background: #422006;
+    border-color: #b45309;
+    color: #fde68a;
+  }
+  .status.awaiting_payment {
+    background: #422006;
+    color: #fcd34d;
+  }
 }
 
 /* ---- Mobile ---- */

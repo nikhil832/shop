@@ -1,9 +1,12 @@
 import { ObjectId } from 'mongodb';
 
+// `expose` lets a 5xx message reach the client (e.g. "the payment service is not reachable"); other 5xx messages
+// are replaced with a generic one.
 export class HttpError extends Error {
-  constructor(status, message) {
+  constructor(status, message, { expose = status < 500 } = {}) {
     super(message);
     this.status = status;
+    this.expose = expose;
   }
 }
 

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
 import { HttpError, escapeRegex, parse, parseObjectId } from '../http.js';
 import { ICONS, image, slugify } from '../seed.js';
+import { refundPayment } from '../payments.js';
 import { cancelOrder, ORDER_STATUSES, toOrder } from './orders.js';
 
 const hexId = (what) => z.string().regex(/^[0-9a-f]{24}$/, `Choose a ${what}`);
@@ -55,7 +56,7 @@ const orderQuery = z.object({
 
 const statusBody = z.object({ status: z.enum(['shipped', 'delivered', 'cancelled']) });
 // Which status each step moves on from. Cancelling also puts the stock back (see cancelOrder).
-const NEXT_FROM = { shipped: ['placed'], delivered: ['shipped'], cancelled: ['placed', 'shipped'] };
+const NEXT_FROM = { shipped: ['placed'], delivered: ['shipped'], cancelled: ['awaiting_payment', 'placed', 'shipped'] };
 
 const PRODUCT_PAGE = 50;
 const ORDER_PAGE = 25;
@@ -265,7 +266,7 @@ export function adminRouter(ctx) {
       .find({ _id: { $in: [...new Set(docs.map((o) => o.userId))] } }, { projection: { name: 1, email: 1 } })
       .toArray();
     const byId = new Map(people.map((u) => [u._id.toString(), { id: u._id.toString(), name: u.name, email: u.email }]));
-    return docs.map((o) => ({ ...toOrder(o), customer: byId.get(o.userId.toString()) ?? null }));
+    return docs.map((o) => ({ ...toOrder(o, { admin: true }), customer: byId.get(o.userId.toString()) ?? null }));
   }
 
   router.get('/admin/orders', async (req, res) => {
@@ -335,6 +336,16 @@ export function adminRouter(ctx) {
       }
     }
     res.json((await withCustomers([doc]))[0]);
+  });
+
+  // For a cancelled online order whose automatic refund failed (e.g. Razorpay was unreachable).
+  router.post('/admin/orders/:id/refund', async (req, res) => {
+    const doc = await orders.findOne({ _id: parseObjectId(req.params.id, 'order id') });
+    if (!doc) throw new HttpError(404, 'Order not found');
+    if (doc.status !== 'cancelled' || doc.payment?.status !== 'refund_failed') {
+      throw new HttpError(409, 'Only a cancelled order whose refund failed can be retried');
+    }
+    res.json((await withCustomers([await refundPayment(ctx, doc)]))[0]);
   });
 
   return router;

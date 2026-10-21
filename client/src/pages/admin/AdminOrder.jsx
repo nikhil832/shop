@@ -2,13 +2,16 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { request } from '../../api.js';
 import OrderSummary from '../../components/OrderSummary.jsx';
-import { formatDate, formatPrice, orderNumber } from '../../format.js';
+import { formatDate, formatPrice, orderNumber, paymentLabel } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 import NotFound from '../NotFound.jsx';
 import { StatusBadge } from '../Orders.jsx';
 
 // The next steps an admin can take from each status (the server enforces the same rules).
 const ACTIONS = {
+  awaiting_payment: [
+    { status: 'cancelled', label: 'Cancel order', confirm: 'Cancel this unpaid order and put the stock back?' },
+  ],
   placed: [
     { status: 'shipped', label: 'Mark as shipped', primary: true },
     { status: 'cancelled', label: 'Cancel order', confirm: 'Cancel this order and put the stock back?' },
@@ -32,22 +35,36 @@ export default function AdminOrder() {
   const order = updated?.id === data.id ? updated : data;
   const { address, customer } = order;
 
-  async function setStatus({ status, confirm }) {
-    if (confirm && !window.confirm(confirm)) return;
+  async function run(change) {
     setAction({ busy: true, error: null });
     try {
-      setUpdated(await request(`/admin/orders/${order.id}/status`, { method: 'POST', body: { status } }));
+      setUpdated(await change());
       setAction({ busy: false, error: null });
     } catch (err) {
       setAction({ busy: false, error: err.message });
     }
   }
 
+  const { payment } = order;
+  // Cancelling a paid order refunds it, so say so in the confirmation.
+  const setStatus = ({ status, confirm }) => {
+    const text =
+      confirm && payment.status === 'paid' ? confirm.replace('?', ' and refund the payment in full?') : confirm;
+    if (text && !window.confirm(text)) return;
+    run(() => request(`/admin/orders/${order.id}/status`, { method: 'POST', body: { status } }));
+  };
+  const retryRefund = () => run(() => request(`/admin/orders/${order.id}/refund`, { method: 'POST' }));
+
   const timeline = [
-    ['Placed', order.createdAt],
+    ['Ordered', order.createdAt],
+    [payment.paidAt && 'Paid', payment.paidAt],
     ['Shipped', order.shippedAt],
     ['Delivered', order.deliveredAt],
-    [order.cancelledBy === 'customer' ? 'Cancelled by customer' : 'Cancelled', order.cancelledAt],
+    [
+      { customer: 'Cancelled by customer', system: 'Expired unpaid' }[order.cancelledBy] ?? 'Cancelled',
+      order.cancelledAt,
+    ],
+    [payment.refundedAt && 'Refund started', payment.refundedAt],
   ].filter(([, at]) => at);
 
   return (
@@ -124,7 +141,17 @@ export default function AdminOrder() {
           delivery={order.delivery}
           total={order.total}
         >
-          <p className="muted small">Payment: Cash on Delivery</p>
+          <div className="muted small payment-info">
+            <p>Payment: {paymentLabel(payment, { admin: true })}</p>
+            {payment.razorpayPaymentId && <p>Razorpay payment {payment.razorpayPaymentId}</p>}
+            {payment.refundId && <p>Refund {payment.refundId}</p>}
+            {payment.refundError && <p className="error">Refund error: {payment.refundError}</p>}
+          </div>
+          {payment.status === 'refund_failed' && (
+            <button type="button" className="btn primary" onClick={retryRefund} disabled={action.busy}>
+              Retry refund
+            </button>
+          )}
           {action.error && (
             <p className="error" role="alert">
               {action.error}

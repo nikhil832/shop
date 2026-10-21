@@ -5,6 +5,7 @@ import { useAuth } from '../auth.jsx';
 import { cartCount, cartQuery, clearCart, useCart } from '../cart.js';
 import OrderSummary from '../components/OrderSummary.jsx';
 import { formatPrice } from '../format.js';
+import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
 
 const FIELDS = [
@@ -45,6 +46,7 @@ export default function Checkout() {
   const items = useCart();
   const navigate = useNavigate();
   const [state, setState] = useState({ busy: false, error: null, version: 0 });
+  const { data: options } = useFetch('/payments/options');
   const {
     data: quote,
     error,
@@ -59,20 +61,30 @@ export default function Checkout() {
 
   async function submit(e) {
     e.preventDefault();
-    const address = Object.fromEntries(new FormData(e.currentTarget));
+    const { paymentMethod = 'cod', ...address } = Object.fromEntries(new FormData(e.currentTarget));
     setState((s) => ({ ...s, busy: true, error: null }));
+    let order;
     try {
-      const order = await request('/orders', {
+      order = await request('/orders', {
         method: 'POST',
-        body: { items, address, expectedTotal: quote.total },
+        body: { items, address, expectedTotal: quote.total, paymentMethod },
       });
-      setUser({ ...user, address: order.address });
-      navigate(`/orders/${order.id}`, { replace: true, state: { placed: true } });
-      clearCart();
     } catch (err) {
       if (err.status === 401) return setUser(null);
       // Stock or prices changed: show why and load the current quote.
-      setState((s) => ({ busy: false, error: err.message, version: s.version + (err.status === 409 ? 1 : 0) }));
+      return setState((s) => ({ busy: false, error: err.message, version: s.version + (err.status === 409 ? 1 : 0) }));
+    }
+    // The order exists now (with its stock reserved), so the cart is done with either way.
+    setUser({ ...user, address: order.address });
+    clearCart();
+    const goToOrder = (state) => navigate(`/orders/${order.id}`, { replace: true, state });
+    if (!order.checkout) return goToOrder({ placed: true });
+    try {
+      const paid = await payOrder(order, order.checkout);
+      // Closed without paying: the order page offers "Pay now" until the payment window ends.
+      goToOrder(paid ? { placed: true } : null);
+    } catch (err) {
+      goToOrder({ paymentError: err.message });
     }
   }
 
@@ -99,13 +111,27 @@ export default function Checkout() {
           </div>
         </section>
 
-        <section className="panel">
-          <h2>Payment</h2>
-          <p className="payment-option">
-            <strong>Cash on Delivery</strong>
-            <span className="muted small">Pay in cash when your order arrives.</span>
-          </p>
-        </section>
+        <fieldset className="panel payment-options">
+          <legend>
+            <h2>Payment</h2>
+          </legend>
+          {options?.online && (
+            <label className="payment-option">
+              <input type="radio" name="paymentMethod" value="razorpay" defaultChecked />
+              <span>
+                <strong>Pay online</strong>
+                <span className="muted small block">UPI, cards, netbanking or wallets, via Razorpay (test mode).</span>
+              </span>
+            </label>
+          )}
+          <label className="payment-option">
+            {options?.online && <input type="radio" name="paymentMethod" value="cod" />}
+            <span>
+              <strong>Cash on Delivery</strong>
+              <span className="muted small block">Pay in cash when your order arrives.</span>
+            </span>
+          </label>
+        </fieldset>
 
         <section className={`panel ${loading ? 'stale' : ''}`}>
           <div className="row-header">
@@ -143,8 +169,12 @@ export default function Checkout() {
             Some items can't be ordered. <Link to="/cart">Review your cart</Link>.
           </p>
         )}
-        <button type="submit" className="btn primary" disabled={state.busy || loading || !quote.canCheckout}>
-          Place order · {formatPrice(quote.total)}
+        <button
+          type="submit"
+          className="btn primary"
+          disabled={state.busy || loading || !quote.canCheckout || !options}
+        >
+          {state.busy ? 'Placing order…' : `Place order · ${formatPrice(quote.total)}`}
         </button>
       </OrderSummary>
     </form>

@@ -3,7 +3,8 @@ import { Link, Navigate, useLocation, useParams } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import OrderSummary from '../components/OrderSummary.jsx';
-import { formatDate, formatPrice, orderNumber } from '../format.js';
+import { formatDate, formatPrice, formatTime, orderNumber, paymentLabel } from '../format.js';
+import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
 import { StatusBadge } from './Orders.jsx';
@@ -13,9 +14,9 @@ export default function Order() {
   const { user } = useAuth();
   const location = useLocation();
   const { data, error } = useFetch(user ? `/orders/${encodeURIComponent(id)}` : null);
-  // The order as returned by a cancel, which replaces the loaded one.
+  // The order as returned by a cancel or payment, which replaces the loaded one.
   const [updated, setUpdated] = useState(null);
-  const [cancel, setCancel] = useState({ busy: false, error: null });
+  const [action, setAction] = useState({ busy: false, error: location.state?.paymentError ?? null });
 
   if (user === undefined) return <p className="muted">Loading…</p>;
   if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />;
@@ -27,16 +28,29 @@ export default function Order() {
   const count = order.items.reduce((n, i) => n + i.qty, 0);
   const { address } = order;
 
-  async function cancelOrder() {
-    if (!window.confirm('Cancel this order?')) return;
-    setCancel({ busy: true, error: null });
+  // Runs a change to the order; a returned order replaces the shown one.
+  async function run(change) {
+    setAction({ busy: true, error: null });
     try {
-      setUpdated(await request(`/orders/${order.id}/cancel`, { method: 'POST' }));
-      setCancel({ busy: false, error: null });
+      const result = await change();
+      if (result) setUpdated(result);
+      setAction({ busy: false, error: null });
     } catch (err) {
-      setCancel({ busy: false, error: err.message });
+      setAction({ busy: false, error: err.message });
     }
   }
+
+  const paid = order.payment.status === 'paid';
+  const cancelOrder = () =>
+    window.confirm(paid ? 'Cancel this order? Your payment will be refunded in full.' : 'Cancel this order?') &&
+    run(() => request(`/orders/${order.id}/cancel`, { method: 'POST' }));
+  // Reopens Razorpay for an order still awaiting payment.
+  const payNow = () =>
+    run(async () => {
+      const reopened = await request(`/orders/${order.id}/pay`, { method: 'POST' });
+      return payOrder(reopened, reopened.checkout);
+    });
+  const checkPayment = () => run(() => request(`/orders/${order.id}/payment/check`, { method: 'POST' }));
 
   return (
     <>
@@ -46,10 +60,28 @@ export default function Order() {
         <span>Order #{orderNumber(order)}</span>
       </nav>
 
-      {location.state?.placed && order.status === 'placed' && (
+      {(location.state?.placed || updated) && order.status === 'placed' && (
         <p className="notice" role="status">
-          Order placed! Please keep {formatPrice(order.total)} ready to pay in cash on delivery.
+          {paid
+            ? `Payment received. Thank you! Your order is placed.`
+            : `Order placed! Please keep ${formatPrice(order.total)} ready to pay in cash on delivery.`}
         </p>
+      )}
+      {order.status === 'awaiting_payment' && (
+        <div className="notice awaiting" role="status">
+          <p>
+            Waiting for your payment of {formatPrice(order.total)}. Please pay by {formatTime(order.expiresAt)}, or the
+            order will be cancelled and its items released.
+          </p>
+          <div className="notice-actions">
+            <button type="button" className="btn primary small" onClick={payNow} disabled={action.busy}>
+              Pay now
+            </button>
+            <button type="button" className="btn small" onClick={checkPayment} disabled={action.busy}>
+              I've paid, check again
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="cart-page">
@@ -59,11 +91,13 @@ export default function Order() {
               <div>
                 <h1>Order #{orderNumber(order)}</h1>
                 <span className="muted small">
-                  Placed on {formatDate(order.createdAt)}
+                  Ordered on {formatDate(order.createdAt)}
                   {order.shippedAt && ` · shipped on ${formatDate(order.shippedAt)}`}
                   {order.deliveredAt && ` · delivered on ${formatDate(order.deliveredAt)}`}
                   {order.cancelledAt &&
-                    ` · cancelled ${order.cancelledBy === 'admin' ? 'by the store ' : ''}on ${formatDate(order.cancelledAt)}`}
+                    (order.cancelledBy === 'system'
+                      ? ' · cancelled: payment not completed in time'
+                      : ` · cancelled ${order.cancelledBy === 'admin' ? 'by the store ' : ''}on ${formatDate(order.cancelledAt)}`)}
                 </span>
               </div>
               <StatusBadge status={order.status} />
@@ -110,14 +144,14 @@ export default function Order() {
         </div>
 
         <OrderSummary count={count} subtotal={order.subtotal} delivery={order.delivery} total={order.total}>
-          <p className="muted small">Payment: Cash on Delivery</p>
-          {cancel.error && (
+          <p className="muted small">Payment: {paymentLabel(order.payment)}</p>
+          {action.error && (
             <p className="error" role="alert">
-              {cancel.error}
+              {action.error}
             </p>
           )}
-          {order.status === 'placed' && (
-            <button type="button" className="btn" onClick={cancelOrder} disabled={cancel.busy}>
+          {(order.status === 'placed' || order.status === 'awaiting_payment') && (
+            <button type="button" className="btn" onClick={cancelOrder} disabled={action.busy}>
               Cancel order
             </button>
           )}

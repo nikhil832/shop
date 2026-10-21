@@ -70,6 +70,7 @@ test('checkout asks to log in, places a COD order, and the order can be cancelle
   await expect(page.getByRole('link', { name: 'Asha' })).toBeVisible();
   await expect(page.getByLabel('Full name')).toHaveValue('Asha Rao');
   for (const [label, value] of Object.entries(address)) await page.getByLabel(label).fill(value);
+  await page.getByRole('radio', { name: /Cash on Delivery/ }).check();
   await expect(summary(page)).toContainText('Total₹8,999');
   await page.getByRole('button', { name: 'Place order · ₹8,999' }).click();
 
@@ -105,6 +106,7 @@ test('the address is remembered, and logging out and back in works', async ({ pa
   await addToCart(page, BOOK);
   await page.goto('/checkout');
   for (const [label, value] of Object.entries(address)) await page.getByLabel(label).fill(value);
+  await page.getByRole('radio', { name: /Cash on Delivery/ }).check();
   await expect(summary(page)).toContainText('Delivery₹40');
   await page.getByRole('button', { name: 'Place order · ₹389' }).click();
   await expect(page.getByRole('status')).toContainText('Order placed!');

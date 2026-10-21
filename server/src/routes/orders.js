@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import { z } from 'zod';
 import { requireUser } from '../auth.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
+import { checkoutParams, PAYMENT_WINDOW_MS, refundPayment, syncPayment } from '../payments.js';
 import { toProductCard } from './catalog.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
@@ -10,7 +11,7 @@ export const FREE_DELIVERY_MIN = 49900;
 export const DELIVERY_FEE = 4000;
 export const MAX_QTY = 10;
 export const MAX_CART_ITEMS = 20;
-export const ORDER_STATUSES = ['placed', 'shipped', 'delivered', 'cancelled'];
+export const ORDER_STATUSES = ['awaiting_payment', 'placed', 'shipped', 'delivered', 'cancelled'];
 
 // Order numbers count up from here: #100001, #100002, …
 const FIRST_ORDER_NUMBER = 100001;
@@ -69,9 +70,16 @@ const orderBody = z.object({
   address,
   // The total the customer was shown; if prices changed since, the order is refused rather than charged differently.
   expectedTotal: z.number().int().min(0),
+  paymentMethod: z.enum(['cod', 'razorpay']).default('cod'),
 });
 
-export const toOrder = (doc) => ({
+const withoutRefundError = (payment, admin) => {
+  if (admin || !payment.refundError) return payment;
+  return { ...payment, refundError: undefined }; // dropped from the JSON
+};
+
+// `admin` keeps internal payment details (why a refund failed) that customers don't need to see.
+export const toOrder = (doc, { admin = false } = {}) => ({
   id: doc._id.toString(),
   // Orders placed before numbering (stage 2) have none; the client falls back to the end of the id.
   number: doc.number ?? null,
@@ -80,8 +88,10 @@ export const toOrder = (doc) => ({
   delivery: doc.delivery,
   total: doc.total,
   address: doc.address,
-  payment: doc.payment,
+  // Orders from before online payments stored just 'cod'.
+  payment: typeof doc.payment === 'string' ? { method: doc.payment } : withoutRefundError(doc.payment, admin),
   status: doc.status,
+  expiresAt: doc.expiresAt ?? null,
   createdAt: doc.createdAt,
   shippedAt: doc.shippedAt ?? null,
   deliveredAt: doc.deliveredAt ?? null,
@@ -90,9 +100,14 @@ export const toOrder = (doc) => ({
 });
 
 // Cancels the order matching `filter` if its status is one of `from`, and puts its stock back, in one transaction.
-// `by` is 'customer' or 'admin'. Returns the updated order document.
-export async function cancelOrder({ db, client }, filter, { from, by }) {
+// A paid online order is then refunded. `by` is 'customer', 'admin' or 'system' (unpaid and expired).
+// Returns the updated order document.
+export async function cancelOrder(ctx, filter, { from, by }) {
+  const { db, client } = ctx;
   const orders = db.collection('orders');
+  // An order still awaiting payment may in fact have been paid: settle that first, so a paid order is refunded.
+  const before = await orders.findOne(filter);
+  if (before?.status === 'awaiting_payment') await syncPayment(ctx, before);
   const session = client.startSession();
   let order;
   try {
@@ -118,10 +133,38 @@ export async function cancelOrder({ db, client }, filter, { from, by }) {
   } finally {
     await session.endSession();
   }
-  return order;
+  return order.payment?.status === 'paid' ? refundPayment(ctx, order) : order;
 }
 
-export function ordersRouter({ db, client }) {
+// Cancels an awaiting-payment order whose payment window has passed, unless Razorpay says it was paid after all.
+export async function expireOrder(ctx, order) {
+  try {
+    return await cancelOrder(ctx, { _id: order._id }, { from: ['awaiting_payment'], by: 'system' });
+  } catch (err) {
+    if (err.status === 409) return ctx.db.collection('orders').findOne({ _id: order._id }); // paid or cancelled meanwhile
+    throw err;
+  }
+}
+
+// Run every minute by index.js (and directly by tests).
+export async function expireUnpaidOrders(ctx) {
+  const due = await ctx.db
+    .collection('orders')
+    .find({ status: 'awaiting_payment', expiresAt: { $lte: new Date() } })
+    .limit(100)
+    .toArray();
+  for (const order of due) {
+    try {
+      await expireOrder(ctx, order);
+    } catch (err) {
+      console.error(`Could not expire order ${order._id}:`, err.message); // retried next minute
+    }
+  }
+  return due.length;
+}
+
+export function ordersRouter(ctx) {
+  const { db, client, razorpay } = ctx;
   const products = db.collection('products');
   const orders = db.collection('orders');
   const users = db.collection('users');
@@ -151,6 +194,8 @@ export function ordersRouter({ db, client }) {
 
   router.post('/orders', requireUser, async (req, res) => {
     const body = parse(orderBody, req.body);
+    const online = body.paymentMethod === 'razorpay';
+    if (online && !razorpay) throw new HttpError(400, 'Online payment is not available. Choose Cash on Delivery.');
     const session = client.startSession();
     let order;
     try {
@@ -204,8 +249,10 @@ export function ordersRouter({ db, client }) {
           items,
           ...totals,
           address: body.address,
-          payment: 'cod',
-          status: 'placed',
+          // Online orders hold their stock while the customer pays; expireUnpaidOrders releases it if they don't.
+          payment: online ? { method: 'razorpay', status: 'pending' } : { method: 'cod' },
+          status: online ? 'awaiting_payment' : 'placed',
+          ...(online && { expiresAt: new Date(now.getTime() + PAYMENT_WINDOW_MS) }),
           createdAt: now,
           updatedAt: now,
         };
@@ -216,7 +263,22 @@ export function ordersRouter({ db, client }) {
     } finally {
       await session.endSession();
     }
-    res.status(201).json(toOrder(order));
+    if (!online) return res.status(201).json({ ...toOrder(order), checkout: null });
+
+    // Outside the transaction: a network call. If Razorpay can't take the order, ours is cancelled and stock returned.
+    try {
+      const rzpOrder = await razorpay.createOrder({
+        amount: order.total,
+        receipt: `order_${order.number}`,
+        notes: { orderId: order._id.toString() },
+      });
+      order.payment.razorpayOrderId = rzpOrder.id;
+      await orders.updateOne({ _id: order._id }, { $set: { 'payment.razorpayOrderId': rzpOrder.id } });
+    } catch (err) {
+      await cancelOrder(ctx, { _id: order._id }, { from: ['awaiting_payment'], by: 'system' });
+      throw err;
+    }
+    res.status(201).json({ ...toOrder(order), checkout: checkoutParams(razorpay, order, req.user) });
   });
 
   router.get('/orders', requireUser, async (req, res) => {
@@ -226,15 +288,17 @@ export function ordersRouter({ db, client }) {
 
   router.get('/orders/:id', requireUser, async (req, res) => {
     // Someone else's order is reported as not found, so ids can't be probed.
-    const doc = await orders.findOne({ _id: parseObjectId(req.params.id, 'order id'), userId: req.user._id });
+    let doc = await orders.findOne({ _id: parseObjectId(req.params.id, 'order id'), userId: req.user._id });
     if (!doc) throw new HttpError(404, 'Order not found');
+    // Don't show a lapsed payment window as still open while waiting for the next sweep.
+    if (doc.status === 'awaiting_payment' && doc.expiresAt <= new Date()) doc = await expireOrder(ctx, doc);
     res.json(toOrder(doc));
   });
 
   router.post('/orders/:id/cancel', requireUser, async (req, res) => {
     const filter = { _id: parseObjectId(req.params.id, 'order id'), userId: req.user._id };
-    // Customers can cancel only until the order ships.
-    const order = await cancelOrder({ db, client }, filter, { from: ['placed'], by: 'customer' });
+    // Customers can cancel only until the order ships (or while it still awaits payment).
+    const order = await cancelOrder(ctx, filter, { from: ['awaiting_payment', 'placed'], by: 'customer' });
     res.json(toOrder(order));
   });
 

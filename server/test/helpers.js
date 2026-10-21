@@ -1,14 +1,19 @@
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { connectDb } from '../src/db.js';
 import { createApp } from '../src/app.js';
+import { razorpayClient } from '../src/razorpay.js';
 import { seedCatalog } from '../src/seed.js';
+import { FAKE_KEYS, startFakeRazorpay } from './fake-razorpay.js';
 
 // Starts the API on a fresh in-memory replica set seeded with the sample catalog.
-export async function startTestServer() {
+// With { razorpay: true }, online payments are on, talking to a stand-in Razorpay (t.fake).
+export async function startTestServer({ razorpay = false } = {}) {
   const mongo = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   const { client, db } = await connectDb(mongo.getUri(), 'test');
   await seedCatalog(db);
-  const server = createApp({ db, client, config: {} }).listen(0);
+  const fake = razorpay ? await startFakeRazorpay() : null;
+  const ctx = { db, client, config: {}, razorpay: fake && razorpayClient({ ...FAKE_KEYS, apiUrl: fake.url }) };
+  const server = createApp(ctx).listen(0);
   await new Promise((resolve) => server.once('listening', resolve));
   const base = `http://localhost:${server.address().port}/api`;
 
@@ -34,11 +39,22 @@ export async function startTestServer() {
   }
   const call = browser();
 
+  // Delivers a Razorpay webhook: the exact body bytes with their signature header.
+  async function webhook(rawBody, signature) {
+    const res = await fetch(`${base}/razorpay/webhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Razorpay-Signature': signature },
+      body: rawBody,
+    });
+    return { status: res.status, body: await res.json() };
+  }
+
   async function stop() {
     server.close();
+    await fake?.stop();
     await client.close();
     await mongo.stop();
   }
 
-  return { db, call, browser, stop };
+  return { db, ctx, fake, call, browser, webhook, stop };
 }

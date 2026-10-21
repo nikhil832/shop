@@ -22,6 +22,15 @@ export async function ensureIndexes(db) {
     db.collection('orders').createIndex({ userId: 1, createdAt: -1 }),
     db
       .collection('orders')
+      .createIndex({ status: 1, expiresAt: 1 }, { partialFilterExpression: { status: 'awaiting_payment' } }),
+    db
+      .collection('orders')
+      .createIndex(
+        { 'payment.razorpayOrderId': 1 },
+        { partialFilterExpression: { 'payment.razorpayOrderId': { $exists: true } } },
+      ),
+    db
+      .collection('orders')
       .createIndex({ number: 1 }, { unique: true, partialFilterExpression: { number: { $exists: true } } }),
   ]);
 }

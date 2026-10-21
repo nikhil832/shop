@@ -3,13 +3,19 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { connectDb } from './db.js';
 import { createApp } from './app.js';
+import { razorpayClient } from './razorpay.js';
+import { expireUnpaidOrders } from './routes/orders.js';
 import { loadConfig } from './config.js';
 
 const config = loadConfig();
 const CLIENT_DIST = fileURLToPath(new URL('../../client/dist', import.meta.url));
 
 const { client, db } = await connectDb(config.mongodbUri, config.mongodbDb);
-const app = createApp({ db, client, config });
+const ctx = { db, client, config, razorpay: razorpayClient(config.razorpay) };
+const app = createApp(ctx);
+
+// Releases the stock of online orders whose 30-minute payment window has passed.
+const sweeper = setInterval(() => expireUnpaidOrders(ctx).catch((err) => console.error(err)), 60_000);
 
 // In production, serve the built React app from the same server.
 if (existsSync(CLIENT_DIST)) {
@@ -19,10 +25,12 @@ if (existsSync(CLIENT_DIST)) {
 
 const server = app.listen(config.port, () => {
   console.log(`API listening on http://localhost:${config.port} (database "${config.mongodbDb}")`);
+  console.log(ctx.razorpay ? 'Online payments: Razorpay test mode.' : 'Online payments: off (Cash on Delivery only).');
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.once(signal, () => {
+    clearInterval(sweeper);
     server.close();
     client.close().finally(() => process.exit(0));
   });

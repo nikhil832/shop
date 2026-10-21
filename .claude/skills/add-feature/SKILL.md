@@ -9,7 +9,7 @@ Read `CLAUDE.md` first for the architecture. This skill is the checklist for doi
 
 ## Stages
 
-Built so far: **1. Catalog** (categories, search, filters, sorting, pagination, product pages) and **2. Accounts, cart, checkout (COD), order history** (with customer cancel while `placed`, free delivery from ₹499 else ₹40, address remembered on the account, cart in the browser only), and **3. Admin panel** (orders placed → shipped → delivered with admin cancel; products with uploaded images stored in MongoDB, hide instead of delete; categories).
+Built so far: **1. Catalog** (categories, search, filters, sorting, pagination, product pages) and **2. Accounts, cart, checkout (COD), order history** (with customer cancel while `placed`, free delivery from ₹499 else ₹40, address remembered on the account, cart in the browser only), and **3. Admin panel** (orders placed → shipped → delivered with admin cancel; products with uploaded images stored in MongoDB, hide instead of delete; categories), and **4. Razorpay payments** (test mode only; stock reserved 30 min while paying; server-side verification + webhook; automatic refunds on cancel).
 
 Planned, in this order (the user chose all of them; the user pauses between stages, so confirm before starting one):
 

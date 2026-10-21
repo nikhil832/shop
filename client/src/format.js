@@ -11,7 +11,28 @@ export const formatDate = (iso) => dateFormat.format(new Date(iso));
 // The order's sequential number; orders from before numbering show the end of their id instead.
 export const orderNumber = (order) => String(order.number ?? order.id.slice(-8).toUpperCase());
 
-export const ORDER_STATUS = { placed: 'Placed', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled' };
+export const ORDER_STATUS = {
+  awaiting_payment: 'Awaiting payment',
+  placed: 'Placed',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+};
+
+// How an order is (being) paid, in words. `admin` shows refund problems as they are. Razorpay takes a few working days
+// to return the money, so a refund it accepted is "started", not done.
+export function paymentLabel(payment, { admin = false } = {}) {
+  if (payment.method === 'cod') return 'Cash on Delivery';
+  return {
+    pending: 'Online · not paid',
+    paid: 'Paid online',
+    refunding: 'Paid online · refund in progress',
+    refunded: 'Paid online · refund started',
+    refund_failed: admin ? 'Paid online · refund failed' : 'Paid online · refund in progress',
+  }[payment.status];
+}
+
+export const formatTime = (iso) => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
 
 // Prices are typed in rupees (decimals allowed) and stored in paise.
 export const toPaise = (rupees) => Math.round(Number(rupees) * 100);
