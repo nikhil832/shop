@@ -1,0 +1,86 @@
+import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
+import { promisify } from 'node:util';
+import { HttpError } from './http.js';
+
+const scryptAsync = promisify(scrypt);
+const KEY_LENGTH = 64;
+
+export const SESSION_COOKIE = 'sid';
+export const SESSION_DAYS = 30;
+
+// Stored as "scrypt$<salt>$<hash>" (base64), so the parameters can change later without breaking old hashes.
+export async function hashPassword(password) {
+  const salt = randomBytes(16);
+  const hash = await scryptAsync(password, salt, KEY_LENGTH);
+  return `scrypt$${salt.toString('base64')}$${hash.toString('base64')}`;
+}
+
+export async function verifyPassword(password, stored) {
+  const [scheme, salt, hash] = stored.split('$');
+  if (scheme !== 'scrypt' || !salt || !hash) return false;
+  const expected = Buffer.from(hash, 'base64');
+  const actual = await scryptAsync(password, Buffer.from(salt, 'base64'), expected.length);
+  return timingSafeEqual(actual, expected);
+}
+
+// Only a hash of the token is stored, so a leaked sessions collection can't be used to log in.
+const hashToken = (token) => createHash('sha256').update(token).digest('base64url');
+
+export async function createSession(db, userId) {
+  const token = randomBytes(32).toString('base64url');
+  const now = Date.now();
+  await db.collection('sessions').insertOne({
+    tokenHash: hashToken(token),
+    userId,
+    createdAt: new Date(now),
+    expiresAt: new Date(now + SESSION_DAYS * 86_400_000),
+  });
+  return token;
+}
+
+export async function deleteSession(db, token) {
+  if (token) await db.collection('sessions').deleteOne({ tokenHash: hashToken(token) });
+}
+
+export function readSessionCookie(req) {
+  for (const part of (req.headers.cookie ?? '').split(';')) {
+    const [name, ...value] = part.trim().split('=');
+    if (name === SESSION_COOKIE) return decodeURIComponent(value.join('='));
+  }
+  return null;
+}
+
+export const sessionCookieOptions = (req) => ({
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: req.secure,
+  path: '/',
+});
+
+// Sets req.user (or null) from the session cookie. Expired sessions are ignored (and removed by a TTL index).
+export function sessionMiddleware({ db }) {
+  return async (req, res, next) => {
+    req.user = null;
+    const token = readSessionCookie(req);
+    if (token) {
+      const session = await db
+        .collection('sessions')
+        .findOne({ tokenHash: hashToken(token), expiresAt: { $gt: new Date() } });
+      if (session) req.user = await db.collection('users').findOne({ _id: session.userId });
+    }
+    next();
+  };
+}
+
+export function requireUser(req, res, next) {
+  if (!req.user) throw new HttpError(401, 'Please log in');
+  next();
+}
+
+export const toUser = (doc) => ({
+  id: doc._id.toString(),
+  name: doc.name,
+  email: doc.email,
+  role: doc.role,
+  address: doc.address ?? null,
+});

@@ -9,7 +9,7 @@ Read `CLAUDE.md` first for the architecture. This skill is the checklist for doi
 
 ## Stages
 
-Built so far: **1. Catalog** (categories, search, filters, sorting, pagination, product pages).
+Built so far: **1. Catalog** (categories, search, filters, sorting, pagination, product pages) and **2. Accounts, cart, checkout (COD), order history** (with customer cancel while `placed`, free delivery from ₹499 else ₹40, address remembered on the account, cart in the browser only).
 
 Planned, in this order (the user chose all of them; the user pauses between stages, so confirm before starting one):
 
@@ -20,9 +20,9 @@ Planned, in this order (the user chose all of them; the user pauses between stag
 
 Design intended so far (not yet built; confirm or revisit with the user when the stage starts):
 
-- **Auth:** email + password hashed with `node:crypto` `scrypt` (no native modules); random session token in an httpOnly, `SameSite=Lax` cookie, stored in a `sessions` collection so it can be revoked. Roles `user`/`admin`; the first admin is created by a CLI script, never via the API.
-- **Cart:** kept in the browser for guests, so browsing needs no login. Checkout requires login, and the server re-reads prices and stock instead of trusting the client.
-- **Placing an order:** one transaction that decrements stock only where `stock >= qty`, snapshots item prices into the order, and creates the order. If any item is short, nothing changes.
+- **Auth (built in stage 2):** email + password hashed with `node:crypto` `scrypt` (no native modules); random session token in an httpOnly, `SameSite=Lax` cookie, stored in a `sessions` collection so it can be revoked. Roles `user`/`admin`; the first admin is created by a CLI script, never via the API.
+- **Cart (built in stage 2):** kept in the browser for guests, so browsing needs no login. Checkout requires login, and the server re-reads prices and stock instead of trusting the client.
+- **Placing an order (built in stage 2):** one transaction that decrements stock only where `stock >= qty`, snapshots item prices into the order, and creates the order. If any item is short, nothing changes.
 - **Razorpay:** keys from `server/.env` (`RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`, test keys only). Verify the payment signature with HMAC on the server. Without keys, only COD is offered. Tests stub the Razorpay HTTP calls.
 - **Reviews:** one per user per product; mark "verified purchase" when they have a delivered order containing it; keep `rating.avg`/`rating.count` on the product up to date.
 

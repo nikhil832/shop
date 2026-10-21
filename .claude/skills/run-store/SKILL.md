@@ -65,6 +65,7 @@ Things that have gone wrong before and how they looked:
 
 - **Stale page after an edit:** Vite reloads on save, but a page loaded at the same moment can miss it. Navigate again before concluding a fix didn't work. To confirm what Vite serves: `curl -s localhost:<vite-port>/src/<file> | grep <new-text>`.
 - **Filter checkboxes update after navigation finishes:** wait for the result count or URL to change rather than reading the checkbox right after the click.
+- **Screenshots time out** ("waiting for fonts to load… fonts loaded", then a 5s timeout) after typing into login or address forms: Chrome's password/autofill prompt blocks capture, while the page itself is idle. `browser_close`, then navigate again (cookies and the cart survive), or check layout with `browser_evaluate` (e.g. `document.documentElement.scrollWidth` vs `innerWidth`). Password fields aren't `role=textbox`; target them as `input[name=password]`.
 - **Screenshots** can only be saved inside the repo (the MCP's allowed roots); don't pass a path outside it. Its output folder `.playwright-mcp/` is gitignored.
 
 ## 5. Shut down

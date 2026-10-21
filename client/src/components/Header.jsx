@@ -1,9 +1,13 @@
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
+import { useAuth } from '../auth.jsx';
+import { cartCount, useCart } from '../cart.js';
 
 export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
+  const { user } = useAuth();
+  const count = cartCount(useCart());
   const urlQuery = location.pathname === '/search' ? (params.get('q') ?? '') : '';
 
   function submit(e) {
@@ -31,6 +35,22 @@ export default function Header() {
             🔍
           </button>
         </form>
+        <nav className="header-nav" aria-label="Account">
+          {/* Nothing until the session check finishes, so "Log in" doesn't flash for logged-in users. */}
+          {user !== undefined && (
+            <Link to={user ? '/orders' : '/login'} className="header-link">
+              {user ? user.name.split(' ')[0] : 'Log in'}
+            </Link>
+          )}
+          <Link to="/cart" className="header-link" aria-label={`Cart, ${count} ${count === 1 ? 'item' : 'items'}`}>
+            🛒 Cart
+            {count > 0 && (
+              <span className="cart-badge" aria-hidden>
+                {count}
+              </span>
+            )}
+          </Link>
+        </nav>
       </div>
     </header>
   );

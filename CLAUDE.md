@@ -36,7 +36,7 @@ If a hook blocks something you need, explain why to the user rather than working
 
 ## Architecture
 
-The store is being built in stages (see README): catalog is done; accounts/cart/checkout, admin, Razorpay payments, reviews/wishlist follow.
+The store is being built in stages (see README): catalog and accounts/cart/checkout are done; admin, Razorpay payments, reviews/wishlist follow.
 
 **Server** (`server/src/`): `createApp(ctx)` in `app.js` mounts one router per area (`routes/*.js`), each a function of `ctx = { db, client, config }` (MongoDB `Db`, `MongoClient` for sessions/transactions, config). `index.js` loads config (`config.js` reads the gitignored `server/.env`; real env vars win), connects (`db.js` also creates indexes), and serves `client/dist` in production.
 
@@ -45,9 +45,11 @@ The store is being built in stages (see README): catalog is done; accounts/cart/
 - **Ids and URLs:** documents use MongoDB ObjectIds (exposed as hex strings); products and categories are addressed by unique `slug`.
 - **Search:** each word must match title or brand (escaped, case-insensitive regex via `escapeRegex`). `relevance` sort is popularity (`rating.count`) for now. The brand facet is computed without the brand filter so other brands stay selectable.
 - **Inactive products** (`active: false`) are hidden from listing and detail endpoints.
-- **Transactions:** order placement will use multi-document transactions, which need a replica set. Atlas is one; tests and demo use `MongoMemoryReplSet`.
+- **Transactions:** placing and cancelling orders use multi-document transactions (`client.startSession()` + `withTransaction`), which need a replica set. Atlas is one; tests and demo use `MongoMemoryReplSet`. Stock is decremented with the check in the filter (`stock: { $gte: qty }`); a short item throws inside the transaction so nothing changes.
+- **Auth:** `sessionMiddleware` (`auth.js`) sets `req.user` from the `sid` cookie on every API request; `requireUser` guards routes. Sessions are stored as a SHA-256 of the token with a TTL index on `expiresAt`. Passwords use `scrypt` (`scrypt$salt$hash`). Roles `user`/`admin`; admin is only granted by `npm run make-admin`, never by the API.
+- **Orders:** the cart is client-side; `GET /api/cart` quotes it, and `POST /api/orders` re-reads prices and stock, refusing (409) if the total differs from the `expectedTotal` the customer saw. Orders snapshot item title/price/image, so later product edits don't change them. Delivery rule lives in `orderTotals()` (`routes/orders.js`). Statuses so far: `placed`, `cancelled`. Other users' orders return 404, not 403. The last address used is saved on the user.
 
-**Tests never touch Atlas.** `server/test/helpers.js` starts a fresh `MongoMemoryReplSet` per test file, seeded with the sample catalog (MongoDB version pinned under `config.mongodbMemoryServer` in the root `package.json` to match the Atlas cluster, currently 8.0.34; binaries cache in `~/.cache/mongodb-binaries`). The e2e webServer runs `server/src/demo.js` on port 4100 (in-memory replica set + seed). `demo.js` sets `MONGODB_URI` before `config.js` loads `.env`, and env vars take precedence over the file, so a real URI in `.env` is never used there.
+**Tests never touch Atlas.** `server/test/helpers.js` starts a fresh `MongoMemoryReplSet` per test file, seeded with the sample catalog (MongoDB version pinned under `config.mongodbMemoryServer` in the root `package.json` to match the Atlas cluster, currently 8.0.34; binaries cache in `~/.cache/mongodb-binaries`). The e2e webServer runs `server/src/demo.js` on port 4100 (in-memory replica set + seed), shared by all spec files, so `shopping.spec.js` registers unique emails and buys only high-stock items the catalog tests don't count. API tests use `t.browser()` from `helpers.js` for a client with its own cookie jar. `demo.js` sets `MONGODB_URI` before `config.js` loads `.env`, and env vars take precedence over the file, so a real URI in `.env` is never used there.
 
 **Seed data** (`server/src/seed.js`): 6 categories and 38 products with fictional brands; 5 products are out of stock. Images are inline SVG data URIs (category icon + brand), so nothing depends on the network. Tests rely on these exact counts.
 
@@ -55,4 +57,5 @@ The store is being built in stages (see README): catalog is done; accounts/cart/
 
 - **URL is the state** for search/filters/sort/page (`useSearchParams`); changing a filter resets `page`. URL prices are rupees; `Search.jsx` converts to paise for the API.
 - `useFetch(path)` loads data, aborts stale requests, and derives `loading` instead of setting state in effects (the react-hooks lint rule forbids that). Inputs that must reflect the URL are uncontrolled and remounted with a `key` (header search box, price filter) rather than synced with effects.
+- **Cart** (`cart.js`) is a `useSyncExternalStore` over localStorage (`bazaar.cart`, `[{ productId, qty }]`), synced across tabs; it never holds prices. **Login state** (`auth.jsx`): `useAuth().user` is `undefined` while checking, `null` when logged out; pages that need login render `<Navigate to="/login?next=…">`. React Router 8 navigations are transitions, so after clearing the user a page must render its own redirect (see logout in `Orders.jsx`) rather than call `navigate()`.
 - Filter checkboxes update after navigation completes, so e2e tests click and then assert `toBeChecked()` instead of using `check()`.

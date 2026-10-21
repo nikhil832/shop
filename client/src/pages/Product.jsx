@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
+import { MAX_QTY, addToCart, useCart } from '../cart.js';
 import PriceTag from '../components/PriceTag.jsx';
 import Rating from '../components/Rating.jsx';
 import { useFetch } from '../useFetch.js';
@@ -28,6 +29,32 @@ function Gallery({ images, title }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function AddToCart({ product }) {
+  const items = useCart();
+  const [full, setFull] = useState(false);
+  const inCart = items.find((i) => i.productId === product.id)?.qty ?? 0;
+  if (product.stock === 0) return null;
+  const atLimit = inCart >= Math.min(MAX_QTY, product.stock);
+  return (
+    <div className="buy-buttons">
+      <button
+        type="button"
+        className="btn primary"
+        disabled={atLimit}
+        onClick={() => setFull(!addToCart(product.id, product.stock))}
+      >
+        {atLimit ? 'Maximum quantity in cart' : 'Add to cart'}
+      </button>
+      {inCart > 0 && (
+        <Link to="/cart" className="btn">
+          Go to cart ({inCart} added)
+        </Link>
+      )}
+      {full && <p className="error small">Your cart is full. Remove something to add this.</p>}
     </div>
   );
 }
@@ -65,6 +92,7 @@ export default function Product() {
           <PriceTag price={product.price} mrp={product.mrp} large />
           <span className="muted small">Inclusive of all taxes</span>
           <p className={`stock ${product.stock === 0 ? 'out' : product.stock <= 5 ? 'low' : 'in'}`}>{stockText}</p>
+          <AddToCart key={product.id} product={product} />
 
           {product.highlights.length > 0 && (
             <section>

@@ -15,5 +15,10 @@ export async function ensureIndexes(db) {
     db.collection('products').createIndex({ slug: 1 }, { unique: true }),
     db.collection('products').createIndex({ categoryId: 1, price: 1 }),
     db.collection('products').createIndex({ brand: 1 }),
+    db.collection('users').createIndex({ email: 1 }, { unique: true }),
+    db.collection('sessions').createIndex({ tokenHash: 1 }, { unique: true }),
+    // MongoDB deletes sessions once expiresAt has passed.
+    db.collection('sessions').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    db.collection('orders').createIndex({ userId: 1, createdAt: -1 }),
   ]);
 }

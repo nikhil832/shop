@@ -1,14 +1,20 @@
 import express from 'express';
+import { sessionMiddleware } from './auth.js';
+import { authRouter } from './routes/auth.js';
 import { catalogRouter } from './routes/catalog.js';
+import { ordersRouter } from './routes/orders.js';
 
-// Builds the Express app around an injected database. ctx = { db, client }.
+// Builds the Express app around an injected database. ctx = { db, client, config }.
 export function createApp(ctx) {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '100kb' }));
 
   const api = express.Router();
+  api.use(sessionMiddleware(ctx));
   api.use(catalogRouter(ctx));
+  api.use(authRouter(ctx));
+  api.use(ordersRouter(ctx));
   api.use((req, res) => res.status(404).json({ error: 'Not found' }));
   app.use('/api', api);
 

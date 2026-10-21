@@ -12,15 +12,24 @@ export async function startTestServer() {
   await new Promise((resolve) => server.once('listening', resolve));
   const base = `http://localhost:${server.address().port}/api`;
 
-  async function call(method, path, body) {
-    const res = await fetch(base + path, {
-      method,
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    const text = await res.text();
-    return { status: res.status, body: text ? JSON.parse(text) : null };
+  // A client with its own cookie jar, like one browser. `call` is a client that never logs in.
+  function browser() {
+    let cookie = null;
+    return async function call(method, path, body) {
+      const headers = {};
+      if (body) headers['Content-Type'] = 'application/json';
+      if (cookie) headers.Cookie = cookie;
+      const res = await fetch(base + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+      const setCookie = res.headers.get('set-cookie');
+      if (setCookie) {
+        const [pair] = setCookie.split(';');
+        cookie = pair.endsWith('=') ? null : pair;
+      }
+      const text = await res.text();
+      return { status: res.status, body: text ? JSON.parse(text) : null, setCookie };
+    };
   }
+  const call = browser();
 
   async function stop() {
     server.close();
@@ -28,5 +37,5 @@ export async function startTestServer() {
     await mongo.stop();
   }
 
-  return { db, call, stop };
+  return { db, call, browser, stop };
 }

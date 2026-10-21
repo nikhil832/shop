@@ -9,6 +9,7 @@
     "dev": "concurrently -n api,web -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
     "demo": "concurrently -n api,web -c blue,green \"npm run demo -w server\" \"npm run dev -w client\"",
     "seed": "npm run seed -w server",
+    "make-admin": "npm run make-admin -w server",
     "build": "npm run build -w client",
     "start": "npm start -w server",
     "test": "npm test -w server",
