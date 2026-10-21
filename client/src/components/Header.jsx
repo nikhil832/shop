@@ -37,6 +37,11 @@ export default function Header() {
         </form>
         <nav className="header-nav" aria-label="Account">
           {/* Nothing until the session check finishes, so "Log in" doesn't flash for logged-in users. */}
+          {user?.role === 'admin' && (
+            <Link to="/admin" className="header-link">
+              Admin
+            </Link>
+          )}
           {user !== undefined && (
             <Link to={user ? '/orders' : '/login'} className="header-link">
               {user ? user.name.split(' ')[0] : 'Log in'}

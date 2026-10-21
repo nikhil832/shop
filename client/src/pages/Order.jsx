@@ -43,7 +43,7 @@ export default function Order() {
       <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link to="/orders">My orders</Link>
         <span aria-hidden>›</span>
-        <span>Order #{orderNumber(order.id)}</span>
+        <span>Order #{orderNumber(order)}</span>
       </nav>
 
       {location.state?.placed && order.status === 'placed' && (
@@ -57,10 +57,13 @@ export default function Order() {
           <section className="panel">
             <div className="order-head">
               <div>
-                <h1>Order #{orderNumber(order.id)}</h1>
+                <h1>Order #{orderNumber(order)}</h1>
                 <span className="muted small">
                   Placed on {formatDate(order.createdAt)}
-                  {order.cancelledAt && ` · cancelled on ${formatDate(order.cancelledAt)}`}
+                  {order.shippedAt && ` · shipped on ${formatDate(order.shippedAt)}`}
+                  {order.deliveredAt && ` · delivered on ${formatDate(order.deliveredAt)}`}
+                  {order.cancelledAt &&
+                    ` · cancelled ${order.cancelledBy === 'admin' ? 'by the store ' : ''}on ${formatDate(order.cancelledAt)}`}
                 </span>
               </div>
               <StatusBadge status={order.status} />

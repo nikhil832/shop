@@ -1,0 +1,30 @@
+import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
+import { useAuth } from '../../auth.jsx';
+
+// Wraps every /admin page. The server checks the role on each request too; this only decides what to show.
+export default function AdminLayout() {
+  const { user } = useAuth();
+  const location = useLocation();
+
+  if (user === undefined) return <p className="muted">Loading…</p>;
+  if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />;
+  if (user.role !== 'admin') {
+    return (
+      <div className="empty-state">
+        <h1>Admins only</h1>
+        <p>This area is for store admins.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin">
+      <nav className="admin-tabs" aria-label="Admin">
+        <NavLink to="/admin/orders">Orders</NavLink>
+        <NavLink to="/admin/products">Products</NavLink>
+        <NavLink to="/admin/categories">Categories</NavLink>
+      </nav>
+      <Outlet />
+    </div>
+  );
+}

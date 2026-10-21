@@ -60,7 +60,7 @@ export default function Orders() {
                   .map((i) => i.image && <img key={i.productId} src={i.image} alt="" width="56" height="56" />)}
               </div>
               <div className="order-card-body">
-                <span className="order-number">Order #{orderNumber(o.id)}</span>
+                <span className="order-number">Order #{orderNumber(o)}</span>
                 <span className="muted small">
                   {formatDate(o.createdAt)} · {o.items.length} {o.items.length === 1 ? 'item' : 'items'}
                 </span>

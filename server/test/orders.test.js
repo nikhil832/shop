@@ -104,6 +104,7 @@ test('places a COD order: snapshots prices, takes stock and remembers the addres
   const order = res.body;
   assert.equal(order.status, 'placed');
   assert.equal(order.payment, 'cod');
+  assert.equal(order.number, 100001); // the first order in this database
   assert.deepEqual(
     order.items.map((i) => [i.slug, i.price, i.qty]),
     [
@@ -258,4 +259,22 @@ test('cancelling a placed order puts the stock back, once', async () => {
   assert.equal(again.status, 409);
   assert.equal(again.body.error, "This order can't be cancelled (it is cancelled)");
   assert.equal(await stockOf(PHONE), stock);
+});
+
+test('numbers orders in sequence, and a failed order uses up no number', async () => {
+  const call = await loggedIn('numbers@example.com');
+  const [book, fold] = await Promise.all([idOf(BOOK), idOf(FOLD)]);
+  const [last] = await t.db.collection('orders').find().sort({ number: -1 }).limit(1).toArray();
+
+  const failed = await call('POST', '/orders', { items: [{ productId: fold, qty: 9 }], address, expectedTotal: 0 });
+  assert.equal(failed.status, 409);
+
+  const first = await placeOrder(call, [{ productId: book, qty: 1 }]);
+  const second = await placeOrder(call, [{ productId: book, qty: 1 }]);
+  assert.equal(first.body.number, last.number + 1);
+  assert.equal(second.body.number, last.number + 2);
+
+  // Concurrent orders get distinct numbers too (the counter update conflicts and the transaction retries).
+  const many = await Promise.all([1, 2, 3].map(() => placeOrder(call, [{ productId: book, qty: 1 }])));
+  assert.deepEqual(many.map((r) => r.body.number).sort(), [last.number + 3, last.number + 4, last.number + 5]);
 });

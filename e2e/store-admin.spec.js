@@ -1,0 +1,173 @@
+import { test, expect } from '@playwright/test';
+
+// Named to run after catalog.spec.js (files run alphabetically on one shared demo server), since adding
+// products and categories here would change the counts that file checks.
+const ADMIN = { email: 'admin@bazaar.demo', password: 'demo-admin-123' }; // created by server/src/demo.js
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
+);
+const unique = () => `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+
+async function logIn(page, { email, password }, next = '/admin') {
+  await page.goto(`/login?next=${encodeURIComponent(next)}`);
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await expect(page).toHaveURL(new RegExp(`${next}`));
+}
+
+// A customer order made through the API with its own cookies, separate from the page's admin session.
+async function customerOrder(request) {
+  const email = `customer-${unique()}@example.com`;
+  expect(
+    (await request.post('/api/auth/register', { data: { name: 'Meera Iyer', email, password: 'password123' } })).ok(),
+  ).toBe(true);
+  const { items } = await (await request.get('/api/products?q=quiet%20engineer')).json();
+  const quote = await (await request.get(`/api/cart?items=${items[0].id}:1`)).json();
+  const res = await request.post('/api/orders', {
+    data: {
+      items: [{ productId: items[0].id, qty: 1 }],
+      address: {
+        name: 'Meera Iyer',
+        phone: '9123456780',
+        line1: '4 Park Street',
+        city: 'Kolkata',
+        state: 'West Bengal',
+        pincode: '700016',
+      },
+      expectedTotal: quote.total,
+    },
+  });
+  expect(res.status()).toBe(201);
+  return { email, order: await res.json() };
+}
+
+test('customers see "Admins only" and no admin link', async ({ page }) => {
+  await page.goto('/register');
+  await page.getByLabel('Name').fill('Plain Customer');
+  await page.getByLabel('Email').fill(`plain-${unique()}@example.com`);
+  await page.getByLabel('Password').fill('password123');
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page.getByRole('link', { name: 'Plain' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Admin' })).toHaveCount(0);
+
+  await page.goto('/admin/orders');
+  await expect(page.getByRole('heading', { name: 'Admins only' })).toBeVisible();
+});
+
+test('admin finds an order and moves it to shipped, then delivered', async ({ page, request }) => {
+  const { email, order } = await customerOrder(request);
+  await logIn(page, ADMIN);
+  await expect(page.getByRole('link', { name: 'Admin' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Orders' })).toBeVisible();
+
+  await page.getByRole('searchbox', { name: 'Find orders' }).fill(email);
+  await page.getByRole('button', { name: 'Find', exact: true }).click();
+  const rows = page.locator('.admin-table tbody tr');
+  await expect(rows).toHaveCount(1);
+  await expect(rows).toContainText('Meera Iyer');
+  await rows.getByRole('link').click();
+
+  await expect(page).toHaveURL(`/admin/orders/${order.id}`);
+  await expect(page.locator('.admin-columns')).toContainText('Kolkata, West Bengal 700016');
+  await page.getByRole('button', { name: 'Mark as shipped' }).click();
+  await expect(page.locator('.order-head .status')).toHaveText('Shipped');
+  await page.getByRole('button', { name: 'Mark as delivered' }).click();
+  await expect(page.locator('.order-head .status')).toHaveText('Delivered');
+  await expect(page.getByRole('button', { name: /Mark as|Cancel order/ })).toHaveCount(0);
+
+  // The status tabs filter the list.
+  await page.goto('/admin/orders?status=delivered');
+  await expect(page.locator('.admin-table')).toContainText(email);
+});
+
+test('admin adds a product with a photo, edits stock, and hides it', async ({ page }) => {
+  const title = `Test Lamp ${unique()}`;
+  await logIn(page, ADMIN, '/admin/products');
+  await page.getByRole('link', { name: 'Add product' }).click();
+
+  await page.getByLabel('Title').fill(title);
+  await page.getByLabel('Brand').fill('Griha');
+  await page.getByLabel('Category').selectOption({ label: 'Home & Kitchen' });
+  await page.getByLabel('Price (₹)').fill('1299');
+  await page.getByLabel('MRP (₹)').fill('1999');
+  await page.getByLabel('Stock', { exact: true }).fill('7');
+  await page.getByLabel('Highlights (one per line, up to 8)').fill('Warm light\nUSB-C');
+  await page.locator('input[type=file]').setInputFiles({ name: 'lamp.png', mimeType: 'image/png', buffer: PNG });
+  await expect(page.getByRole('img', { name: 'Image 1' })).toHaveAttribute('src', /^\/api\/images\/[0-9a-f]{24}$/);
+  await page.getByRole('button', { name: 'Add product' }).click();
+
+  await expect(page.getByRole('status')).toHaveText(`Saved “${title}”.`);
+  await page.getByRole('searchbox', { name: 'Find products' }).fill(title);
+  await page.getByRole('button', { name: 'Find', exact: true }).click();
+  const row = page.locator('.admin-table tbody tr');
+  await expect(row).toHaveCount(1);
+  await expect(row).toContainText('₹1,299');
+
+  // Quick stock edit from the list.
+  const stock = page.getByLabel(`Stock of ${title}`);
+  await stock.fill('3');
+  await row.getByRole('button', { name: 'Save' }).click();
+  await expect(row.getByRole('button', { name: 'Save' })).toBeEnabled();
+  await page.reload();
+  await expect(page.getByLabel(`Stock of ${title}`)).toHaveValue('3');
+
+  // In the store, with its uploaded photo.
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  await page.goto(`/p/${slug}`);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(title);
+  await expect(page.getByText('Only 3 left')).toBeVisible();
+  await expect(page.locator('.gallery-main img')).toHaveAttribute('src', /^\/api\/images\//);
+
+  // Hide it: gone from the store.
+  await page.goBack();
+  await page.getByRole('button', { name: `Hide ${title}` }).click();
+  await expect(row.locator('.status')).toHaveText('Hidden');
+  await page.goto(`/p/${slug}`);
+  await expect(page.getByText("This product doesn't exist or is no longer sold.")).toBeVisible();
+});
+
+test('admin adds, renames, reorders and deletes a category', async ({ page }) => {
+  const name = `Toys ${unique()}`;
+  await logIn(page, ADMIN, '/admin/categories');
+  await page.getByLabel('New category icon').fill('🧸');
+  await page.getByLabel('New category name').fill(name);
+  await page.getByRole('button', { name: 'Add category' }).click();
+  await expect(page.getByLabel(`Name of ${name}`)).toBeVisible();
+  await expect(page.getByRole('button', { name: `Delete ${name}` })).toBeEnabled();
+  // Categories with products can't be deleted.
+  await expect(page.getByRole('button', { name: 'Delete Books' })).toBeDisabled();
+
+  await page.getByLabel(`Name of ${name}`).fill(`${name} & Games`);
+  await page
+    .locator('li', { has: page.getByLabel(`Name of ${name}`) })
+    .getByRole('button', { name: 'Save' })
+    .click();
+  const renamed = `${name} & Games`;
+  await expect(page.getByLabel(`Name of ${renamed}`)).toBeVisible();
+
+  await page.getByRole('button', { name: `Move ${renamed} up` }).click();
+  const names = page.locator('.category-list input[name=name]');
+  await expect.poll(async () => (await names.evaluateAll((els) => els.map((e) => e.value))).at(-2)).toBe(renamed);
+
+  await page.goto('/');
+  await expect(page.getByRole('navigation', { name: 'Categories' }).getByRole('link', { name: renamed })).toBeVisible();
+
+  await page.goto('/admin/categories');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: `Delete ${renamed}` }).click();
+  await expect(page.getByLabel(`Name of ${renamed}`)).toHaveCount(0);
+});
+
+test('admin pages fit a phone screen without sideways scrolling', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await logIn(page, ADMIN, '/admin/products');
+  await expect(page.locator('.admin-table tbody tr').first()).toBeVisible();
+  // Only the table may scroll sideways (inside its own box), never the page.
+  for (const path of ['/admin/products', '/admin/orders', '/admin/categories', '/admin/products/new']) {
+    await page.goto(path);
+    await expect(page.locator('.panel').first()).toBeVisible();
+    expect(await page.locator('html').evaluate((html) => html.scrollWidth), path).toBeLessThanOrEqual(390);
+  }
+});

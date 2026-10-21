@@ -77,6 +77,12 @@ export function requireUser(req, res, next) {
   next();
 }
 
+export function requireAdmin(req, res, next) {
+  if (!req.user) throw new HttpError(401, 'Please log in');
+  if (req.user.role !== 'admin') throw new HttpError(403, 'Admins only');
+  next();
+}
+
 export const toUser = (doc) => ({
   id: doc._id.toString(),
   name: doc.name,

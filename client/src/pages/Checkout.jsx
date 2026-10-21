@@ -18,7 +18,7 @@ const FIELDS = [
     title: '10-digit mobile number',
     maxLength: 10,
   },
-  { name: 'line1', label: 'Address (house, street, area)', autoComplete: 'address-line1', maxLength: 120 },
+  { name: 'line1', label: 'Address (house, street, area)', autoComplete: 'address-line1', maxLength: 120, wide: true },
   {
     name: 'line2',
     label: 'Landmark (optional)',

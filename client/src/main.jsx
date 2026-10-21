@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Route, Routes } from 'react-router';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { AuthProvider } from './auth.jsx';
 import Layout from './components/Layout.jsx';
 import Home from './pages/Home.jsx';
@@ -12,6 +12,12 @@ import Login from './pages/Login.jsx';
 import Order from './pages/Order.jsx';
 import Orders from './pages/Orders.jsx';
 import NotFound from './pages/NotFound.jsx';
+import AdminCategories from './pages/admin/AdminCategories.jsx';
+import AdminLayout from './pages/admin/AdminLayout.jsx';
+import AdminOrder from './pages/admin/AdminOrder.jsx';
+import AdminOrders from './pages/admin/AdminOrders.jsx';
+import AdminProduct from './pages/admin/AdminProduct.jsx';
+import AdminProducts from './pages/admin/AdminProducts.jsx';
 import './styles.css';
 
 createRoot(document.getElementById('root')).render(
@@ -29,6 +35,15 @@ createRoot(document.getElementById('root')).render(
             <Route path="register" element={<Login key="register" mode="register" />} />
             <Route path="orders" element={<Orders />} />
             <Route path="orders/:id" element={<Order />} />
+            <Route path="admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="orders" replace />} />
+              <Route path="orders" element={<AdminOrders />} />
+              <Route path="orders/:id" element={<AdminOrder />} />
+              <Route path="products" element={<AdminProducts />} />
+              <Route path="products/new" element={<AdminProduct />} />
+              <Route path="products/:id" element={<AdminProduct />} />
+              <Route path="categories" element={<AdminCategories />} />
+            </Route>
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

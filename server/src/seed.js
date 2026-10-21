@@ -214,17 +214,17 @@ const PRODUCTS = [
   ['books', 'Pustak Press', 'Cooking Without Fuss', 399, 650, 0, ['Recipes', '200 pages', 'Vegetarian']],
 ];
 
-const slugify = (s) =>
+export const slugify = (s) =>
   s
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 
-const ICONS = { mobiles: '📱', laptops: '💻', audio: '🎧', fashion: '👕', 'home-kitchen': '🍳', books: '📚' };
+export const ICONS = { mobiles: '📱', laptops: '💻', audio: '🎧', fashion: '👕', 'home-kitchen': '🍳', books: '📚' };
 
 // Placeholder product image: an inline SVG tile with the category icon and a label, tinted per seed.
-// Works offline and looks the same every run; real products use image URLs.
-function image(seed, icon, label, view = 0) {
+// Works offline and looks the same every run. Also used for admin-created products without uploaded photos.
+export function image(seed, icon, label, view = 0) {
   let hash = 0;
   for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
   const hue = hash % 360;

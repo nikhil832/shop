@@ -20,5 +20,8 @@ export async function ensureIndexes(db) {
     // MongoDB deletes sessions once expiresAt has passed.
     db.collection('sessions').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     db.collection('orders').createIndex({ userId: 1, createdAt: -1 }),
+    db
+      .collection('orders')
+      .createIndex({ number: 1 }, { unique: true, partialFilterExpression: { number: { $exists: true } } }),
   ]);
 }

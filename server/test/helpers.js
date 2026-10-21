@@ -13,20 +13,23 @@ export async function startTestServer() {
   const base = `http://localhost:${server.address().port}/api`;
 
   // A client with its own cookie jar, like one browser. `call` is a client that never logs in.
+  // A Buffer body is sent as-is with `type` as its Content-Type (file uploads); non-JSON responses come back as Buffers.
   function browser() {
     let cookie = null;
-    return async function call(method, path, body) {
+    return async function call(method, path, body, type) {
       const headers = {};
-      if (body) headers['Content-Type'] = 'application/json';
+      const raw = Buffer.isBuffer(body);
+      if (body) headers['Content-Type'] = raw ? type : 'application/json';
       if (cookie) headers.Cookie = cookie;
-      const res = await fetch(base + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+      const res = await fetch(base + path, { method, headers, body: raw ? body : body && JSON.stringify(body) });
       const setCookie = res.headers.get('set-cookie');
       if (setCookie) {
         const [pair] = setCookie.split(';');
         cookie = pair.endsWith('=') ? null : pair;
       }
-      const text = await res.text();
-      return { status: res.status, body: text ? JSON.parse(text) : null, setCookie };
+      const isJson = res.headers.get('content-type')?.startsWith('application/json');
+      const data = isJson ? await res.json() : Buffer.from(await res.arrayBuffer());
+      return { status: res.status, body: isJson || data.length ? data : null, headers: res.headers, setCookie };
     };
   }
   const call = browser();

@@ -10,6 +10,10 @@ export const FREE_DELIVERY_MIN = 49900;
 export const DELIVERY_FEE = 4000;
 export const MAX_QTY = 10;
 export const MAX_CART_ITEMS = 20;
+export const ORDER_STATUSES = ['placed', 'shipped', 'delivered', 'cancelled'];
+
+// Order numbers count up from here: #100001, #100002, …
+const FIRST_ORDER_NUMBER = 100001;
 
 export const orderTotals = (subtotal) => {
   const delivery = subtotal >= FREE_DELIVERY_MIN ? 0 : DELIVERY_FEE;
@@ -67,8 +71,10 @@ const orderBody = z.object({
   expectedTotal: z.number().int().min(0),
 });
 
-const toOrder = (doc) => ({
+export const toOrder = (doc) => ({
   id: doc._id.toString(),
+  // Orders placed before numbering (stage 2) have none; the client falls back to the end of the id.
+  number: doc.number ?? null,
   items: doc.items.map((i) => ({ ...i, productId: i.productId.toString() })),
   subtotal: doc.subtotal,
   delivery: doc.delivery,
@@ -77,8 +83,43 @@ const toOrder = (doc) => ({
   payment: doc.payment,
   status: doc.status,
   createdAt: doc.createdAt,
+  shippedAt: doc.shippedAt ?? null,
+  deliveredAt: doc.deliveredAt ?? null,
   cancelledAt: doc.cancelledAt ?? null,
+  cancelledBy: doc.cancelledBy ?? null,
 });
+
+// Cancels the order matching `filter` if its status is one of `from`, and puts its stock back, in one transaction.
+// `by` is 'customer' or 'admin'. Returns the updated order document.
+export async function cancelOrder({ db, client }, filter, { from, by }) {
+  const orders = db.collection('orders');
+  const session = client.startSession();
+  let order;
+  try {
+    await session.withTransaction(async () => {
+      const now = new Date();
+      order = await orders.findOneAndUpdate(
+        { ...filter, status: { $in: from } },
+        { $set: { status: 'cancelled', cancelledAt: now, cancelledBy: by, updatedAt: now } },
+        { session, returnDocument: 'after' },
+      );
+      if (!order) {
+        const existing = await orders.findOne(filter, { session });
+        if (!existing) throw new HttpError(404, 'Order not found');
+        throw new HttpError(409, `This order can't be cancelled (it is ${existing.status})`);
+      }
+      await db.collection('products').bulkWrite(
+        order.items.map((i) => ({
+          updateOne: { filter: { _id: i.productId }, update: { $inc: { stock: i.qty }, $set: { updatedAt: now } } },
+        })),
+        { session },
+      );
+    });
+  } finally {
+    await session.endSession();
+  }
+  return order;
+}
 
 export function ordersRouter({ db, client }) {
   const products = db.collection('products');
@@ -149,7 +190,16 @@ export function ordersRouter({ db, client }) {
         if (totals.total !== body.expectedTotal) {
           throw new HttpError(409, 'Prices have changed since you loaded the page. Please review your order.');
         }
+        // Taken inside the transaction: a failed order gives its number back, so numbers have no gaps or repeats.
+        const counter = await db
+          .collection('counters')
+          .findOneAndUpdate(
+            { _id: 'orderNumber' },
+            { $inc: { seq: 1 } },
+            { session, upsert: true, returnDocument: 'after' },
+          );
         order = {
+          number: FIRST_ORDER_NUMBER - 1 + counter.seq,
           userId: req.user._id,
           items,
           ...totals,
@@ -182,32 +232,9 @@ export function ordersRouter({ db, client }) {
   });
 
   router.post('/orders/:id/cancel', requireUser, async (req, res) => {
-    const _id = parseObjectId(req.params.id, 'order id');
-    const session = client.startSession();
-    let order;
-    try {
-      await session.withTransaction(async () => {
-        const now = new Date();
-        order = await orders.findOneAndUpdate(
-          { _id, userId: req.user._id, status: 'placed' },
-          { $set: { status: 'cancelled', cancelledAt: now, updatedAt: now } },
-          { session, returnDocument: 'after' },
-        );
-        if (!order) {
-          const existing = await orders.findOne({ _id, userId: req.user._id }, { session });
-          if (!existing) throw new HttpError(404, 'Order not found');
-          throw new HttpError(409, `This order can't be cancelled (it is ${existing.status})`);
-        }
-        await products.bulkWrite(
-          order.items.map((i) => ({
-            updateOne: { filter: { _id: i.productId }, update: { $inc: { stock: i.qty }, $set: { updatedAt: now } } },
-          })),
-          { session },
-        );
-      });
-    } finally {
-      await session.endSession();
-    }
+    const filter = { _id: parseObjectId(req.params.id, 'order id'), userId: req.user._id };
+    // Customers can cancel only until the order ships.
+    const order = await cancelOrder({ db, client }, filter, { from: ['placed'], by: 'customer' });
     res.json(toOrder(order));
   });
 
