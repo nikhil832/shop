@@ -32,5 +32,11 @@ export async function ensureIndexes(db) {
     db
       .collection('orders')
       .createIndex({ number: 1 }, { unique: true, partialFilterExpression: { number: { $exists: true } } }),
+    // One review per customer per product; listed newest first per product and (for admins) overall.
+    db.collection('reviews').createIndex({ productId: 1, userId: 1 }, { unique: true }),
+    db.collection('reviews').createIndex({ productId: 1, hidden: 1, createdAt: -1 }),
+    db.collection('reviews').createIndex({ createdAt: -1 }),
+    db.collection('wishlist').createIndex({ userId: 1, productId: 1 }, { unique: true }),
+    db.collection('wishlist').createIndex({ userId: 1, addedAt: -1 }),
   ]);
 }

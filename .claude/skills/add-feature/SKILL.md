@@ -9,7 +9,7 @@ Read `CLAUDE.md` first for the architecture. This skill is the checklist for doi
 
 ## Stages
 
-Built so far: **1. Catalog** (categories, search, filters, sorting, pagination, product pages) and **2. Accounts, cart, checkout (COD), order history** (with customer cancel while `placed`, free delivery from ₹499 else ₹40, address remembered on the account, cart in the browser only), and **3. Admin panel** (orders placed → shipped → delivered with admin cancel; products with uploaded images stored in MongoDB, hide instead of delete; categories), and **4. Razorpay payments** (test mode only; stock reserved 30 min while paying; server-side verification + webhook; automatic refunds on cancel).
+Built so far: **1. Catalog** (categories, search, filters, sorting, pagination, product pages) and **2. Accounts, cart, checkout (COD), order history** (with customer cancel while `placed`, free delivery from ₹499 else ₹40, address remembered on the account, cart in the browser only), and **3. Admin panel** (orders placed → shipped → delivered with admin cancel; products with uploaded images stored in MongoDB, hide instead of delete; categories), **4. Razorpay payments** (test mode only; stock reserved 30 min while paying; server-side verification + webhook; automatic refunds on cancel), and **5. Reviews & wishlist** (buyers with a delivered order only; sample ratings kept and added to; admins hide, never delete; wishlist saved in the account). All planned stages are done; ask the user what comes next.
 
 Planned, in this order (the user chose all of them; the user pauses between stages, so confirm before starting one):
 
@@ -18,13 +18,13 @@ Planned, in this order (the user chose all of them; the user pauses between stag
 4. Razorpay payments in **test mode**
 5. Reviews & ratings, wishlist
 
-Design intended so far (not yet built; confirm or revisit with the user when the stage starts):
+Design notes from the planned stages (all now built; see `CLAUDE.md` for how each works):
 
 - **Auth (built in stage 2):** email + password hashed with `node:crypto` `scrypt` (no native modules); random session token in an httpOnly, `SameSite=Lax` cookie, stored in a `sessions` collection so it can be revoked. Roles `user`/`admin`; the first admin is created by a CLI script, never via the API.
 - **Cart (built in stage 2):** kept in the browser for guests, so browsing needs no login. Checkout requires login, and the server re-reads prices and stock instead of trusting the client.
 - **Placing an order (built in stage 2):** one transaction that decrements stock only where `stock >= qty`, snapshots item prices into the order, and creates the order. If any item is short, nothing changes.
-- **Razorpay:** keys from `server/.env` (`RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`, test keys only). Verify the payment signature with HMAC on the server. Without keys, only COD is offered. Tests stub the Razorpay HTTP calls.
-- **Reviews:** one per user per product; mark "verified purchase" when they have a delivered order containing it; keep `rating.avg`/`rating.count` on the product up to date.
+- **Razorpay (built in stage 4):** keys from `server/.env` (`RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`, test keys only). Verify the payment signature with HMAC on the server. Without keys, only COD is offered. Tests stub the Razorpay HTTP calls.
+- **Reviews (built in stage 5):** one per user per product, and only from customers with a delivered order containing it (the user chose buyers-only over a "verified purchase" badge); `rating.avg`/`rating.count` on the product kept up to date in the same transaction.
 
 ## Server
 

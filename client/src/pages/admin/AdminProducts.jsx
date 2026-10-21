@@ -3,7 +3,7 @@ import { Link, useLocation, useSearchParams } from 'react-router';
 import { query, request } from '../../api.js';
 import { formatPrice } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
-import { Pager } from './AdminOrders.jsx';
+import Pager from '../../components/Pager.jsx';
 
 const STATUSES = [
   ['', 'All'],

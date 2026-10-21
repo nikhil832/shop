@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
+import AccountNav from '../components/AccountNav.jsx';
 import { ORDER_STATUS, formatDate, formatPrice, orderNumber } from '../format.js';
 import { useFetch } from '../useFetch.js';
 
@@ -28,6 +29,7 @@ export default function Orders() {
 
   return (
     <div className="orders-page">
+      <AccountNav />
       <section className="panel account">
         <div>
           <h1>My orders</h1>

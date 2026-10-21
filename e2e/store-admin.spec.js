@@ -165,7 +165,13 @@ test('admin pages fit a phone screen without sideways scrolling', async ({ page 
   await logIn(page, ADMIN, '/admin/products');
   await expect(page.locator('.admin-table tbody tr').first()).toBeVisible();
   // Only the table may scroll sideways (inside its own box), never the page.
-  for (const path of ['/admin/products', '/admin/orders', '/admin/categories', '/admin/products/new']) {
+  for (const path of [
+    '/admin/products',
+    '/admin/orders',
+    '/admin/categories',
+    '/admin/reviews',
+    '/admin/products/new',
+  ]) {
     await page.goto(path);
     await expect(page.locator('.panel').first()).toBeVisible();
     expect(await page.locator('html').evaluate((html) => html.scrollWidth), path).toBeLessThanOrEqual(390);

@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router';
 import { MAX_QTY, addToCart, useCart } from '../cart.js';
 import PriceTag from '../components/PriceTag.jsx';
 import Rating from '../components/Rating.jsx';
+import Reviews from '../components/Reviews.jsx';
+import WishlistButton from '../components/WishlistButton.jsx';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
 
@@ -61,11 +63,13 @@ function AddToCart({ product }) {
 
 export default function Product() {
   const { slug } = useParams();
-  const { data: product, error, loading } = useFetch(`/products/${encodeURIComponent(slug)}`);
+  // Bumped after a review changes the rating; the page keeps showing the product while it reloads.
+  const [version, setVersion] = useState(0);
+  const { data: product, error, loading } = useFetch(`/products/${encodeURIComponent(slug)}`, version);
 
   if (error?.status === 404) return <NotFound message="This product doesn't exist or is no longer sold." />;
   if (error) return <p className="error">{error.message}</p>;
-  if (loading || !product) return <p className="muted">Loading…</p>;
+  if (!product || (loading && product.slug !== slug)) return <p className="muted">Loading…</p>;
 
   const stockText =
     product.stock === 0 ? 'Out of stock' : product.stock <= 5 ? `Only ${product.stock} left` : 'In stock';
@@ -93,6 +97,7 @@ export default function Product() {
           <span className="muted small">Inclusive of all taxes</span>
           <p className={`stock ${product.stock === 0 ? 'out' : product.stock <= 5 ? 'low' : 'in'}`}>{stockText}</p>
           <AddToCart key={product.id} product={product} />
+          <WishlistButton key={`wish-${product.id}`} product={product} />
 
           {product.highlights.length > 0 && (
             <section>
@@ -110,6 +115,7 @@ export default function Product() {
           </section>
         </div>
       </article>
+      <Reviews key={product.id} product={product} onChange={() => setVersion((v) => v + 1)} />
     </>
   );
 }

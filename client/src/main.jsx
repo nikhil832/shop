@@ -11,6 +11,7 @@ import Checkout from './pages/Checkout.jsx';
 import Login from './pages/Login.jsx';
 import Order from './pages/Order.jsx';
 import Orders from './pages/Orders.jsx';
+import Wishlist from './pages/Wishlist.jsx';
 import NotFound from './pages/NotFound.jsx';
 import AdminCategories from './pages/admin/AdminCategories.jsx';
 import AdminLayout from './pages/admin/AdminLayout.jsx';
@@ -18,6 +19,7 @@ import AdminOrder from './pages/admin/AdminOrder.jsx';
 import AdminOrders from './pages/admin/AdminOrders.jsx';
 import AdminProduct from './pages/admin/AdminProduct.jsx';
 import AdminProducts from './pages/admin/AdminProducts.jsx';
+import AdminReviews from './pages/admin/AdminReviews.jsx';
 import './styles.css';
 
 createRoot(document.getElementById('root')).render(
@@ -35,6 +37,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="register" element={<Login key="register" mode="register" />} />
             <Route path="orders" element={<Orders />} />
             <Route path="orders/:id" element={<Order />} />
+            <Route path="wishlist" element={<Wishlist />} />
             <Route path="admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="orders" replace />} />
               <Route path="orders" element={<AdminOrders />} />
@@ -43,6 +46,7 @@ createRoot(document.getElementById('root')).render(
               <Route path="products/new" element={<AdminProduct />} />
               <Route path="products/:id" element={<AdminProduct />} />
               <Route path="categories" element={<AdminCategories />} />
+              <Route path="reviews" element={<AdminReviews />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Route>

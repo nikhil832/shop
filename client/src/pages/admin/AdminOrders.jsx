@@ -2,25 +2,8 @@ import { Link, useSearchParams } from 'react-router';
 import { query } from '../../api.js';
 import { ORDER_STATUS, formatDate, formatPrice, orderNumber } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
+import Pager from '../../components/Pager.jsx';
 import { StatusBadge } from '../Orders.jsx';
-
-export function Pager({ page, total, pageSize, onPage }) {
-  const pages = Math.ceil(total / pageSize);
-  if (pages <= 1) return null;
-  return (
-    <div className="pagination">
-      <button type="button" className="btn small" disabled={page <= 1} onClick={() => onPage(page - 1)}>
-        ‹ Previous
-      </button>
-      <span className="muted">
-        Page {page} of {pages}
-      </span>
-      <button type="button" className="btn small" disabled={page >= pages} onClick={() => onPage(page + 1)}>
-        Next ›
-      </button>
-    </div>
-  );
-}
 
 export default function AdminOrders() {
   const [params, setParams] = useSearchParams();

@@ -116,13 +116,17 @@ export function catalogRouter({ db }) {
   router.get('/products/:slug', async (req, res) => {
     const doc = await products.findOne({ slug: req.params.slug, active: true });
     if (!doc) throw new HttpError(404, 'Product not found');
-    const category = await categories.findOne({ _id: doc.categoryId });
+    const [category, saved] = await Promise.all([
+      categories.findOne({ _id: doc.categoryId }),
+      req.user && db.collection('wishlist').findOne({ userId: req.user._id, productId: doc._id }),
+    ]);
     res.json({
       ...toProductCard(doc),
       description: doc.description,
       highlights: doc.highlights ?? [],
       images: doc.images,
       category: category && toCategory(category),
+      wishlisted: Boolean(saved), // always false when logged out
     });
   });
 

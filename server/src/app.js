@@ -6,6 +6,8 @@ import { ordersRouter } from './routes/orders.js';
 import { paymentsRouter } from './routes/payments.js';
 import { adminRouter } from './routes/admin.js';
 import { imagesRouter } from './routes/images.js';
+import { reviewsRouter } from './routes/reviews.js';
+import { wishlistRouter } from './routes/wishlist.js';
 
 // Builds the Express app around an injected database. ctx = { db, client, config, razorpay } (razorpay is null
 // when online payments aren't configured).
@@ -22,6 +24,8 @@ export function createApp(ctx) {
   api.use(ordersRouter(ctx));
   api.use(paymentsRouter(ctx));
   api.use(imagesRouter(ctx));
+  api.use(reviewsRouter(ctx));
+  api.use(wishlistRouter(ctx));
   api.use(adminRouter(ctx));
   api.use((req, res) => res.status(404).json({ error: 'Not found' }));
   app.use('/api', api);

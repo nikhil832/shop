@@ -6,6 +6,7 @@ import { HttpError, escapeRegex, parse, parseObjectId } from '../http.js';
 import { ICONS, image, slugify } from '../seed.js';
 import { refundPayment } from '../payments.js';
 import { cancelOrder, ORDER_STATUSES, toOrder } from './orders.js';
+import { changeRating, inTransaction, toReview } from './reviews.js';
 
 const hexId = (what) => z.string().regex(/^[0-9a-f]{24}$/, `Choose a ${what}`);
 
@@ -53,6 +54,12 @@ const orderQuery = z.object({
   q: z.string().trim().max(100).optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
+
+const reviewQuery = z.object({
+  status: z.enum(['visible', 'hidden']).optional(),
+  page: z.coerce.number().int().min(1).max(1000).default(1),
+});
+const reviewVisibility = z.object({ hidden: z.boolean() });
 
 const statusBody = z.object({ status: z.enum(['shipped', 'delivered', 'cancelled']) });
 // Which status each step moves on from. Cancelling also puts the stock back (see cancelOrder).
@@ -346,6 +353,76 @@ export function adminRouter(ctx) {
       throw new HttpError(409, 'Only a cancelled order whose refund failed can be retried');
     }
     res.json((await withCustomers([await refundPayment(ctx, doc)]))[0]);
+  });
+
+  // ---- Reviews ----
+
+  const reviews = db.collection('reviews');
+  const REVIEW_PAGE = 20;
+
+  // Adds the product (title, slug) and the reviewer's full name and email, which customers never see.
+  async function reviewDetails(docs) {
+    const [items, people] = await Promise.all([
+      products
+        .find({ _id: { $in: docs.map((r) => r.productId) } }, { projection: { title: 1, slug: 1, active: 1 } })
+        .toArray(),
+      users.find({ _id: { $in: docs.map((r) => r.userId) } }, { projection: { name: 1, email: 1 } }).toArray(),
+    ]);
+    const product = new Map(items.map((p) => [p._id.toString(), { title: p.title, slug: p.slug, active: p.active }]));
+    const person = new Map(people.map((u) => [u._id.toString(), { name: u.name, email: u.email }]));
+    return docs.map((r) => ({
+      ...toReview(r),
+      product: product.get(r.productId.toString()) ?? null,
+      customer: person.get(r.userId.toString()) ?? null,
+    }));
+  }
+
+  router.get('/admin/reviews', async (req, res) => {
+    const query = parse(reviewQuery, req.query);
+    const filter = query.status ? { hidden: query.status === 'hidden' } : {};
+    const [docs, total, counts] = await Promise.all([
+      reviews
+        .find(filter)
+        .sort({ createdAt: -1, _id: -1 })
+        .skip((query.page - 1) * REVIEW_PAGE)
+        .limit(REVIEW_PAGE)
+        .toArray(),
+      reviews.countDocuments(filter),
+      reviews.aggregate([{ $group: { _id: '$hidden', n: { $sum: 1 } } }]).toArray(),
+    ]);
+    res.json({
+      items: await reviewDetails(docs),
+      total,
+      page: query.page,
+      pageSize: REVIEW_PAGE,
+      counts: {
+        visible: counts.find((c) => c._id === false)?.n ?? 0,
+        hidden: counts.find((c) => c._id === true)?.n ?? 0,
+      },
+    });
+  });
+
+  // Hiding takes a review off the product page and out of its rating; showing puts it back. Nothing is deleted.
+  router.post('/admin/reviews/:id/visibility', async (req, res) => {
+    const _id = parseObjectId(req.params.id, 'review id');
+    const { hidden } = parse(reviewVisibility, req.body);
+    const doc = await inTransaction(ctx.client, async (session) => {
+      const now = new Date();
+      // Only a change of state moves the rating, so clicking twice can't count a review twice.
+      const changed = await reviews.findOneAndUpdate(
+        { _id, hidden: !hidden },
+        { $set: { hidden, hiddenAt: hidden ? now : null } },
+        { session, returnDocument: 'after' },
+      );
+      if (changed) {
+        const sign = hidden ? -1 : 1;
+        await changeRating(db, changed.productId, { sum: sign * changed.rating, count: sign }, session);
+        return changed;
+      }
+      return reviews.findOne({ _id }, { session });
+    });
+    if (!doc) throw new HttpError(404, 'Review not found');
+    res.json((await reviewDetails([doc]))[0]);
   });
 
   return router;
