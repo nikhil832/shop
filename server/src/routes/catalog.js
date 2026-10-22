@@ -181,9 +181,11 @@ export function catalogRouter({ db }) {
   router.get('/products/:slug', async (req, res) => {
     const doc = await products.findOne({ slug: req.params.slug, active: true });
     if (!doc) throw new HttpError(404, 'Product not found');
-    const [category, saved] = await Promise.all([
+    const mine = { userId: req.user?._id, productId: doc._id };
+    const [category, saved, alert] = await Promise.all([
       categories.findOne({ _id: doc.categoryId }),
-      req.user && db.collection('wishlist').findOne({ userId: req.user._id, productId: doc._id }),
+      req.user && db.collection('wishlist').findOne(mine),
+      req.user && doc.stock === 0 && db.collection('stockAlerts').findOne(mine),
     ]);
     res.json({
       ...toProductCard(doc),
@@ -192,6 +194,7 @@ export function catalogRouter({ db }) {
       images: doc.images,
       category: category && toCategory(category),
       wishlisted: Boolean(saved), // always false when logged out
+      stockAlert: Boolean(alert), // asked to be emailed when it's back (out-of-stock products only)
     });
   });
 

@@ -23,6 +23,8 @@ Built in stages. Done so far:
 
 10. **Account page** (`/account`): change your name, edit or remove the saved address checkout fills in, and change your password (the current one is needed, it can't be reused, and other devices are logged out).
 
+11. **Back-in-stock alerts**: on a sold-out product, logged-in customers click "Email me when it's back" and get one email when it's in stock again (checked every minute, however the stock came back).
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database
@@ -100,6 +102,8 @@ Without keys the store works as before, with Cash on Delivery only. Tests never 
 | PUT    | `/api/account/address`              | Login. `{ address }` (same rules as checkout) → `{ user }`                                                                                                                                                                         |
 | DELETE | `/api/account/address`              | Login. Removes the saved address → `{ user }`                                                                                                                                                                                      |
 | POST   | `/api/account/password`             | Login. `{ currentPassword, newPassword }` → 204; wrong current passwords count towards the login lock; logs out other devices                                                                                                      |
+| PUT    | `/api/stock-alerts/:productId`      | Login. Email me when this sold-out product is back → `{ stockAlert: true }`; 409 if it's in stock; ≤50 per customer                                                                                                                |
+| DELETE | `/api/stock-alerts/:productId`      | Login. Cancels the alert → `{ stockAlert: false }`                                                                                                                                                                                 |
 | GET    | `/api/auth/me`                      | `{ user }`, or `{ user: null }` when logged out                                                                                                                                                                                    |
 | POST   | `/api/orders`                       | Login. `{ items, address, expectedTotal, paymentMethod? }` (`cod` default, or `razorpay`); one transaction; 409 if stock or prices changed. Online orders start `awaiting_payment` and include `checkout` (Razorpay order to open) |
 | GET    | `/api/orders`                       | Login. Your orders, newest first                                                                                                                                                                                                   |

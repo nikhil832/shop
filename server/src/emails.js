@@ -1,5 +1,5 @@
 // Customer emails: order confirmed (placed), shipped, delivered and cancelled, sent after the change is saved (a failure
-// is logged and never undoes or fails the change itself), and the password reset link.
+// is logged and never undoes or fails the change itself), the password reset link and back-in-stock alerts.
 
 const DEFAULT_PUBLIC_URL = 'http://localhost:5173';
 
@@ -140,6 +140,31 @@ export function passwordResetEmail(user, url) {
 ${button('Choose a new password', url)}
 <p>${escapeHtml(lines[1])}</p>`,
     "You're getting this email because a password reset was requested for your account.",
+  );
+  return { subject, text, html };
+}
+
+// "Back in stock" for a customer who asked to be told. `product` is the product document.
+export function backInStockEmail(user, product, publicUrl = DEFAULT_PUBLIC_URL) {
+  const subject = `Back in stock: ${product.title}`;
+  const firstName = user.name.split(/\s+/)[0];
+  const url = `${publicUrl}/p/${product.slug}`;
+  const lines = [
+    `Good news: ${product.title} is back in stock at ${rupees(product.price)}.`,
+    ...(product.stock <= 5 ? [`Only ${product.stock} left, so don't wait too long.`] : []),
+    "We only email once. If it sells out again, ask again on the product's page.",
+  ];
+  const text = [`Hi ${firstName},`, ...lines, `See it: ${url}`, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+${lines
+  .slice(0, -1)
+  .map((l) => `<p>${escapeHtml(l)}</p>`)
+  .join('\n')}
+${button('View the product', url)}
+<p>${escapeHtml(lines.at(-1))}</p>`,
+    "You're getting this email because you asked to be told when this product was back.",
   );
   return { subject, text, html };
 }

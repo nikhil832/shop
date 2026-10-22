@@ -6,6 +6,7 @@ import { createApp } from './app.js';
 import { razorpayClient } from './razorpay.js';
 import { mailClient } from './mail.js';
 import { expireUnpaidOrders } from './routes/orders.js';
+import { sendBackInStockAlerts } from './routes/stockAlerts.js';
 import { loadConfig } from './config.js';
 
 const config = loadConfig();
@@ -15,8 +16,12 @@ const { client, db } = await connectDb(config.mongodbUri, config.mongodbDb);
 const ctx = { db, client, config, razorpay: razorpayClient(config.razorpay), mail: mailClient(config.mail) };
 const app = createApp(ctx);
 
-// Releases the stock of online orders whose 30-minute payment window has passed.
-const sweeper = setInterval(() => expireUnpaidOrders(ctx).catch((err) => console.error(err)), 60_000);
+// Every minute: release the stock of online orders whose 30-minute payment window has passed, then email customers
+// waiting for products that are back in stock (which that release can cause).
+const sweeper = setInterval(async () => {
+  await expireUnpaidOrders(ctx).catch((err) => console.error(err));
+  await sendBackInStockAlerts(ctx).catch((err) => console.error(err));
+}, 60_000);
 
 // In production, serve the built React app from the same server.
 if (existsSync(CLIENT_DIST)) {
