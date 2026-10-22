@@ -9,12 +9,11 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 | #   | Idea                          | Why                                                                                                                                                                                                             | To start                           |
 | --- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| 1   | Coupon codes                  | Admin-made codes (e.g. 10% off, free delivery), checked again on the server when the order is placed.                                                                                                           | "add coupon codes"                 |
-| 2   | Sales dashboard               | Admin home page: revenue per day, order counts, best sellers, low stock.                                                                                                                                        | "add a sales dashboard"            |
-| 3   | Email the admin on new orders | So nobody has to keep checking the admin panel.                                                                                                                                                                 | "email me new orders"              |
-| 4   | Clean up unused uploads       | Images uploaded in the admin panel but never saved to a product stay in MongoDB forever; Atlas's free tier is 512 MB.                                                                                           | "clean up unused uploads"          |
-| 5   | Limit login tries per network | Login is limited per email (below), but one person could try one common password on many accounts. Needs a check first of which address Render passes on as the visitor's IP, so shared proxies aren't blocked. | "limit login tries per network"    |
-| 6   | Change email                  | The account page can't change the email: the new address must be confirmed by a link sent to it first, and the old address told.                                                                                | "let customers change their email" |
+| 1   | Sales dashboard               | Admin home page: revenue per day, order counts, best sellers, low stock.                                                                                                                                        | "add a sales dashboard"            |
+| 2   | Email the admin on new orders | So nobody has to keep checking the admin panel.                                                                                                                                                                 | "email me new orders"              |
+| 3   | Clean up unused uploads       | Images uploaded in the admin panel but never saved to a product stay in MongoDB forever; Atlas's free tier is 512 MB.                                                                                           | "clean up unused uploads"          |
+| 4   | Limit login tries per network | Login is limited per email (below), but one person could try one common password on many accounts. Needs a check first of which address Render passes on as the visitor's IP, so shared proxies aren't blocked. | "limit login tries per network"    |
+| 5   | Change email                  | The account page can't change the email: the new address must be confirmed by a link sent to it first, and the old address told.                                                                                | "let customers change their email" |
 
 ## Set aside
 
@@ -28,14 +27,15 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Done
 
-| What                                                                                                        | Commit                                 |
-| ----------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Stages 1–5: catalog, accounts and checkout, admin panel, Razorpay (test), reviews                           | `480ad9a`                              |
-| Deployed on Render, with health check and Secure cookies                                                    | `344462a`                              |
-| Order emails through Brevo                                                                                  | `1e27f0b`                              |
-| Password reset by email                                                                                     | `e15881c`                              |
-| Better search ranking                                                                                       | `e6505fe`                              |
-| Login protection (5 wrong passwords pause an email for 15 minutes); reset can't reuse the current password  | Stage 9 (`git log --grep "Stage 9"`)   |
-| Account page: name, saved address, change password (current one needed, no reuse, other devices logged out) | Stage 10 (`git log --grep "Stage 10"`) |
-| Back-in-stock alerts: logged-in customers ask on a sold-out product's page and get one email when it's back | Stage 11 (`git log --grep "Stage 11"`) |
-| Search suggestions: categories and the top 6 products in a dropdown while typing, with keyboard support     | Stage 12 (`git log --grep "Stage 12"`) |
+| What                                                                                                                  | Commit                                 |
+| --------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Stages 1–5: catalog, accounts and checkout, admin panel, Razorpay (test), reviews                                     | `480ad9a`                              |
+| Deployed on Render, with health check and Secure cookies                                                              | `344462a`                              |
+| Order emails through Brevo                                                                                            | `1e27f0b`                              |
+| Password reset by email                                                                                               | `e15881c`                              |
+| Better search ranking                                                                                                 | `e6505fe`                              |
+| Login protection (5 wrong passwords pause an email for 15 minutes); reset can't reuse the current password            | Stage 9 (`git log --grep "Stage 9"`)   |
+| Account page: name, saved address, change password (current one needed, no reuse, other devices logged out)           | Stage 10 (`git log --grep "Stage 10"`) |
+| Back-in-stock alerts: logged-in customers ask on a sold-out product's page and get one email when it's back           | Stage 11 (`git log --grep "Stage 11"`) |
+| Search suggestions: categories and the top 6 products in a dropdown while typing, with keyboard support               | Stage 12 (`git log --grep "Stage 12"`) |
+| Coupon codes: % off (with a cap), amount off or free delivery; minimum order, last day, total uses; once per customer | Stage 13 (`git log --grep "Stage 13"`) |

@@ -885,6 +885,33 @@ address {
   margin: 0;
   font-weight: 600;
 }
+/* Coupon code at checkout */
+.coupon-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.coupon-row {
+  display: flex;
+  gap: 8px;
+}
+.coupon-row input {
+  flex: 1;
+  min-width: 0;
+  text-transform: uppercase;
+}
+.coupon-box p,
+.coupon-applied {
+  margin: 0;
+}
+.coupon-applied {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--success);
+}
 .account-actions {
   display: flex;
   gap: 10px;

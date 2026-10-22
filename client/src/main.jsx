@@ -23,6 +23,7 @@ import AdminOrders from './pages/admin/AdminOrders.jsx';
 import AdminProduct from './pages/admin/AdminProduct.jsx';
 import AdminProducts from './pages/admin/AdminProducts.jsx';
 import AdminReviews from './pages/admin/AdminReviews.jsx';
+import AdminCoupons from './pages/admin/AdminCoupons.jsx';
 import './styles.css';
 
 createRoot(document.getElementById('root')).render(
@@ -53,6 +54,7 @@ createRoot(document.getElementById('root')).render(
               <Route path="products/:id" element={<AdminProduct />} />
               <Route path="categories" element={<AdminCategories />} />
               <Route path="reviews" element={<AdminReviews />} />
+              <Route path="coupons" element={<AdminCoupons />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Route>

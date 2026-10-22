@@ -139,6 +139,8 @@ export default function AdminOrder() {
           count={order.items.reduce((n, i) => n + i.qty, 0)}
           subtotal={order.subtotal}
           delivery={order.delivery}
+          discount={order.discount}
+          couponCode={order.coupon?.code}
           total={order.total}
         >
           <div className="muted small payment-info">

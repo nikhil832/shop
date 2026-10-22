@@ -143,7 +143,14 @@ export default function Order() {
           </section>
         </div>
 
-        <OrderSummary count={count} subtotal={order.subtotal} delivery={order.delivery} total={order.total}>
+        <OrderSummary
+          count={count}
+          subtotal={order.subtotal}
+          delivery={order.delivery}
+          discount={order.discount}
+          couponCode={order.coupon?.code}
+          total={order.total}
+        >
           <p className="muted small">Payment: {paymentLabel(order.payment)}</p>
           {action.error && (
             <p className="error" role="alert">

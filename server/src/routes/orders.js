@@ -2,6 +2,7 @@ import express from 'express';
 import { ObjectId } from 'mongodb';
 import { z } from 'zod';
 import { requireUser } from '../auth.js';
+import { couponDiscount, redeemCoupon, releaseCoupon } from '../coupons.js';
 import { sendOrderEmail } from '../emails.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
 import { checkoutParams, PAYMENT_WINDOW_MS, refundPayment, syncPayment } from '../payments.js';
@@ -16,6 +17,9 @@ export const ORDER_STATUSES = ['awaiting_payment', 'placed', 'shipped', 'deliver
 
 // Order numbers count up from here: #100001, #100002, …
 const FIRST_ORDER_NUMBER = 100001;
+
+// Totals after a coupon's discount (paise; at most the items plus delivery).
+const withDiscount = (totals, discount) => ({ ...totals, discount, total: totals.total - discount });
 
 export const orderTotals = (subtotal) => {
   const delivery = subtotal >= FREE_DELIVERY_MIN ? 0 : DELIVERY_FEE;
@@ -35,6 +39,7 @@ const cartItems = z
 
 // GET /cart?items=<productId>:<qty>,<productId>:<qty>
 const quoteQuery = z.object({
+  coupon: z.string().trim().max(40).optional(),
   items: z
     .string()
     .max(1000)
@@ -73,6 +78,7 @@ const orderBody = z.object({
   // The total the customer was shown; if prices changed since, the order is refused rather than charged differently.
   expectedTotal: z.number().int().min(0),
   paymentMethod: z.enum(['cod', 'razorpay']).default('cod'),
+  couponCode: z.string().trim().max(40).optional(),
 });
 
 const withoutRefundError = (payment, admin) => {
@@ -88,6 +94,9 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   items: doc.items.map((i) => ({ ...i, productId: i.productId.toString() })),
   subtotal: doc.subtotal,
   delivery: doc.delivery,
+  // Orders from before coupons have no discount.
+  discount: doc.discount ?? 0,
+  coupon: doc.coupon ?? null,
   total: doc.total,
   address: doc.address,
   // Orders from before online payments stored just 'cod'.
@@ -131,6 +140,7 @@ export async function cancelOrder(ctx, filter, { from, by, notify = true }) {
         })),
         { session },
       );
+      if (order.coupon) await releaseCoupon(db, order._id, session);
     });
   } finally {
     await session.endSession();
@@ -176,7 +186,8 @@ export function ordersRouter(ctx) {
 
   // Current prices and stock for a cart kept in the browser. Works for guests.
   router.get('/cart', async (req, res) => {
-    const { items } = parse(quoteQuery, req.query);
+    const query = parse(quoteQuery, req.query);
+    const { items } = query;
     const docs = await products
       .find({ _id: { $in: items.map((i) => new ObjectId(i.productId)) }, active: true })
       .toArray();
@@ -188,9 +199,24 @@ export function ordersRouter(ctx) {
       return { productId, qty, product: toProductCard(doc), lineTotal: doc.price * qty, problem };
     });
     const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
+    const totals = orderTotals(subtotal);
+    // A coupon that can't be used is reported (couponError), not an error: the quote is still useful.
+    let coupon = null;
+    let couponError = null;
+    if (query.coupon) {
+      try {
+        const found = await couponDiscount(db, query.coupon, { ...totals, userId: req.user?._id });
+        coupon = { code: found.coupon.code, type: found.coupon.type, discount: found.discount };
+      } catch (err) {
+        if (err.status !== 409) throw err;
+        couponError = err.message;
+      }
+    }
     res.json({
       items: lines,
-      ...orderTotals(subtotal),
+      ...withDiscount(totals, coupon?.discount ?? 0),
+      coupon,
+      couponError,
       freeDeliveryMin: FREE_DELIVERY_MIN,
       canCheckout: lines.every((l) => !l.problem),
     });
@@ -235,7 +261,19 @@ export function ordersRouter(ctx) {
             qty,
           });
         }
-        const totals = orderTotals(items.reduce((sum, i) => sum + i.price * i.qty, 0));
+        const before = orderTotals(items.reduce((sum, i) => sum + i.price * i.qty, 0));
+        const orderId = new ObjectId();
+        let coupon = null;
+        let discount = 0;
+        if (body.couponCode) {
+          ({ coupon, discount } = await couponDiscount(db, body.couponCode, {
+            ...before,
+            userId: req.user._id,
+            session,
+          }));
+          await redeemCoupon(db, coupon, { userId: req.user._id, orderId, session });
+        }
+        const totals = withDiscount(before, discount);
         if (totals.total !== body.expectedTotal) {
           throw new HttpError(409, 'Prices have changed since you loaded the page. Please review your order.');
         }
@@ -248,10 +286,13 @@ export function ordersRouter(ctx) {
             { session, upsert: true, returnDocument: 'after' },
           );
         order = {
+          _id: orderId,
           number: FIRST_ORDER_NUMBER - 1 + counter.seq,
           userId: req.user._id,
           items,
           ...totals,
+          // What was applied, kept with the order like its prices (the coupon itself may change later).
+          ...(coupon && { coupon: { code: coupon.code, type: coupon.type } }),
           address: body.address,
           // Online orders hold their stock while the customer pays; expireUnpaidOrders releases it if they don't.
           payment: online ? { method: 'razorpay', status: 'pending' } : { method: 'cod' },
@@ -260,8 +301,7 @@ export function ordersRouter(ctx) {
           createdAt: now,
           updatedAt: now,
         };
-        const { insertedId } = await orders.insertOne(order, { session });
-        order._id = insertedId;
+        await orders.insertOne(order, { session });
         await users.updateOne({ _id: req.user._id }, { $set: { address: body.address } }, { session });
       });
     } finally {

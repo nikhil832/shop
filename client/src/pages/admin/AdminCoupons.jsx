@@ -1,0 +1,183 @@
+import { useState } from 'react';
+import { request } from '../../api.js';
+import { formatDate, formatPrice, toPaise } from '../../format.js';
+import { useFetch } from '../../useFetch.js';
+
+export const describeCoupon = (c) =>
+  c.type === 'free_delivery'
+    ? 'Free delivery'
+    : c.type === 'percent'
+      ? `${c.value}% off${c.maxDiscount ? ` (up to ${formatPrice(c.maxDiscount)})` : ''}`
+      : `${formatPrice(c.value)} off`;
+
+const conditions = (c) =>
+  [
+    c.minSubtotal > 0 && `Orders from ${formatPrice(c.minSubtotal)}`,
+    c.expiresAt && `${new Date(c.expiresAt) <= new Date() ? 'Ended' : 'Ends'} ${formatDate(c.expiresAt)}`,
+  ]
+    .filter(Boolean)
+    .join(' · ') || '—';
+
+// The form's rupee and date fields, turned into what the API takes (paise, an end-of-day date, numbers or null).
+function couponBody(form) {
+  const f = Object.fromEntries(new FormData(form));
+  const optional = (value, convert) => (value === '' || value === undefined ? null : convert(value));
+  return {
+    code: f.code,
+    type: f.type,
+    value: f.type === 'percent' ? Number(f.value) : f.type === 'flat' ? toPaise(f.value) : 0,
+    maxDiscount: f.type === 'percent' ? optional(f.maxDiscount, toPaise) : null,
+    minSubtotal: optional(f.minSubtotal, toPaise) ?? 0,
+    // The last day it works: until the end of that day, local time.
+    expiresAt: optional(f.expiresAt, (d) => new Date(`${d}T23:59:59`).toISOString()),
+    usageLimit: optional(f.usageLimit, Number),
+  };
+}
+
+export default function AdminCoupons() {
+  const [version, setVersion] = useState(0);
+  const { data: coupons, error } = useFetch('/admin/coupons', version);
+  const [state, setState] = useState({ busy: false, error: null });
+  const [type, setType] = useState('percent');
+
+  async function run(change) {
+    setState({ busy: true, error: null });
+    try {
+      await change();
+      setState({ busy: false, error: null });
+      setVersion((v) => v + 1);
+      return true;
+    } catch (err) {
+      setState({ busy: false, error: err.message });
+      return false;
+    }
+  }
+
+  async function create(e) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    if (await run(() => request('/admin/coupons', { method: 'POST', body: couponBody(form) }))) {
+      form.reset();
+      setType('percent');
+    }
+  }
+
+  const setActive = (c, active) => run(() => request(`/admin/coupons/${c.id}`, { method: 'PATCH', body: { active } }));
+
+  return (
+    <div className="admin-form">
+      <section className="panel">
+        <div className="admin-head">
+          <h1>Coupons</h1>
+        </div>
+        <p className="muted small">
+          Each customer can use a coupon once; cancelling the order gives the use back. Coupons can be switched off but
+          not deleted, because orders refer to them.
+        </p>
+        {(state.error || error) && (
+          <p className="error" role="alert">
+            {state.error ?? error.message}
+          </p>
+        )}
+        {coupons?.length === 0 && <p className="muted">No coupons yet. Create one below.</p>}
+        {coupons?.length > 0 && (
+          <div className="table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Discount</th>
+                  <th>Conditions</th>
+                  <th>Used</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {coupons.map((c) => (
+                  <tr key={c.id} className={c.active ? '' : 'inactive'}>
+                    <td>
+                      <strong>{c.code}</strong>
+                    </td>
+                    <td>{describeCoupon(c)}</td>
+                    <td>{conditions(c)}</td>
+                    <td>
+                      {c.usedCount}
+                      {c.usageLimit ? ` / ${c.usageLimit}` : ''}
+                    </td>
+                    <td>
+                      <div className="status-cell">
+                        <span className={`status ${c.active ? 'placed' : 'cancelled'}`}>{c.active ? 'On' : 'Off'}</span>
+                        <button
+                          type="button"
+                          className="link"
+                          onClick={() => setActive(c, !c.active)}
+                          disabled={state.busy}
+                        >
+                          {c.active ? 'Switch off' : 'Switch on'}
+                          <span className="sr-only"> {c.code}</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <form className="panel admin-form" onSubmit={create} aria-labelledby="new-coupon">
+        <h2 id="new-coupon">New coupon</h2>
+        <div className="address-grid">
+          <label>
+            Code
+            <input name="code" required pattern="[A-Za-z0-9]{3,20}" title="3–20 letters and digits" maxLength={20} />
+          </label>
+          <label>
+            Discount
+            <select name="type" value={type} onChange={(e) => setType(e.target.value)}>
+              <option value="percent">Percentage off</option>
+              <option value="flat">Amount off</option>
+              <option value="free_delivery">Free delivery</option>
+            </select>
+          </label>
+          {type === 'percent' && (
+            <>
+              <label>
+                Percent off
+                <input name="value" type="number" required min={1} max={90} step={1} />
+              </label>
+              <label>
+                Maximum discount, ₹ (optional)
+                <input name="maxDiscount" type="number" min={1} step={1} />
+              </label>
+            </>
+          )}
+          {type === 'flat' && (
+            <label>
+              Amount off, ₹
+              <input name="value" type="number" required min={1} step={1} />
+            </label>
+          )}
+          <label>
+            Minimum order, ₹ (optional)
+            <input name="minSubtotal" type="number" min={0} step="any" />
+          </label>
+          <label>
+            Last day (optional)
+            <input name="expiresAt" type="date" />
+          </label>
+          <label>
+            Total uses (optional)
+            <input name="usageLimit" type="number" min={1} step={1} />
+          </label>
+        </div>
+        <div className="form-actions">
+          <button type="submit" className="btn primary" disabled={state.busy}>
+            Create coupon
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}

@@ -1,5 +1,6 @@
 import express from 'express';
 import { sessionMiddleware } from './auth.js';
+import { couponsRouter } from './coupons.js';
 import { accountRouter } from './routes/account.js';
 import { authRouter } from './routes/auth.js';
 import { catalogRouter } from './routes/catalog.js';
@@ -38,6 +39,7 @@ export function createApp(ctx) {
   api.use(reviewsRouter(ctx));
   api.use(wishlistRouter(ctx));
   api.use(stockAlertsRouter(ctx));
+  api.use(couponsRouter(ctx));
   api.use(adminRouter(ctx));
   api.use((req, res) => res.status(404).json({ error: 'Not found' }));
   app.use('/api', api);

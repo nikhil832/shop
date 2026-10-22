@@ -44,6 +44,10 @@ export async function ensureIndexes(db) {
     db.collection('reviews').createIndex({ productId: 1, hidden: 1, createdAt: -1 }),
     db.collection('reviews').createIndex({ createdAt: -1 }),
     db.collection('wishlist').createIndex({ userId: 1, productId: 1 }, { unique: true }),
+    // Coupons by code; each customer uses a coupon once; a cancelled order's use is found by order.
+    db.collection('coupons').createIndex({ code: 1 }, { unique: true }),
+    db.collection('couponRedemptions').createIndex({ couponId: 1, userId: 1 }, { unique: true }),
+    db.collection('couponRedemptions').createIndex({ orderId: 1 }),
     // One back-in-stock alert per customer per product; the sweep looks them up by product.
     db.collection('stockAlerts').createIndex({ userId: 1, productId: 1 }, { unique: true }),
     db.collection('stockAlerts').createIndex({ productId: 1 }),

@@ -76,6 +76,7 @@ export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL) {
       ? [
           ['Items', rupees(order.subtotal)],
           ['Delivery', order.delivery ? rupees(order.delivery) : 'Free'],
+          ...(order.discount ? [[`Coupon ${order.coupon?.code ?? ''}`.trim(), `−${rupees(order.discount)}`]] : []),
           ['Total', rupees(order.total)],
         ]
       : [];
