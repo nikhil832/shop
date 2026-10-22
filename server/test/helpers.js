@@ -56,5 +56,5 @@ export async function startTestServer({ razorpay = false } = {}) {
     await mongo.stop();
   }
 
-  return { db, ctx, fake, call, browser, webhook, stop };
+  return { db, ctx, fake, base, call, browser, webhook, stop };
 }

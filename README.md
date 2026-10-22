@@ -48,6 +48,16 @@ Env vars (`server/.env` or the environment): `MONGODB_URI` (required except in d
 3. Restart `npm run dev` (or `npm run demo`, which also reads them): the server prints "Online payments: Razorpay test mode" and checkout offers "Pay online". Pay with Razorpay's [test cards or UPI IDs](https://razorpay.com/docs/payments/payments/test-card-details/); no real money moves.
 4. Optional webhook (needs a public URL): Dashboard → Webhooks → `https://<your-site>/api/razorpay/webhook`, events `payment.captured` and `order.paid`, and put its secret in `RAZORPAY_WEBHOOK_SECRET`.
 
+## Deploy (Render)
+
+`render.yaml` describes one free web service: it builds the React app, runs `npm start` (UI and API on one server, over HTTPS) and redeploys on every push to `main`. `GET /api/health` is its health check.
+
+1. In Atlas, Network Access → add `0.0.0.0/0` (Render's free plan has no fixed IP address; the database password still protects it).
+2. On [Render](https://render.com), New → Blueprint → pick this repository. When asked, set `MONGODB_URI`, and optionally the Razorpay test keys (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`); leave any you don't use empty.
+3. Once it's live, set up the Razorpay webhook (step 4 above) with the Render address, put its secret in `RAZORPAY_WEBHOOK_SECRET` under the service's Environment, and save (it redeploys).
+
+The free plan sleeps after 15 minutes without visitors; the next visit takes about a minute to wake it. Unpaid online orders past their 30 minutes are cancelled once it's awake again.
+
 Refunds are paid from your Razorpay balance, which is short of each payment by Razorpay's fee. In a fresh test account a full refund of the only payment therefore fails; the order page then offers admins **Retry refund** once the balance covers it.
 
 Without keys the store works as before, with Cash on Delivery only. Tests never call Razorpay: they use a stand-in (`server/test/fake-razorpay.js`).

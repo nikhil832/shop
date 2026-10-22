@@ -1,0 +1,28 @@
+# Render Blueprint: one web service that builds the React app and serves it with the API (see README, "Deploy").
+# Secrets are marked sync: false, so Render asks for them in the dashboard; they are never in this file.
+services:
+  - type: web
+    name: bazaar
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: '24'
+      # The in-memory MongoDB is only for tests and the demo; don't download it while building.
+      - key: MONGOMS_DISABLE_POSTINSTALL
+        value: '1'
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: shop
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false

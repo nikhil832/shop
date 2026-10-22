@@ -95,3 +95,19 @@ test('ignores unknown and expired session cookies', async () => {
   assert.deepEqual((await call('GET', '/auth/me')).body, { user: null });
   assert.equal((await call('GET', '/orders')).status, 401);
 });
+
+test('marks the session cookie Secure behind an HTTPS proxy', async () => {
+  const res = await fetch(`${t.base}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Forwarded-Proto': 'https' },
+    body: JSON.stringify({ email: account.email, password: account.password }),
+  });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('set-cookie'), /; Secure; /);
+});
+
+test('answers the health check', async () => {
+  const res = await t.call('GET', '/health');
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body, { ok: true });
+});

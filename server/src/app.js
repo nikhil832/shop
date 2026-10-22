@@ -14,10 +14,18 @@ import { wishlistRouter } from './routes/wishlist.js';
 export function createApp(ctx) {
   const app = express();
   app.disable('x-powered-by');
+  // When hosted (Render), one HTTPS proxy sits in front: trusting it makes req.secure true, so the session cookie is
+  // marked Secure. Locally there is no proxy and nothing changes.
+  app.set('trust proxy', 1);
   // The raw body is kept for the Razorpay webhook, whose signature covers the exact bytes sent.
   app.use(express.json({ limit: '100kb', verify: (req, res, buf) => (req.rawBody = buf) }));
 
   const api = express.Router();
+  // For the host's health check: up only while the database answers. Before the session lookup, which it doesn't need.
+  api.get('/health', async (req, res) => {
+    await ctx.db.command({ ping: 1 });
+    res.json({ ok: true });
+  });
   api.use(sessionMiddleware(ctx));
   api.use(catalogRouter(ctx));
   api.use(authRouter(ctx));
