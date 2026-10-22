@@ -29,3 +29,20 @@ test('the reset page needs a link, matching passwords and a live token', async (
   await expect(page.getByRole('alert')).toContainText('This reset link has expired or was already used.');
   await expect(page.getByRole('alert').getByRole('link', { name: 'Get a new link' })).toBeVisible();
 });
+
+test('after 5 wrong passwords the login form says the email is paused', async ({ page }) => {
+  const email = `locked-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`;
+  await page.goto('/login');
+  await page.getByLabel('Email').fill(email);
+  for (let i = 0; i < 4; i++) {
+    await page.getByLabel('Password').fill(`wrong ${i}`);
+    await page.getByRole('button', { name: 'Log in' }).click();
+    await expect(page.getByRole('alert')).toHaveText('Wrong email or password');
+  }
+  await page.getByLabel('Password').fill('wrong 4');
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await expect(page.getByRole('alert')).toHaveText(
+    'Too many wrong passwords for this email. Try again in 15 minutes, or reset your password.',
+  );
+  await expect(page.getByRole('link', { name: 'Forgot password?' })).toBeVisible();
+});

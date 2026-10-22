@@ -19,6 +19,10 @@ Built in stages. Done so far:
 
 8. **Better search**: words also match category names and product highlights, plurals and a few synonyms work ("phones" finds the Mobiles category), whole words only ("book" doesn't find Chromebooks), and results are ranked by how well they match, then popularity.
 
+9. **Login protection**: after 5 wrong passwords, login for that email pauses for 15 minutes (a password reset ends it sooner), and a reset can't reuse the current password.
+
+What's next: see [ROADMAP.md](ROADMAP.md).
+
 ## Try it without a database
 
 ```bash

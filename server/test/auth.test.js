@@ -183,3 +183,68 @@ test('reset links expire, malformed ones are refused, and only 3 are sent an hou
   assert.equal(sent, 3);
   assert.equal(await t.db.collection('passwordResets').countDocuments({ expiresAt: { $gt: new Date() } }), 2);
 });
+
+const LOCKED = 'Too many wrong passwords for this email. Try again in 15 minutes, or reset your password.';
+const login = (email, password) => t.call('POST', '/auth/login', { email, password });
+
+test('5 wrong passwords pause login for that email, even with the right password', async () => {
+  const email = 'locked1@example.com';
+  await t.browser()('POST', '/auth/register', { name: 'Lata', email, password: 'right password' });
+
+  for (let i = 0; i < 4; i++) assert.equal((await login(email, `wrong ${i}`)).status, 401);
+  const fifth = await login(email, 'wrong 4');
+  assert.equal(fifth.status, 429);
+  assert.equal(fifth.body.error, LOCKED);
+  const right = await login(email, 'right password');
+  assert.equal(right.status, 429);
+  assert.equal(right.setCookie, null);
+
+  // Other accounts are unaffected, and the lock ends once the attempts are 15 minutes old.
+  assert.equal((await login('asha@example.com', 'wrong')).status, 401);
+  const old = new Date(Date.now() - 16 * 60_000);
+  await t.db.collection('loginAttempts').updateMany({}, { $set: { at: old } });
+  assert.equal((await login(email, 'right password')).status, 200);
+});
+
+test('unknown emails lock the same way, and attempts sent at once still count', async () => {
+  await t.db.collection('loginAttempts').deleteMany({}); // only this test's attempts below
+  // However the attempts arrive, at most 5 passwords are checked: exactly 4 "wrong" answers, then the lock.
+  const burst = await Promise.all(Array.from({ length: 12 }, (_, i) => login('ghost@example.com', `guess ${i}`)));
+  const statuses = burst.map((r) => r.status);
+  // Then one at a time until the lock answers.
+  for (let i = 0; i < 10; i++) {
+    const { status } = await login('ghost@example.com', 'again');
+    statuses.push(status);
+    if (status === 429) break;
+  }
+  assert.equal(statuses.filter((s) => s === 401).length, 4);
+  assert.equal(statuses.at(-1), 429);
+  // Refused attempts aren't kept, so retrying while locked doesn't stretch the lock.
+  assert.ok((await t.db.collection('loginAttempts').countDocuments({})) <= 5);
+  await t.db.collection('loginAttempts').deleteMany({});
+});
+
+test('a successful login clears earlier wrong passwords', async () => {
+  const email = 'locked2@example.com';
+  await t.browser()('POST', '/auth/register', { name: 'Lata', email, password: 'right password' });
+  for (let i = 0; i < 4; i++) await login(email, 'wrong');
+  assert.equal((await login(email, 'right password')).status, 200);
+  for (let i = 0; i < 4; i++) assert.equal((await login(email, 'wrong')).status, 401);
+});
+
+test('a password reset ends a lock, and must choose a different password', async () => {
+  const email = 'locked3@example.com';
+  await t.browser()('POST', '/auth/register', { name: 'Lata', email, password: 'right password' });
+  for (let i = 0; i < 5; i++) await login(email, 'wrong');
+  assert.equal((await login(email, 'right password')).status, 429);
+
+  await t.call('POST', '/auth/forgot-password', { email });
+  const token = tokenIn(await resetMailTo(email));
+  const call = t.browser();
+  const same = await call('POST', '/auth/reset-password', { token, password: 'right password' });
+  assert.equal(same.status, 400);
+  assert.equal(same.body.error, 'Your new password must be different from your current one.');
+  // The link still works for a different password, which also unlocks login.
+  assert.equal((await call('POST', '/auth/reset-password', { token, password: 'brand new password' })).status, 200);
+  assert.equal((await login(email, 'brand new password')).status, 200);
+});
