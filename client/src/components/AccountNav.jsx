@@ -8,6 +8,7 @@ export default function AccountNav() {
         My orders
       </NavLink>
       <NavLink to="/wishlist">Wishlist</NavLink>
+      <NavLink to="/account">Account</NavLink>
     </nav>
   );
 }

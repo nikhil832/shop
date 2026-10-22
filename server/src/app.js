@@ -1,5 +1,6 @@
 import express from 'express';
 import { sessionMiddleware } from './auth.js';
+import { accountRouter } from './routes/account.js';
 import { authRouter } from './routes/auth.js';
 import { catalogRouter } from './routes/catalog.js';
 import { ordersRouter } from './routes/orders.js';
@@ -29,6 +30,7 @@ export function createApp(ctx) {
   api.use(sessionMiddleware(ctx));
   api.use(catalogRouter(ctx));
   api.use(authRouter(ctx));
+  api.use(accountRouter(ctx));
   api.use(ordersRouter(ctx));
   api.use(paymentsRouter(ctx));
   api.use(imagesRouter(ctx));

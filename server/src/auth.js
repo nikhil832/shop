@@ -83,6 +83,49 @@ export function requireAdmin(req, res, next) {
   next();
 }
 
+// Wrong passwords allowed per email within LOCK_MINUTES; after that, checks for that email are refused (even the
+// right password, so a guesser learns nothing) until the attempts age out or the password is reset.
+const MAX_FAILED_PASSWORDS = 5;
+const LOCK_MINUTES = 15;
+const LOCKED = `Too many wrong passwords for this email. Try again in ${LOCK_MINUTES} minutes, or reset your password.`;
+
+// Compared against when the email is unknown, so both cases take about as long.
+const DUMMY_HASH = await hashPassword('not-a-real-password');
+
+// Keyed by a hash of the email (known or not, so a lock says nothing about whether the account exists).
+const attemptKey = (email) => hashToken(`login:${email}`);
+
+export const clearPasswordAttempts = (db, email) =>
+  db.collection('loginAttempts').deleteMany({ key: attemptKey(email) });
+
+// Checks a password for `email` against `passwordHash` (undefined for an unknown email) under the lock: logging in and
+// changing the password share it. Returns true or false; throws 429 while locked, including on the attempt that locks.
+// Every attempt is recorded before the check, so many guesses sent at once still count; a right password clears them.
+export async function checkPassword(db, email, password, passwordHash) {
+  const attempts = db.collection('loginAttempts');
+  const key = attemptKey(email);
+  const now = Date.now();
+  const { insertedId } = await attempts.insertOne({
+    key,
+    at: new Date(now),
+    expiresAt: new Date(now + LOCK_MINUTES * 60_000),
+  });
+  const tries = await attempts.countDocuments({ key, at: { $gt: new Date(now - LOCK_MINUTES * 60_000) } });
+  if (tries > MAX_FAILED_PASSWORDS) {
+    // Not kept, so retrying while locked doesn't stretch the lock: it ends LOCK_MINUTES after the last real try.
+    await attempts.deleteOne({ _id: insertedId });
+    throw new HttpError(429, LOCKED);
+  }
+  const ok = await verifyPassword(password, passwordHash ?? DUMMY_HASH);
+  if (ok && passwordHash) {
+    await attempts.deleteMany({ key });
+    return true;
+  }
+  // The last allowed wrong password already says the email is locked.
+  if (tries === MAX_FAILED_PASSWORDS) throw new HttpError(429, LOCKED);
+  return false;
+}
+
 export const toUser = (doc) => ({
   id: doc._id.toString(),
   name: doc.name,

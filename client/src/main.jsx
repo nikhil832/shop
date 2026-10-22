@@ -14,6 +14,7 @@ import ResetPassword from './pages/ResetPassword.jsx';
 import Order from './pages/Order.jsx';
 import Orders from './pages/Orders.jsx';
 import Wishlist from './pages/Wishlist.jsx';
+import Account from './pages/Account.jsx';
 import NotFound from './pages/NotFound.jsx';
 import AdminCategories from './pages/admin/AdminCategories.jsx';
 import AdminLayout from './pages/admin/AdminLayout.jsx';
@@ -42,6 +43,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="orders" element={<Orders />} />
             <Route path="orders/:id" element={<Order />} />
             <Route path="wishlist" element={<Wishlist />} />
+            <Route path="account" element={<Account />} />
             <Route path="admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="orders" replace />} />
               <Route path="orders" element={<AdminOrders />} />

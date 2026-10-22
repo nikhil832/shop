@@ -50,7 +50,8 @@ const quoteQuery = z.object({
     .pipe(cartItems),
 });
 
-const address = z.object({
+// Also used by the account page's saved address.
+export const address = z.object({
   name: z.string().trim().min(1, 'Enter the recipient name').max(80),
   phone: z
     .string()

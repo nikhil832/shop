@@ -617,6 +617,7 @@ a:focus-visible {
   transition: opacity 0.15s;
 }
 .auth-form label,
+.account-section label,
 .address-grid label {
   display: flex;
   flex-direction: column;
@@ -625,6 +626,7 @@ a:focus-visible {
   font-size: 0.9rem;
 }
 .auth-form input,
+.account-section input,
 .address-grid input {
   font-weight: 400;
 }
@@ -819,6 +821,25 @@ address {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+/* The account page: one panel per section, its fields stacked. */
+.account-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 640px;
+}
+.account-section h1,
+.account-section h2,
+.account-section p {
+  margin: 0;
+}
+.account-section > .btn {
+  align-self: flex-start;
+}
+.account-actions {
+  display: flex;
+  gap: 10px;
 }
 .account {
   display: flex;

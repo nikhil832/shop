@@ -3,43 +3,11 @@ import { Link, Navigate, useNavigate } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import { cartCount, cartQuery, clearCart, useCart } from '../cart.js';
+import AddressFields from '../components/AddressFields.jsx';
 import OrderSummary from '../components/OrderSummary.jsx';
 import { formatPrice } from '../format.js';
 import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
-
-const FIELDS = [
-  { name: 'name', label: 'Full name', autoComplete: 'name', maxLength: 80 },
-  {
-    name: 'phone',
-    label: 'Mobile number',
-    autoComplete: 'tel-national',
-    inputMode: 'numeric',
-    pattern: '[6-9][0-9]{9}',
-    title: '10-digit mobile number',
-    maxLength: 10,
-  },
-  { name: 'line1', label: 'Address (house, street, area)', autoComplete: 'address-line1', maxLength: 120, wide: true },
-  {
-    name: 'line2',
-    label: 'Landmark (optional)',
-    autoComplete: 'address-line2',
-    maxLength: 120,
-    required: false,
-    wide: true,
-  },
-  { name: 'city', label: 'City', autoComplete: 'address-level2', maxLength: 60 },
-  { name: 'state', label: 'State', autoComplete: 'address-level1', maxLength: 60 },
-  {
-    name: 'pincode',
-    label: 'PIN code',
-    autoComplete: 'postal-code',
-    inputMode: 'numeric',
-    pattern: '[1-9][0-9]{5}',
-    title: '6-digit PIN code',
-    maxLength: 6,
-  },
-];
 
 export default function Checkout() {
   const { user, setUser } = useAuth();
@@ -88,27 +56,13 @@ export default function Checkout() {
     }
   }
 
-  const saved = user.address ?? {};
-
   return (
     <form className="cart-page" onSubmit={submit}>
       <div className="checkout-main">
         <section className="panel">
           <h1>Delivery address</h1>
           {/* Remounted per user so the saved address fills in. */}
-          <div key={user.id} className="address-grid">
-            {FIELDS.map(({ name, label, wide, required = true, ...input }) => (
-              <label key={name} className={wide ? 'wide' : ''}>
-                {label}
-                <input
-                  name={name}
-                  defaultValue={saved[name] ?? (name === 'name' ? user.name : '')}
-                  required={required}
-                  {...input}
-                />
-              </label>
-            ))}
-          </div>
+          <AddressFields key={user.id} saved={user.address} defaultName={user.name} />
         </section>
 
         <fieldset className="panel payment-options">

@@ -4,6 +4,8 @@ import { z } from 'zod';
 import {
   SESSION_COOKIE,
   SESSION_DAYS,
+  checkPassword,
+  clearPasswordAttempts,
   createSession,
   deleteSession,
   hashPassword,
@@ -18,7 +20,7 @@ import { HttpError, parse } from '../http.js';
 
 const email = z.string().trim().toLowerCase().max(254).pipe(z.email('Enter a valid email'));
 
-const newPassword = z.string().min(8, 'Password must be at least 8 characters').max(128);
+export const newPassword = z.string().min(8, 'Password must be at least 8 characters').max(128);
 
 const registerBody = z.object({
   name: z.string().trim().min(1, 'Enter your name').max(80),
@@ -43,22 +45,13 @@ const resetBody = z.object({
 const MAX_RESETS_PER_HOUR = 3;
 const BAD_RESET_LINK = 'This reset link has expired or was already used. Ask for a new one.';
 
-// Wrong passwords allowed per email within LOCK_MINUTES; after that, login for that email pauses until they age out.
-const MAX_FAILED_LOGINS = 5;
-const LOCK_MINUTES = 15;
-const LOCKED = `Too many wrong passwords for this email. Try again in ${LOCK_MINUTES} minutes, or reset your password.`;
-const SAME_PASSWORD = 'Your new password must be different from your current one.';
-
-// Compared against when the email is unknown, so both cases take about as long.
-const DUMMY_HASH = await hashPassword('not-a-real-password');
+export const SAME_PASSWORD = 'Your new password must be different from your current one.';
 
 export function authRouter(ctx) {
   const { db } = ctx;
   const users = db.collection('users');
   const resets = db.collection('passwordResets');
-  const attempts = db.collection('loginAttempts');
-  // Keyed by a hash of the email (known or not, so a lock says nothing about whether the account exists).
-  const attemptKey = (email) => hashToken(`login:${email}`);
+
   const router = express.Router();
 
   // Emails a one-time link (token after #, so it never reaches server logs or other sites). Only its hash is stored.
@@ -108,30 +101,10 @@ export function authRouter(ctx) {
 
   router.post('/auth/login', async (req, res) => {
     const body = parse(loginBody, req.body);
-    // Every attempt is recorded before the password is checked, so many guesses sent at once still count; a
-    // successful login removes them. While locked, even the right password is refused (no hint for a guesser).
-    const key = attemptKey(body.email);
-    const now = Date.now();
-    const { insertedId } = await attempts.insertOne({
-      key,
-      at: new Date(now),
-      expiresAt: new Date(now + LOCK_MINUTES * 60_000),
-    });
-    const tries = await attempts.countDocuments({ key, at: { $gt: new Date(now - LOCK_MINUTES * 60_000) } });
-    if (tries > MAX_FAILED_LOGINS) {
-      // Not kept, so retrying while locked doesn't stretch the lock: it ends LOCK_MINUTES after the last real try.
-      await attempts.deleteOne({ _id: insertedId });
-      throw new HttpError(429, LOCKED);
-    }
-
     const user = await users.findOne({ email: body.email });
-    const ok = await verifyPassword(body.password, user?.passwordHash ?? DUMMY_HASH);
-    if (!user || !ok) {
-      // The last allowed wrong password already says the email is locked.
-      if (tries === MAX_FAILED_LOGINS) throw new HttpError(429, LOCKED);
+    if (!(await checkPassword(db, body.email, body.password, user?.passwordHash))) {
       throw new HttpError(401, 'Wrong email or password');
     }
-    await attempts.deleteMany({ key });
     await startSession(req, res, user);
     res.json({ user: toUser(user) });
   });
@@ -168,7 +141,7 @@ export function authRouter(ctx) {
     await Promise.all([
       resets.deleteMany({ userId: user._id }),
       db.collection('sessions').deleteMany({ userId: user._id }),
-      attempts.deleteMany({ key: attemptKey(user.email) }),
+      clearPasswordAttempts(db, user.email),
     ]);
     await startSession(req, res, user);
     res.json({ user: toUser(user) });

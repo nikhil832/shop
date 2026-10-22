@@ -21,6 +21,8 @@ Built in stages. Done so far:
 
 9. **Login protection**: after 5 wrong passwords, login for that email pauses for 15 minutes (a password reset ends it sooner), and a reset can't reuse the current password.
 
+10. **Account page** (`/account`): change your name, edit or remove the saved address checkout fills in, and change your password (the current one is needed, it can't be reused, and other devices are logged out).
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database
@@ -94,6 +96,10 @@ Without keys the store works as before, with Cash on Delivery only. Tests never 
 | POST   | `/api/auth/logout`                  | Ends the session                                                                                                                                                                                                                   |
 | POST   | `/api/auth/forgot-password`         | `{ email }` → 204 either way; emails a one-time reset link (1 hour, at most 3 an hour) if the account exists                                                                                                                       |
 | POST   | `/api/auth/reset-password`          | `{ token, password }`: sets the password, logs out every device, logs this browser in → `{ user }`                                                                                                                                 |
+| PATCH  | `/api/account`                      | Login. `{ name }` → `{ user }` (the email and role never change here)                                                                                                                                                              |
+| PUT    | `/api/account/address`              | Login. `{ address }` (same rules as checkout) → `{ user }`                                                                                                                                                                         |
+| DELETE | `/api/account/address`              | Login. Removes the saved address → `{ user }`                                                                                                                                                                                      |
+| POST   | `/api/account/password`             | Login. `{ currentPassword, newPassword }` → 204; wrong current passwords count towards the login lock; logs out other devices                                                                                                      |
 | GET    | `/api/auth/me`                      | `{ user }`, or `{ user: null }` when logged out                                                                                                                                                                                    |
 | POST   | `/api/orders`                       | Login. `{ items, address, expectedTotal, paymentMethod? }` (`cod` default, or `razorpay`); one transaction; 409 if stock or prices changed. Online orders start `awaiting_payment` and include `checkout` (Razorpay order to open) |
 | GET    | `/api/orders`                       | Login. Your orders, newest first                                                                                                                                                                                                   |
