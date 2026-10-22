@@ -1,3 +1,4 @@
+import { sendOrderEmail } from './emails.js';
 import { HttpError } from './http.js';
 
 // Online payments (Razorpay, test mode). An online order is created as `awaiting_payment` with its stock already
@@ -20,7 +21,8 @@ export const checkoutParams = (razorpay, order, user) => ({
 
 // Marks an awaiting order paid, given a Razorpay payment entity for it. Safe to call more than once for the same
 // payment (the browser, the webhook and "check again" can all report it). Returns the current order document.
-export async function confirmPayment({ db, razorpay }, order, payment) {
+export async function confirmPayment(ctx, order, payment) {
+  const { db, razorpay } = ctx;
   const orders = db.collection('orders');
   if (payment.order_id !== order.payment?.razorpayOrderId)
     throw new HttpError(400, 'This payment is for another order');
@@ -40,7 +42,11 @@ export async function confirmPayment({ db, razorpay }, order, payment) {
     { $set: { status: 'placed', ...paid }, $unset: { expiresAt: '' } },
     { returnDocument: 'after' },
   );
-  if (placed) return placed;
+  if (placed) {
+    // Only the call that moved the order to placed gets here, so the confirmation goes out once.
+    await sendOrderEmail(ctx, placed, 'placed');
+    return placed;
+  }
 
   const current = await orders.findOne({ _id: order._id });
   // Money arrived for an order that had already expired or been cancelled (its stock is gone): give it back.

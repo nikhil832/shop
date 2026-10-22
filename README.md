@@ -13,6 +13,8 @@ Built in stages. Done so far:
 
 5. **Reviews and wishlist**: customers rate and review products they've received (one review each, which they can edit or delete); new reviews are added to the sample ratings. Admins can hide a review, which also takes it out of the rating. A wishlist kept in the account, with a Wishlist page next to My orders.
 
+6. **Order emails** through [Brevo](https://www.brevo.com): the customer hears when an order is confirmed (for online orders, once paid), shipped, delivered (with links to review each item) and cancelled (saying whether a refund was started). Without a Brevo key, emails are printed in the server log instead.
+
 ## Try it without a database
 
 ```bash
@@ -41,6 +43,14 @@ npm run make-admin -- you@example.com   # give a registered account the admin ro
 
 Env vars (`server/.env` or the environment): `MONGODB_URI` (required except in demo mode), `MONGODB_DB` (default `shop`), `PORT` (default 4000).
 
+### Order emails (optional)
+
+1. Create a free [Brevo](https://www.brevo.com) account (300 emails a day). Under Senders, domains & IPs → Senders, add and verify the address emails come from (your Gmail works; no domain needed).
+2. SMTP & API → API keys → generate a key. Set `BREVO_API_KEY`, `MAIL_FROM` (the verified sender) and, for links in the emails, `PUBLIC_URL` (your site's address; default `http://localhost:5173`). `MAIL_FROM_NAME` defaults to `Bazaar`.
+3. Restart: the server prints "Order emails: sent through Brevo". Without a key it prints each email's subject and recipient instead.
+
+Emails sent from a Gmail address through Brevo can land in spam; a domain of your own, verified in Brevo, fixes that.
+
 ### Razorpay (optional, test mode only)
 
 1. In the Razorpay Dashboard, switch to **Test Mode**, then Account & Settings → API keys → generate a key.
@@ -55,6 +65,7 @@ Env vars (`server/.env` or the environment): `MONGODB_URI` (required except in d
 1. In Atlas, Network Access → add `0.0.0.0/0` (Render's free plan has no fixed IP address; the database password still protects it).
 2. On [Render](https://render.com), New → Blueprint → pick this repository. When asked, set `MONGODB_URI`, and optionally the Razorpay test keys (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`); leave any you don't use empty.
 3. Once it's live, set up the Razorpay webhook (step 4 above) with the Render address, put its secret in `RAZORPAY_WEBHOOK_SECRET` under the service's Environment, and save (it redeploys).
+4. For order emails, set `BREVO_API_KEY`, `MAIL_FROM` and `PUBLIC_URL` (the Render address) the same way.
 
 The free plan sleeps after 15 minutes without visitors; the next visit takes about a minute to wake it. Unpaid online orders past their 30 minutes are cancelled once it's awake again.
 

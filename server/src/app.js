@@ -9,8 +9,8 @@ import { imagesRouter } from './routes/images.js';
 import { reviewsRouter } from './routes/reviews.js';
 import { wishlistRouter } from './routes/wishlist.js';
 
-// Builds the Express app around an injected database. ctx = { db, client, config, razorpay } (razorpay is null
-// when online payments aren't configured).
+// Builds the Express app around an injected database. ctx = { db, client, config, razorpay, mail } (razorpay is null
+// when online payments aren't configured; mail sends or logs order emails).
 export function createApp(ctx) {
   const app = express();
   app.disable('x-powered-by');

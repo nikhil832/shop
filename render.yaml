@@ -26,3 +26,10 @@ services:
         sync: false
       - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
+      # Order emails (Brevo). PUBLIC_URL is this site's address, for the links in them.
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: PUBLIC_URL
+        sync: false

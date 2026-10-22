@@ -6,6 +6,7 @@ import { HttpError, escapeRegex, parse, parseObjectId } from '../http.js';
 import { ICONS, image, slugify } from '../seed.js';
 import { refundPayment } from '../payments.js';
 import { cancelOrder, ORDER_STATUSES, toOrder } from './orders.js';
+import { sendOrderEmail } from '../emails.js';
 import { changeRating, inTransaction, toReview } from './reviews.js';
 
 const hexId = (what) => z.string().regex(/^[0-9a-f]{24}$/, `Choose a ${what}`);
@@ -341,6 +342,7 @@ export function adminRouter(ctx) {
         if (!existing) throw new HttpError(404, 'Order not found');
         throw new HttpError(409, `A ${existing.status} order can't be marked ${status}`);
       }
+      await sendOrderEmail(ctx, doc, status);
     }
     res.json((await withCustomers([doc]))[0]);
   });

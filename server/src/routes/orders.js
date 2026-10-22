@@ -2,6 +2,7 @@ import express from 'express';
 import { ObjectId } from 'mongodb';
 import { z } from 'zod';
 import { requireUser } from '../auth.js';
+import { sendOrderEmail } from '../emails.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
 import { checkoutParams, PAYMENT_WINDOW_MS, refundPayment, syncPayment } from '../payments.js';
 import { toProductCard } from './catalog.js';
@@ -100,9 +101,9 @@ export const toOrder = (doc, { admin = false } = {}) => ({
 });
 
 // Cancels the order matching `filter` if its status is one of `from`, and puts its stock back, in one transaction.
-// A paid online order is then refunded. `by` is 'customer', 'admin' or 'system' (unpaid and expired).
-// Returns the updated order document.
-export async function cancelOrder(ctx, filter, { from, by }) {
+// A paid online order is then refunded. `by` is 'customer', 'admin' or 'system' (unpaid and expired). The customer
+// is emailed unless `notify` is false. Returns the updated order document.
+export async function cancelOrder(ctx, filter, { from, by, notify = true }) {
   const { db, client } = ctx;
   const orders = db.collection('orders');
   // An order still awaiting payment may in fact have been paid: settle that first, so a paid order is refunded.
@@ -133,7 +134,9 @@ export async function cancelOrder(ctx, filter, { from, by }) {
   } finally {
     await session.endSession();
   }
-  return order.payment?.status === 'paid' ? refundPayment(ctx, order) : order;
+  const result = order.payment?.status === 'paid' ? await refundPayment(ctx, order) : order;
+  if (notify) await sendOrderEmail(ctx, result, 'cancelled');
+  return result;
 }
 
 // Cancels an awaiting-payment order whose payment window has passed, unless Razorpay says it was paid after all.
@@ -263,7 +266,10 @@ export function ordersRouter(ctx) {
     } finally {
       await session.endSession();
     }
-    if (!online) return res.status(201).json({ ...toOrder(order), checkout: null });
+    if (!online) {
+      await sendOrderEmail(ctx, order, 'placed');
+      return res.status(201).json({ ...toOrder(order), checkout: null });
+    }
 
     // Outside the transaction: a network call. If Razorpay can't take the order, ours is cancelled and stock returned.
     try {
@@ -275,7 +281,8 @@ export function ordersRouter(ctx) {
       order.payment.razorpayOrderId = rzpOrder.id;
       await orders.updateOne({ _id: order._id }, { $set: { 'payment.razorpayOrderId': rzpOrder.id } });
     } catch (err) {
-      await cancelOrder(ctx, { _id: order._id }, { from: ['awaiting_payment'], by: 'system' });
+      // The customer sees the error straight away, so no cancellation email for an order they never saw.
+      await cancelOrder(ctx, { _id: order._id }, { from: ['awaiting_payment'], by: 'system', notify: false });
       throw err;
     }
     res.status(201).json({ ...toOrder(order), checkout: checkoutParams(razorpay, order, req.user) });

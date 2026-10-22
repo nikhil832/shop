@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { connectDb } from './db.js';
 import { createApp } from './app.js';
 import { razorpayClient } from './razorpay.js';
+import { mailClient } from './mail.js';
 import { expireUnpaidOrders } from './routes/orders.js';
 import { loadConfig } from './config.js';
 
@@ -11,7 +12,7 @@ const config = loadConfig();
 const CLIENT_DIST = fileURLToPath(new URL('../../client/dist', import.meta.url));
 
 const { client, db } = await connectDb(config.mongodbUri, config.mongodbDb);
-const ctx = { db, client, config, razorpay: razorpayClient(config.razorpay) };
+const ctx = { db, client, config, razorpay: razorpayClient(config.razorpay), mail: mailClient(config.mail) };
 const app = createApp(ctx);
 
 // Releases the stock of online orders whose 30-minute payment window has passed.
@@ -26,6 +27,7 @@ if (existsSync(CLIENT_DIST)) {
 const server = app.listen(config.port, () => {
   console.log(`API listening on http://localhost:${config.port} (database "${config.mongodbDb}")`);
   console.log(ctx.razorpay ? 'Online payments: Razorpay test mode.' : 'Online payments: off (Cash on Delivery only).');
+  console.log(ctx.mail.enabled ? 'Order emails: sent through Brevo.' : 'Order emails: printed here, not sent.');
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {

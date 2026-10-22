@@ -12,12 +12,32 @@ export function loadConfig() {
     mongodbUri: process.env.MONGODB_URI,
     mongodbDb: process.env.MONGODB_DB || 'shop',
     razorpay: razorpayConfig(),
+    mail: mailConfig(),
   };
   if (!config.mongodbUri) {
     console.error('MONGODB_URI is not set. Add it to server/.env (see server/.env.example), or run `npm run demo`.');
     process.exit(1);
   }
   return config;
+}
+
+// Order emails go out through Brevo when BREVO_API_KEY is set; otherwise they are only printed in the server log.
+// PUBLIC_URL is the site address the emails link to. Messages never include the key.
+function mailConfig() {
+  const apiKey = process.env.BREVO_API_KEY?.trim() || null;
+  const from = process.env.MAIL_FROM?.trim() || null;
+  if (apiKey && !from) {
+    console.error('Set MAIL_FROM (the sender address you verified in Brevo) along with BREVO_API_KEY.');
+    process.exit(1);
+  }
+  return {
+    apiKey,
+    from,
+    fromName: process.env.MAIL_FROM_NAME?.trim() || 'Bazaar',
+    publicUrl: (process.env.PUBLIC_URL?.trim() || 'http://localhost:5173').replace(/\/+$/, ''),
+    // Overridden only by the tests, which point it at a stand-in server.
+    apiUrl: process.env.BREVO_API_URL || 'https://api.brevo.com',
+  };
 }
 
 // Online payments are on only when both keys are set, and only with test-mode keys (this store never takes real money).

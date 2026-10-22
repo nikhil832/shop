@@ -12,7 +12,29 @@ export async function startTestServer({ razorpay = false } = {}) {
   const { client, db } = await connectDb(mongo.getUri(), 'test');
   await seedCatalog(db);
   const fake = razorpay ? await startFakeRazorpay() : null;
-  const ctx = { db, client, config: {}, razorpay: fake && razorpayClient({ ...FAKE_KEYS, apiUrl: fake.url }) };
+  // Records order emails instead of sending them (t.mail.sent); t.mail.failNext() makes the next send throw.
+  const mail = {
+    enabled: true,
+    sent: [],
+    failing: false,
+    failNext() {
+      this.failing = true;
+    },
+    async send(message) {
+      if (this.failing) {
+        this.failing = false;
+        throw new Error('mail service down');
+      }
+      this.sent.push(message);
+    },
+  };
+  const ctx = {
+    db,
+    client,
+    config: { mail: { publicUrl: 'https://bazaar.test' } },
+    razorpay: fake && razorpayClient({ ...FAKE_KEYS, apiUrl: fake.url }),
+    mail,
+  };
   const server = createApp(ctx).listen(0);
   await new Promise((resolve) => server.once('listening', resolve));
   const base = `http://localhost:${server.address().port}/api`;
@@ -56,5 +78,5 @@ export async function startTestServer({ razorpay = false } = {}) {
     await mongo.stop();
   }
 
-  return { db, ctx, fake, base, call, browser, webhook, stop };
+  return { db, ctx, fake, mail, base, call, browser, webhook, stop };
 }

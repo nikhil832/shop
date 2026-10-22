@@ -38,3 +38,33 @@ test('accepts test keys, and runs without any', () => {
   assert.equal(none.status, 0, none.stderr);
   assert.equal(none.stdout.trim(), 'null');
 });
+
+test('emails need a sender address along with the Brevo key, which is never printed', () => {
+  const script =
+    "const { loadConfig } = await import('./src/config.js'); const { mail } = loadConfig(); console.log(JSON.stringify({ ...mail, apiKey: mail.apiKey && '***' }));";
+  const run = (env) =>
+    spawnSync(process.execPath, ['--input-type=module', '-e', script], {
+      cwd: new URL('..', import.meta.url),
+      env: { PATH: process.env.PATH, MONGODB_URI: 'mongodb://unused', BREVO_API_KEY: '', MAIL_FROM: '', ...env },
+      encoding: 'utf8',
+    });
+
+  const noSender = run({ BREVO_API_KEY: 'xkeysib-secret-value' });
+  assert.equal(noSender.status, 1);
+  assert.match(noSender.stderr, /Set MAIL_FROM/);
+  assert.ok(!noSender.stderr.includes('xkeysib-secret-value'));
+
+  const ok = run({ BREVO_API_KEY: 'k', MAIL_FROM: 'shop@example.com', PUBLIC_URL: 'https://bazaar.example/' });
+  assert.equal(ok.status, 0, ok.stderr);
+  assert.deepEqual(JSON.parse(ok.stdout), {
+    apiKey: '***',
+    from: 'shop@example.com',
+    fromName: 'Bazaar',
+    publicUrl: 'https://bazaar.example',
+    apiUrl: 'https://api.brevo.com',
+  });
+
+  const off = run({});
+  assert.equal(off.status, 0, off.stderr);
+  assert.equal(JSON.parse(off.stdout).apiKey, null);
+});
