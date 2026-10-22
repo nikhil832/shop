@@ -193,7 +193,8 @@ export default function Search() {
           <select value={sort} onChange={(e) => update({ sort: e.target.value })} aria-label="Sort by">
             {SORTS.map((s) => (
               <option key={s.id} value={s.id}>
-                Sort: {s.label}
+                {/* With a search, the default order is by how well products match (popularity breaks ties). */}
+                Sort: {s.id === 'relevance' && q ? 'Relevance' : s.label}
               </option>
             ))}
           </select>

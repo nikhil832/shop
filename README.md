@@ -17,6 +17,8 @@ Built in stages. Done so far:
 
 7. **Password reset by email**: "Forgot password?" on the login page emails a one-time link (valid for 1 hour); choosing a new password logs you out everywhere else.
 
+8. **Better search**: words also match category names and product highlights, plurals and a few synonyms work ("phones" finds the Mobiles category), whole words only ("book" doesn't find Chromebooks), and results are ranked by how well they match, then popularity.
+
 ## Try it without a database
 
 ```bash

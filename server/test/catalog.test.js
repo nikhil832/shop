@@ -89,6 +89,68 @@ test('searches every word across title and brand, case-insensitively', async () 
   assert.equal((await t.call('GET', `/products?q=${encodeURIComponent('.*')}`)).body.total, 0);
 });
 
+const search = async (q, extra = '') =>
+  (await t.call('GET', `/products?q=${encodeURIComponent(q)}&pageSize=48${extra}`)).body.items;
+const categoryOf = async (p) =>
+  (
+    await t.db
+      .collection('categories')
+      .findOne({ _id: (await t.db.collection('products').findOne({ slug: p.slug })).categoryId })
+  ).slug;
+
+test('search also matches category names, highlights, plurals and a few synonyms', async () => {
+  for (const q of ['laptop', 'laptops', 'notebook']) {
+    const items = await search(q);
+    assert.equal(items.length, 6, q);
+    for (const p of items) assert.equal(await categoryOf(p), 'laptops');
+  }
+  // "phone" means the Mobiles category, not the headphones it is part of.
+  const phones = await search('phones');
+  assert.equal(phones.length, 7);
+  for (const p of phones) assert.equal(await categoryOf(p), 'mobiles');
+
+  assert.deepEqual(titles({ body: { items: await search('watches') } }), ['Ziva Analog Watch']);
+  assert.ok((await search('bluetooth')).some((p) => p.title === 'Sonique Buds Pro (ANC)')); // a highlight
+  const homeKitchen = (await t.call('GET', '/products?category=home-kitchen&pageSize=48')).body.total;
+  assert.equal((await search('kitchen')).length, homeKitchen);
+});
+
+test('search matches whole words from their start, not inside other words', async () => {
+  const books = await search('book');
+  assert.equal(books.length, 5);
+  assert.ok(!books.some((p) => /chromebook|arcbook/i.test(p.title)));
+  assert.equal((await search('bass'))[0].title, 'Bolt Bass Neckband'); // "bass" isn't made singular
+});
+
+test('relevance ranks title and brand matches above category and highlight matches', async () => {
+  // "pro" is in three titles, and only in a highlight ("splash-proof") of the speaker, which comes last.
+  const pro = await search('pro');
+  assert.deepEqual(
+    pro
+      .slice(0, 3)
+      .map((p) => p.title)
+      .sort(),
+    ['Arcbook Pro 16 (32GB, 1TB SSD)', 'Sonique Buds Pro (ANC)', 'Voltix Nova Pro 5G (12GB RAM, 256GB)'],
+  );
+  assert.equal(pro.at(-1).title, 'Bolt Party Speaker 40W');
+
+  // The exact phrase in a title wins; ties go to the more popular product.
+  assert.equal((await search('nova pro'))[0].title, 'Voltix Nova Pro 5G (12GB RAM, 256GB)');
+  const laptops = await search('laptop');
+  const counts = laptops.map((p) => p.rating.count);
+  assert.deepEqual(
+    counts,
+    [...counts].sort((a, b) => b - a),
+  );
+
+  // Other sorts still apply to search results.
+  const cheap = (await search('laptop', '&sort=price_asc')).map((p) => p.price);
+  assert.deepEqual(
+    cheap,
+    [...cheap].sort((a, b) => a - b),
+  );
+});
+
 test('sorts by price, newest and rating', async () => {
   const asc = (await t.call('GET', '/products?sort=price_asc&pageSize=48')).body.items.map((p) => p.price);
   assert.deepEqual(

@@ -92,6 +92,18 @@ test('paginates long result lists', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Next ›' })).toBeDisabled();
 });
 
+test('a search finds a whole category, sorted by relevance', async ({ page }) => {
+  await page.goto('/search?q=phones');
+  await expect(resultCount(page)).toHaveText('7 products');
+  await expect(cards(page).first()).not.toContainText('Headphones');
+  await expect(page.getByRole('combobox', { name: 'Sort by' }).locator('option').first()).toHaveText('Sort: Relevance');
+
+  await page.goto('/search');
+  await expect(page.getByRole('combobox', { name: 'Sort by' }).locator('option').first()).toHaveText(
+    'Sort: Popularity',
+  );
+});
+
 test('product page shows details, price and gallery', async ({ page }) => {
   await page.goto('/search?q=arcbook%20pro');
   await cards(page).first().click();

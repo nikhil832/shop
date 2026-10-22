@@ -5,7 +5,8 @@ import { HttpError, escapeRegex, parse } from '../http.js';
 // Prices are integers in paise (₹1 = 100) everywhere: storage, API and client state.
 
 export const PRODUCT_SORTS = {
-  relevance: { 'rating.count': -1, _id: 1 }, // popularity until real search ranking exists
+  // Popularity; with a search, products are ranked by searchScore first (see searchStages).
+  relevance: { 'rating.count': -1, _id: 1 },
   price_asc: { price: 1, _id: 1 },
   price_desc: { price: -1, _id: 1 },
   newest: { createdAt: -1, _id: -1 },
@@ -24,6 +25,73 @@ const listQuery = z.object({
   page: z.coerce.number().int().min(1).max(1000).default(1),
   pageSize: z.coerce.number().int().min(1).max(48).default(24),
 });
+
+// Words that should find a category whose name doesn't contain them (after plurals are dropped).
+const SYNONYMS = {
+  phone: ['mobile'],
+  smartphone: ['mobile'],
+  cellphone: ['mobile'],
+  notebook: ['laptop'],
+  computer: ['laptop'],
+  clothe: ['fashion'],
+  clothing: ['fashion'],
+  novel: ['book'],
+};
+
+// "laptops" → "laptop", "watches" → "watch", "glasses" → "glass"; short words and "bass" stay as they are.
+function singular(word) {
+  if (word.length > 4 && /(ch|sh|x|ss)es$/.test(word)) return word.slice(0, -2);
+  if (word.length > 3 && word.endsWith('s') && !word.endsWith('ss')) return word.slice(0, -1);
+  return word;
+}
+
+// A search becomes up to 8 terms; each term is a list of alternatives (the word, singular, plus synonyms),
+// matched case-insensitively at the start of a word, so "book" finds "Books" but not "Chromebook".
+export function searchTerms(q) {
+  const words = [...new Set(q.toLowerCase().split(/\s+/).filter(Boolean))].slice(0, 8);
+  return words.map((word) => {
+    const base = singular(word);
+    const alternatives = [...new Set([base, ...(SYNONYMS[base] ?? [])])];
+    return `(?:^|[^a-z0-9])(?:${alternatives.map(escapeRegex).join('|')})`;
+  });
+}
+
+const matches = (input, regex) => ({ $regexMatch: { input, regex, options: 'i' } });
+const points = (condition, n) => ({ $cond: [condition, n, 0] });
+
+// Each term must match the title, brand, a highlight or the category name. With the relevance sort, a score ranks
+// the results: per term, title or brand 4, category 3, a highlight 1; the whole search in the title adds 5.
+// Popularity breaks ties.
+async function searchStages(categories, q) {
+  const terms = searchTerms(q);
+  const allCategories = await categories.find({}, { projection: { name: 1 } }).toArray();
+  const categoryIds = (regex) => allCategories.filter((c) => new RegExp(regex, 'i').test(c.name)).map((c) => c._id);
+  const filter = terms.map((regex) => {
+    const pattern = { $regex: regex, $options: 'i' };
+    return {
+      $or: [
+        { title: pattern },
+        { brand: pattern },
+        { highlights: pattern },
+        { categoryId: { $in: categoryIds(regex) } },
+      ],
+    };
+  });
+  const termScores = terms.map((regex) => ({
+    $add: [
+      points(matches('$title', regex), 4),
+      points(matches('$brand', regex), 4),
+      points({ $in: ['$categoryId', categoryIds(regex)] }, 3),
+      points(
+        { $anyElementTrue: [{ $map: { input: { $ifNull: ['$highlights', []] }, in: matches('$$this', regex) } }] },
+        1,
+      ),
+    ],
+  }));
+  const phrase = q.trim().toLowerCase().split(/\s+/).map(escapeRegex).join('\\s+');
+  const score = { $add: [...termScores, points(matches('$title', phrase), 5)] };
+  return { filter, score };
+}
 
 export const toCategory = (doc) => ({ id: doc._id.toString(), slug: doc.slug, name: doc.name, image: doc.image });
 
@@ -58,16 +126,8 @@ export function catalogRouter({ db }) {
       if (!category) return res.json({ items: [], total: 0, page: query.page, pageSize: query.pageSize, brands: [] });
       base.categoryId = category._id;
     }
-    if (query.q) {
-      // Every word must appear in the title or brand.
-      base.$and = query.q
-        .split(/\s+/)
-        .slice(0, 8)
-        .map((word) => {
-          const pattern = { $regex: escapeRegex(word), $options: 'i' };
-          return { $or: [{ title: pattern }, { brand: pattern }] };
-        });
-    }
+    const search = query.q ? await searchStages(categories, query.q) : null;
+    if (search) base.$and = search.filter;
     if (query.minPrice !== undefined || query.maxPrice !== undefined) {
       base.price = {};
       if (query.minPrice !== undefined) base.price.$gte = query.minPrice;
@@ -90,7 +150,12 @@ export function catalogRouter({ db }) {
           {
             $facet: {
               items: [
-                { $sort: PRODUCT_SORTS[query.sort] },
+                ...(search && query.sort === 'relevance'
+                  ? [
+                      { $addFields: { searchScore: search.score } },
+                      { $sort: { searchScore: -1, ...PRODUCT_SORTS.relevance } },
+                    ]
+                  : [{ $sort: PRODUCT_SORTS[query.sort] }]),
                 { $skip: (query.page - 1) * query.pageSize },
                 { $limit: query.pageSize },
               ],
