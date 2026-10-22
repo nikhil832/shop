@@ -111,3 +111,75 @@ test('answers the health check', async () => {
   assert.equal(res.status, 200);
   assert.deepEqual(res.body, { ok: true });
 });
+
+// The reset email is sent in the background (so the reply's timing reveals nothing); wait for it.
+async function resetMailTo(email, count = 1) {
+  for (let i = 0; i < 100; i++) {
+    const mails = t.mail.sent.filter((m) => m.to.email === email && m.subject === 'Reset your Bazaar password');
+    if (mails.length >= count) return mails.at(-1);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error(`No reset email for ${email}`);
+}
+const tokenIn = (mail) => mail.text.match(/\/reset-password#token=([\w-]{43})/)[1];
+
+test('a password reset link sets a new password once, and logs out every other device', async () => {
+  const email = 'reset1@example.com';
+  const other = t.browser(); // already logged in elsewhere
+  assert.equal(
+    (await other('POST', '/auth/register', { name: 'Ravi Kumar', email, password: 'old password' })).status,
+    201,
+  );
+
+  const call = t.browser();
+  assert.equal((await call('POST', '/auth/forgot-password', { email: 'Reset1@Example.com' })).status, 204);
+  const mail = await resetMailTo(email);
+  assert.match(mail.text, /^Hi Ravi,/);
+  assert.match(mail.text, /https:\/\/bazaar\.test\/reset-password#token=/);
+  const token = tokenIn(mail);
+  // Only a hash is stored.
+  assert.equal(await t.db.collection('passwordResets').countDocuments({ tokenHash: token }), 0);
+
+  assert.equal((await call('POST', '/auth/reset-password', { token, password: 'short' })).status, 400);
+  const res = await call('POST', '/auth/reset-password', { token, password: 'new password' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.user.email, email);
+  assert.equal((await call('GET', '/auth/me')).body.user.email, email); // logged in here
+
+  assert.deepEqual((await other('GET', '/auth/me')).body, { user: null }); // and out everywhere else
+  assert.equal((await t.call('POST', '/auth/login', { email, password: 'old password' })).status, 401);
+  assert.equal((await t.call('POST', '/auth/login', { email, password: 'new password' })).status, 200);
+
+  const again = await call('POST', '/auth/reset-password', { token, password: 'another password' });
+  assert.equal(again.status, 400);
+  assert.equal(again.body.error, 'This reset link has expired or was already used. Ask for a new one.');
+});
+
+test('a reset request for an unknown email gets the same answer and sends nothing', async () => {
+  const before = t.mail.sent.length;
+  const res = await t.call('POST', '/auth/forgot-password', { email: 'nobody@example.com' });
+  assert.equal(res.status, 204);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.equal(t.mail.sent.length, before);
+  assert.equal((await t.call('POST', '/auth/forgot-password', { email: 'not an email' })).status, 400);
+});
+
+test('reset links expire, malformed ones are refused, and only 3 are sent an hour', async () => {
+  const email = 'reset2@example.com';
+  await t.browser()('POST', '/auth/register', { name: 'Meera', email, password: 'password123' });
+  await t.call('POST', '/auth/forgot-password', { email });
+  const token = tokenIn(await resetMailTo(email));
+
+  await t.db.collection('passwordResets').updateMany({}, { $set: { expiresAt: new Date(Date.now() - 1000) } });
+  assert.equal((await t.call('POST', '/auth/reset-password', { token, password: 'new password' })).status, 400);
+  const bad = await t.call('POST', '/auth/reset-password', { token: 'abc', password: 'new password' });
+  assert.equal(bad.status, 400);
+  assert.equal(bad.body.error, 'This reset link has expired or was already used. Ask for a new one.');
+
+  for (let i = 0; i < 3; i++) await t.call('POST', '/auth/forgot-password', { email });
+  await resetMailTo(email, 3);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const sent = t.mail.sent.filter((m) => m.to.email === email).length;
+  assert.equal(sent, 3);
+  assert.equal(await t.db.collection('passwordResets').countDocuments({ expiresAt: { $gt: new Date() } }), 2);
+});

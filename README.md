@@ -15,6 +15,8 @@ Built in stages. Done so far:
 
 6. **Order emails** through [Brevo](https://www.brevo.com): the customer hears when an order is confirmed (for online orders, once paid), shipped, delivered (with links to review each item) and cancelled (saying whether a refund was started). Without a Brevo key, emails are printed in the server log instead.
 
+7. **Password reset by email**: "Forgot password?" on the login page emails a one-time link (valid for 1 hour); choosing a new password logs you out everywhere else.
+
 ## Try it without a database
 
 ```bash
@@ -84,6 +86,8 @@ Without keys the store works as before, with Cash on Delivery only. Tests never 
 | POST   | `/api/auth/register`                | `{ name, email, password }` (≥8 chars); logs in                                                                                                                                                                                    |
 | POST   | `/api/auth/login`                   | `{ email, password }`; sets the `sid` session cookie (httpOnly, 30 days)                                                                                                                                                           |
 | POST   | `/api/auth/logout`                  | Ends the session                                                                                                                                                                                                                   |
+| POST   | `/api/auth/forgot-password`         | `{ email }` → 204 either way; emails a one-time reset link (1 hour, at most 3 an hour) if the account exists                                                                                                                       |
+| POST   | `/api/auth/reset-password`          | `{ token, password }`: sets the password, logs out every device, logs this browser in → `{ user }`                                                                                                                                 |
 | GET    | `/api/auth/me`                      | `{ user }`, or `{ user: null }` when logged out                                                                                                                                                                                    |
 | POST   | `/api/orders`                       | Login. `{ items, address, expectedTotal, paymentMethod? }` (`cod` default, or `razorpay`); one transaction; 409 if stock or prices changed. Online orders start `awaiting_payment` and include `checkout` (Razorpay order to open) |
 | GET    | `/api/orders`                       | Login. Your orders, newest first                                                                                                                                                                                                   |

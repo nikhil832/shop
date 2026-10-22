@@ -55,6 +55,11 @@ export default function Login({ mode = 'login' }) {
           />
           {register && <span className="muted small">At least 8 characters</span>}
         </label>
+        {!register && (
+          <p className="small">
+            <Link to="/forgot-password">Forgot password?</Link>
+          </p>
+        )}
         {state.error && (
           <p className="error" role="alert">
             {state.error}

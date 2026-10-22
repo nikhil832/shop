@@ -23,8 +23,8 @@ export async function verifyPassword(password, stored) {
   return timingSafeEqual(actual, expected);
 }
 
-// Only a hash of the token is stored, so a leaked sessions collection can't be used to log in.
-const hashToken = (token) => createHash('sha256').update(token).digest('base64url');
+// Only a hash of the token is stored, so a leaked sessions (or passwordResets) collection can't be used to log in.
+export const hashToken = (token) => createHash('sha256').update(token).digest('base64url');
 
 export async function createSession(db, userId) {
   const token = randomBytes(32).toString('base64url');

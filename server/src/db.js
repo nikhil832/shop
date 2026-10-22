@@ -19,6 +19,10 @@ export async function ensureIndexes(db) {
     db.collection('sessions').createIndex({ tokenHash: 1 }, { unique: true }),
     // MongoDB deletes sessions once expiresAt has passed.
     db.collection('sessions').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    // Password reset links: looked up by token hash, counted per user for the hourly limit, deleted once expired.
+    db.collection('passwordResets').createIndex({ tokenHash: 1 }, { unique: true }),
+    db.collection('passwordResets').createIndex({ userId: 1, createdAt: -1 }),
+    db.collection('passwordResets').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     db.collection('orders').createIndex({ userId: 1, createdAt: -1 }),
     db
       .collection('orders')

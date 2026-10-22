@@ -1,5 +1,5 @@
-// Order emails: confirmed (placed), shipped, delivered and cancelled. Sent after the change is saved; a failure is
-// logged and never undoes or fails the change itself.
+// Customer emails: order confirmed (placed), shipped, delivered and cancelled, sent after the change is saved (a failure
+// is logged and never undoes or fails the change itself), and the password reset link.
 
 const DEFAULT_PUBLIC_URL = 'http://localhost:5173';
 
@@ -7,6 +7,20 @@ const rupees = (paise) => `₹${(paise / 100).toLocaleString('en-IN', { maximumF
 const orderNumber = (order) => order.number ?? order._id.toString().slice(-8).toUpperCase();
 const escapeHtml = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+const button = (label, url) =>
+  `<p style="margin:24px 0"><a href="${escapeHtml(url)}" style="background:#2563eb;color:#ffffff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block">${escapeHtml(label)}</a></p>`;
+
+// The frame every email shares: the Bazaar header, a heading, the content (already HTML) and a footer note.
+const layout = (heading, content, footer) => `<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head><body style="margin:0;padding:24px;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;color:#111827">
+<div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:8px;padding:24px">
+<div style="font-size:22px;font-weight:bold;color:#1e3a8a;margin-bottom:16px">Bazaar</div>
+<h1 style="font-size:20px;margin:0 0 16px">${escapeHtml(heading)}</h1>
+${content}
+<p style="font-size:12px;color:#6b7280">Bazaar · a demo store. ${escapeHtml(footer)}</p>
+</div>
+</body></html>`;
 
 const SUBJECTS = {
   placed: 'confirmed',
@@ -86,12 +100,9 @@ export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL) {
   ].join('\n\n');
 
   const cell = 'padding:6px 0;border-bottom:1px solid #e5e7eb';
-  const html = `<!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head><body style="margin:0;padding:24px;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;color:#111827">
-<div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:8px;padding:24px">
-<div style="font-size:22px;font-weight:bold;color:#1e3a8a;margin-bottom:16px">Bazaar</div>
-<h1 style="font-size:20px;margin:0 0 16px">${escapeHtml(subject)}</h1>
-<p>Hi ${escapeHtml(firstName)},</p>
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
 ${paragraphs.map((p) => `<p>${escapeHtml(p)}</p>`).join('\n')}
 <table style="width:100%;border-collapse:collapse;margin:16px 0">
 ${items
@@ -104,11 +115,32 @@ ${totals.map(([label, value]) => `<tr><td style="padding:4px 0">${label}</td><td
 </table>
 ${reviewNote ? `<p>${escapeHtml(reviewNote)}</p>` : ''}
 ${address.length ? `<p><strong>Delivering to</strong><br>${address.map(escapeHtml).join('<br>')}</p>` : ''}
-<p style="margin:24px 0"><a href="${escapeHtml(orderUrl)}" style="background:#2563eb;color:#ffffff;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block">View your order</a></p>
-<p style="font-size:12px;color:#6b7280">Bazaar · a demo store. You're getting this email because you placed an order.</p>
-</div>
-</body></html>`;
+${button('View your order', orderUrl)}`,
+    "You're getting this email because you placed an order.",
+  );
 
+  return { subject, text, html };
+}
+
+export const RESET_LINK_MINUTES = 60;
+
+// The password reset email. `url` carries the one-time token.
+export function passwordResetEmail(user, url) {
+  const subject = 'Reset your Bazaar password';
+  const firstName = user.name.split(/\s+/)[0];
+  const lines = [
+    'Someone (hopefully you) asked to reset the password for your Bazaar account. Use this link to choose a new one:',
+    `It works once, for the next ${RESET_LINK_MINUTES} minutes. If you didn't ask, ignore this email: your password stays the same.`,
+  ];
+  const text = [`Hi ${firstName},`, lines[0], url, lines[1], 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p>${escapeHtml(lines[0])}</p>
+${button('Choose a new password', url)}
+<p>${escapeHtml(lines[1])}</p>`,
+    "You're getting this email because a password reset was requested for your account.",
+  );
   return { subject, text, html };
 }
 
