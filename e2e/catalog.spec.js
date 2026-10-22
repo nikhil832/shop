@@ -24,7 +24,7 @@ test('home shows categories and product rows', async ({ page }) => {
 
 test('searching from the header lists matches and keeps the query in the box', async ({ page }) => {
   await page.goto('/');
-  const box = page.getByRole('searchbox', { name: 'Search products' });
+  const box = page.getByRole('combobox', { name: 'Search products' });
   await box.fill('sonique');
   await box.press('Enter');
 
@@ -90,6 +90,38 @@ test('paginates long result lists', async ({ page }) => {
   await expect(page).toHaveURL(/page=2/);
   await expect(cards(page)).toHaveCount(14);
   await expect(page.getByRole('button', { name: 'Next ›' })).toBeDisabled();
+});
+
+test('the search box suggests categories and products while typing', async ({ page }) => {
+  await page.goto('/');
+  const box = page.getByRole('combobox', { name: 'Search products' });
+  const list = page.getByRole('listbox', { name: 'Search suggestions' });
+  await box.fill('lapt');
+  await expect(list.getByRole('option')).toHaveCount(8); // the category, 6 laptops, "see all"
+  await expect(list.getByRole('option').first()).toHaveText('LaptopsCategory');
+  await expect(list.getByRole('option').last()).toHaveText('See all 6 results for “lapt”');
+
+  // Arrow keys move through the options (wrapping), Enter opens the highlighted one.
+  await box.press('ArrowUp');
+  await expect(list.getByRole('option').last()).toHaveAttribute('aria-selected', 'true');
+  await box.press('ArrowDown');
+  await box.press('ArrowDown');
+  await expect(list.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
+  await box.press('Enter');
+  await expect(page).toHaveURL('/search?category=laptops');
+  await expect(list).toHaveCount(0);
+
+  // Clicking a product opens it; Escape closes the list; Enter with nothing highlighted searches.
+  await box.fill('nova pro');
+  await list.getByRole('option', { name: /Voltix Nova Pro 5G/ }).click();
+  await expect(page).toHaveURL('/p/voltix-nova-pro-5g-12gb-ram-256gb');
+  await box.fill('sonique');
+  await expect(list).toBeVisible();
+  await box.press('Escape');
+  await expect(list).toHaveCount(0);
+  await expect(box).toHaveValue('sonique');
+  await box.press('Enter');
+  await expect(page).toHaveURL('/search?q=sonique');
 });
 
 test('a search finds a whole category, sorted by relevance', async ({ page }) => {

@@ -1,20 +1,14 @@
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import { useAuth } from '../auth.jsx';
 import { cartCount, useCart } from '../cart.js';
+import SearchBox from './SearchBox.jsx';
 
 export default function Header() {
-  const navigate = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
   const { user } = useAuth();
   const count = cartCount(useCart());
   const urlQuery = location.pathname === '/search' ? (params.get('q') ?? '') : '';
-
-  function submit(e) {
-    e.preventDefault();
-    const q = new FormData(e.currentTarget).get('q').trim();
-    navigate(q ? `/search?q=${encodeURIComponent(q)}` : '/search');
-  }
 
   return (
     <header className="header">
@@ -23,18 +17,7 @@ export default function Header() {
           Bazaar
         </Link>
         {/* Remounted when the URL's query changes (back/forward, category links) so the box shows it. */}
-        <form key={urlQuery} className="search-form" role="search" onSubmit={submit}>
-          <input
-            name="q"
-            type="search"
-            placeholder="Search for products and brands"
-            aria-label="Search products"
-            defaultValue={urlQuery}
-          />
-          <button type="submit" aria-label="Search">
-            🔍
-          </button>
-        </form>
+        <SearchBox key={urlQuery} initial={urlQuery} />
         <nav className="header-nav" aria-label="Account">
           {/* Nothing until the session check finishes, so "Log in" doesn't flash for logged-in users. */}
           {user?.role === 'admin' && (

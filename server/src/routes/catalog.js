@@ -13,6 +13,9 @@ export const PRODUCT_SORTS = {
   rating: { 'rating.avg': -1, 'rating.count': -1, _id: 1 },
 };
 
+const SUGGESTIONS = 6;
+const suggestQuery = z.object({ q: z.string().trim().min(1, 'Type something to search for').max(100) });
+
 const listQuery = z.object({
   q: z.string().trim().max(100).optional(),
   category: z.string().trim().max(60).optional(),
@@ -64,7 +67,7 @@ const points = (condition, n) => ({ $cond: [condition, n, 0] });
 // Popularity breaks ties.
 async function searchStages(categories, q) {
   const terms = searchTerms(q);
-  const allCategories = await categories.find({}, { projection: { name: 1 } }).toArray();
+  const allCategories = await categories.find({}, { projection: { name: 1, slug: 1, sortOrder: 1 } }).toArray();
   const categoryIds = (regex) => allCategories.filter((c) => new RegExp(regex, 'i').test(c.name)).map((c) => c._id);
   const filter = terms.map((regex) => {
     const pattern = { $regex: regex, $options: 'i' };
@@ -90,7 +93,11 @@ async function searchStages(categories, q) {
   }));
   const phrase = q.trim().toLowerCase().split(/\s+/).map(escapeRegex).join('\\s+');
   const score = { $add: [...termScores, points(matches('$title', phrase), 5)] };
-  return { filter, score };
+  // Categories whose name matches every term ("lapt" → Laptops), for the search suggestions.
+  const matchingCategories = allCategories
+    .filter((c) => terms.every((regex) => new RegExp(regex, 'i').test(c.name)))
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  return { filter, score, matchingCategories };
 }
 
 export const toCategory = (doc) => ({ id: doc._id.toString(), slug: doc.slug, name: doc.name, image: doc.image });
@@ -175,6 +182,31 @@ export function catalogRouter({ db }) {
       page: query.page,
       pageSize: query.pageSize,
       brands: brands.map((b) => ({ name: b._id, count: b.count })),
+    });
+  });
+
+  // What the header's search box offers while typing: matching categories, the best few products (ranked like the
+  // relevance sort) and how many products match in all.
+  router.get('/search/suggest', async (req, res) => {
+    const { q } = parse(suggestQuery, req.query);
+    const search = await searchStages(categories, q);
+    const match = { active: true, $and: search.filter };
+    const [items, total] = await Promise.all([
+      products
+        .aggregate([
+          { $match: match },
+          { $addFields: { searchScore: search.score } },
+          { $sort: { searchScore: -1, ...PRODUCT_SORTS.relevance } },
+          { $limit: SUGGESTIONS },
+          { $project: { slug: 1, title: 1, brand: 1, price: 1 } },
+        ])
+        .toArray(),
+      products.countDocuments(match),
+    ]);
+    res.json({
+      categories: search.matchingCategories.slice(0, 3).map((c) => ({ slug: c.slug, name: c.name })),
+      products: items.map((p) => ({ slug: p.slug, title: p.title, brand: p.brand, price: p.price })),
+      total,
     });
   });
 

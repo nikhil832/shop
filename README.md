@@ -25,6 +25,8 @@ Built in stages. Done so far:
 
 11. **Back-in-stock alerts**: on a sold-out product, logged-in customers click "Email me when it's back" and get one email when it's in stock again (checked every minute, however the stock came back).
 
+12. **Search suggestions**: typing in the header's search box shows matching categories and the best 6 products (ranked like search), plus "See all N results"; arrow keys, Enter and Escape work too.
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database
@@ -90,6 +92,7 @@ Without keys the store works as before, with Cash on Delivery only. Tests never 
 | Method | Path                                | Notes                                                                                                                                                                                                                              |
 | ------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/api/categories`                   |                                                                                                                                                                                                                                    |
+| GET    | `/api/search/suggest?q=`            | Up to 3 matching `categories`, the 6 best `products` (`slug`, `title`, `brand`, `price`) and the `total` that match                                                                                                                |
 | GET    | `/api/products`                     | `q`, `category` (slug), `brand` (comma-separated), `minPrice`/`maxPrice` (paise), `rating`, `inStock=1`, `sort`, `page`, `pageSize` ≤48                                                                                            |
 | GET    | `/api/products/:slug`               | Full product with images, highlights and category                                                                                                                                                                                  |
 | GET    | `/api/cart`                         | `items=<productId>:<qty>,…` (≤20 items, qty ≤10): current prices, stock problems, delivery and total. No login needed                                                                                                              |

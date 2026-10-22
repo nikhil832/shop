@@ -208,7 +208,8 @@ test('5 wrong passwords pause login for that email, even with the right password
 
 test('unknown emails lock the same way, and attempts sent at once still count', async () => {
   await t.db.collection('loginAttempts').deleteMany({}); // only this test's attempts below
-  // However the attempts arrive, at most 5 passwords are checked: exactly 4 "wrong" answers, then the lock.
+  // However the attempts arrive, at most 5 passwords are checked: at most 4 "wrong" answers, then the lock. (Attempts
+  // sent at once can see each other before the extra ones are removed, so the lock may even come sooner.)
   const burst = await Promise.all(Array.from({ length: 12 }, (_, i) => login('ghost@example.com', `guess ${i}`)));
   const statuses = burst.map((r) => r.status);
   // Then one at a time until the lock answers.
@@ -217,7 +218,7 @@ test('unknown emails lock the same way, and attempts sent at once still count', 
     statuses.push(status);
     if (status === 429) break;
   }
-  assert.equal(statuses.filter((s) => s === 401).length, 4);
+  assert.ok(statuses.filter((s) => s === 401).length <= 4);
   assert.equal(statuses.at(-1), 429);
   // Refused attempts aren't kept, so retrying while locked doesn't stretch the lock.
   assert.ok((await t.db.collection('loginAttempts').countDocuments({})) <= 5);

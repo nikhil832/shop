@@ -189,6 +189,44 @@ a:focus-visible {
   flex: 1;
   max-width: 640px;
   display: flex;
+  position: relative; /* for the suggestions below it */
+}
+.suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.suggestions li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.suggestions li.active {
+  background: var(--accent-soft);
+}
+.suggestion-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.suggestions .small {
+  flex-shrink: 0;
 }
 .search-form input {
   flex: 1;

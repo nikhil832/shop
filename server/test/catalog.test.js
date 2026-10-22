@@ -151,6 +151,41 @@ test('relevance ranks title and brand matches above category and highlight match
   );
 });
 
+const suggest = async (q) => (await t.call('GET', `/search/suggest?q=${encodeURIComponent(q)}`)).body;
+
+test('suggests categories and the best products while typing', async () => {
+  // A partial word already finds the category and its products.
+  const lapt = await suggest('lapt');
+  assert.deepEqual(lapt.categories, [{ slug: 'laptops', name: 'Laptops' }]);
+  assert.equal(lapt.total, 6);
+  assert.equal(lapt.products.length, 6);
+  assert.deepEqual(Object.keys(lapt.products[0]).sort(), ['brand', 'price', 'slug', 'title']);
+
+  // Ranked like the relevance sort: the exact title first.
+  const nova = await suggest('nova pro');
+  assert.equal(nova.products[0].title, 'Voltix Nova Pro 5G (12GB RAM, 256GB)');
+  assert.deepEqual(nova.categories, []);
+
+  // At most 6 products, but the total counts them all.
+  const camera = await suggest('camera');
+  assert.equal(camera.products.length, 6);
+  assert.ok(camera.total > 6);
+
+  assert.deepEqual(await suggest('zzzz'), { categories: [], products: [], total: 0 });
+  const empty = await t.call('GET', '/search/suggest?q=%20');
+  assert.equal(empty.status, 400);
+});
+
+test('suggestions leave out hidden products', async () => {
+  const products = t.db.collection('products');
+  await products.updateOne({ slug: 'bolt-bass-neckband' }, { $set: { active: false } });
+  try {
+    assert.equal((await suggest('neckband')).total, 0);
+  } finally {
+    await products.updateOne({ slug: 'bolt-bass-neckband' }, { $set: { active: true } });
+  }
+});
+
 test('sorts by price, newest and rating', async () => {
   const asc = (await t.call('GET', '/products?sort=price_asc&pageSize=48')).body.items.map((p) => p.price);
   assert.deepEqual(
