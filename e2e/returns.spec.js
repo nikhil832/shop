@@ -76,6 +76,9 @@ test('a customer returns one of two books; the admin approves it and marks the C
   await toPay.getByRole('button', { name: /^Mark refunded/ }).click();
   await adminPage.getByRole('button', { name: /^Refunded/ }).click();
   await expect(adminPage.getByRole('row', { name: new RegExp(`#${order.number}`) })).toContainText('Refunded');
+  // The dashboard's revenue is now net of it.
+  await adminPage.goto('/admin');
+  await expect(adminPage.getByRole('region', { name: 'Totals' })).toContainText(/in sales − ₹[\d,]+ refunded/);
   await adminPage.close();
 
   await page.reload();

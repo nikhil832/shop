@@ -63,6 +63,8 @@ Built in stages. Done so far:
 
 30. **Two-step login**: on the account page, anyone can turn on login codes from an authenticator app (Google Authenticator, Microsoft Authenticator, Authy…): confirm the password, scan the QR code or type the key, enter a code, and save the 8 one-time recovery codes. Logging in then asks for a code after the password (5 wrong codes per try; each code works once), a password reset link no longer logs in by itself, and turning it off needs the password and a code. The admin panel reminds admins without it. Lost the phone and the recovery codes: `npm run reset-two-step -- <email>` (database credentials needed).
 
+31. **Returns in the sales figures**: the dashboard's revenue is net of refunds from approved returns ("₹… in sales − ₹… refunded"), compared with the period before the same way; a refund counts on the day of the order it came from. The chart's tooltip and table show each day's refunds, best sellers count items kept (sold less returned), and the order export has Refunded (₹) and Net total (₹) columns.
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database

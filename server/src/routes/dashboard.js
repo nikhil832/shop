@@ -10,6 +10,9 @@ const dashboardQuery = z.object({
 
 // Orders that count as sales: paid for or to be paid on delivery. Unpaid online orders and cancelled ones don't.
 const SOLD = ['placed', 'shipped', 'delivered'];
+// Returns that take money back: approved ones and later (requested and declined ones don't). They count against the
+// period of the order they came from, so "these 30 days" means what was sold then and kept.
+export const REFUNDED_RETURNS = ['approved', 'refunding', 'refunded', 'refund_failed'];
 // Days are counted in India time (no daylight saving, so a fixed offset is exact).
 const TIME_ZONE = 'Asia/Kolkata';
 const IST_OFFSET = 330 * 60_000;
@@ -36,19 +39,21 @@ const totalsGroup = {
 
 export function dashboardRouter({ db }) {
   const orders = db.collection('orders');
+  const returns = db.collection('returns');
   const products = db.collection('products');
   const router = express.Router();
   router.use('/admin/dashboard', requireAdmin);
 
-  // Sales for the last 7, 30 or 90 days (today included) and the same length before, revenue per day, best sellers,
-  // and what needs attention now: orders to ship and products running out.
+  // Sales for the last 7, 30 or 90 days (today included) and the same length before, revenue per day, refunds from
+  // returns (REFUNDED_RETURNS) and the net, best sellers, and what needs attention now: orders to ship and products
+  // running out.
   router.get('/admin/dashboard', async (req, res) => {
     const { days } = parse(dashboardQuery, req.query);
     const from = periodStart(new Date(), days);
     const previousFrom = new Date(from.getTime() - days * DAY);
     const current = { createdAt: { $gte: from }, status: { $in: SOLD } };
 
-    const [[stats], toShip, lowStock, lowStockCount] = await Promise.all([
+    const [[stats], [refundStats], toShip, lowStock, lowStockCount] = await Promise.all([
       orders
         .aggregate([
           { $match: { createdAt: { $gte: previousFrom } } },
@@ -81,8 +86,55 @@ export function dashboardRouter({ db }) {
                     sales: { $sum: { $multiply: ['$items.price', '$items.qty'] } },
                   },
                 },
-                { $sort: { qty: -1, sales: -1, _id: 1 } },
-                { $limit: BEST_SELLERS },
+              ],
+            },
+          },
+        ])
+        .toArray(),
+      // Refunds from returns of the orders in both periods, by the order's day, and the items they gave back.
+      returns
+        .aggregate([
+          { $match: { status: { $in: REFUNDED_RETURNS } } },
+          {
+            $lookup: {
+              from: 'orders',
+              localField: 'orderId',
+              foreignField: '_id',
+              as: 'order',
+              pipeline: [{ $project: { createdAt: 1, status: 1 } }],
+            },
+          },
+          { $unwind: '$order' },
+          { $match: { 'order.createdAt': { $gte: previousFrom }, 'order.status': { $in: SOLD } } },
+          {
+            $facet: {
+              current: [
+                { $match: { 'order.createdAt': { $gte: from } } },
+                { $group: { _id: null, refunds: { $sum: '$refund' }, items: { $sum: { $sum: '$items.qty' } } } },
+              ],
+              previous: [
+                { $match: { 'order.createdAt': { $lt: from } } },
+                { $group: { _id: null, refunds: { $sum: '$refund' } } },
+              ],
+              daily: [
+                { $match: { 'order.createdAt': { $gte: from } } },
+                {
+                  $group: {
+                    _id: { $dateToString: { date: '$order.createdAt', format: '%Y-%m-%d', timezone: TIME_ZONE } },
+                    refunds: { $sum: '$refund' },
+                  },
+                },
+              ],
+              byProduct: [
+                { $match: { 'order.createdAt': { $gte: from } } },
+                { $unwind: '$items' },
+                {
+                  $group: {
+                    _id: '$items.productId',
+                    qty: { $sum: '$items.qty' },
+                    value: { $sum: { $multiply: ['$items.price', '$items.qty'] } },
+                  },
+                },
               ],
             },
           },
@@ -104,18 +156,36 @@ export function dashboardRouter({ db }) {
 
     const totals = stats.current[0] ?? { revenue: 0, orders: 0, discount: 0, itemsSold: 0 };
     const previous = stats.previous[0] ?? { revenue: 0, orders: 0 };
+    const refunded = refundStats.current[0] ?? { refunds: 0, items: 0 };
+    const refundedBefore = refundStats.previous[0]?.refunds ?? 0;
     const byDay = new Map(stats.daily.map((d) => [d._id, d]));
+    const refundsByDay = new Map(refundStats.daily.map((d) => [d._id, d.refunds]));
+    const returnedBy = new Map(refundStats.byProduct.map((r) => [r._id.toString(), r]));
+    // Best sellers by what was kept: items sold less items returned.
+    const bestSellers = stats.bestSellers
+      .map((b) => {
+        const back = returnedBy.get(b._id.toString());
+        return { ...b, returned: back?.qty ?? 0, qty: b.qty - (back?.qty ?? 0), sales: b.sales - (back?.value ?? 0) };
+      })
+      .filter((b) => b.qty > 0)
+      .sort((a, b) => b.qty - a.qty || b.sales - a.sales || a._id.toString().localeCompare(b._id.toString()))
+      .slice(0, BEST_SELLERS);
     // Every day of the period, with zeros for days without sales.
     const daily = Array.from({ length: days }, (_, i) => {
       const date = isoDay(from.getTime() + i * DAY);
-      return { date, revenue: byDay.get(date)?.revenue ?? 0, orders: byDay.get(date)?.orders ?? 0 };
+      return {
+        date,
+        revenue: byDay.get(date)?.revenue ?? 0,
+        orders: byDay.get(date)?.orders ?? 0,
+        refunds: refundsByDay.get(date) ?? 0,
+      };
     });
     // Slugs (for links) and titles from the products as they are now: order lines name the variant bought ("… (Size:
     // UK 8)"), while a best seller counts all of them. A product since deleted keeps the title from its orders.
     const liveProducts = new Map(
       (
         await products
-          .find({ _id: { $in: stats.bestSellers.map((b) => b._id) } }, { projection: { slug: 1, title: 1 } })
+          .find({ _id: { $in: bestSellers.map((b) => b._id) } }, { projection: { slug: 1, title: 1 } })
           .toArray()
       ).map((p) => [p._id.toString(), p]),
     );
@@ -130,14 +200,24 @@ export function dashboardRouter({ db }) {
         itemsSold: totals.itemsSold,
         discount: totals.discount,
         cancelled: stats.cancelled[0]?.n ?? 0,
+        // Refunds of returns from these orders, and what was kept.
+        refunds: refunded.refunds,
+        itemsReturned: refunded.items,
+        netRevenue: totals.revenue - refunded.refunds,
       },
-      previous: { revenue: previous.revenue, orders: previous.orders },
+      previous: {
+        revenue: previous.revenue,
+        orders: previous.orders,
+        refunds: refundedBefore,
+        netRevenue: previous.revenue - refundedBefore,
+      },
       daily,
-      bestSellers: stats.bestSellers.map((b) => ({
+      bestSellers: bestSellers.map((b) => ({
         productId: b._id.toString(),
         slug: liveProducts.get(b._id.toString())?.slug ?? null,
         title: liveProducts.get(b._id.toString())?.title ?? b.title,
         qty: b.qty,
+        returned: b.returned,
         sales: b.sales,
       })),
       toShip,

@@ -7,9 +7,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                         | Why                                                                                                                                             | To start                 |
-| --- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| 1   | Returns in the sales figures | The dashboard and export count an order's full total even after part of it was returned and refunded; they should show refunds and net revenue. | "count returns in sales" |
+| #   | Idea | Why | To start |
+| --- | ---- | --- | -------- |
 
 ## Set aside
 
@@ -52,3 +51,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Returns: chosen items within 7 days of delivery, admin approve (stock back, refund) or decline                              | Stage 28 (`git log --grep "Stage 28"`) |
 | Delivery PIN check on product pages, areas by PIN prefix in the admin panel, refused at checkout                            | Stage 29 (`git log --grep "Stage 29"`) |
 | Two-step login with an authenticator app, recovery codes, admin reminder                                                    | Stage 30 (`git log --grep "Stage 30"`) |
+| Returns in the sales figures: net revenue, refunds per day, best sellers and export net of returns                          | Stage 31 (`git log --grep "Stage 31"`) |

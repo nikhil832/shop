@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
 import { HttpError, parse } from '../http.js';
 import { ORDER_STATUSES } from './orders.js';
+import { REFUNDED_RETURNS } from './dashboard.js';
 
 // Days are India time, like the dashboard (a fixed +5:30, no daylight saving).
 const IST_OFFSET = 330 * 60_000;
@@ -53,6 +54,8 @@ const COLUMNS = [
   'Discount (₹)',
   'Coupon',
   'Total (₹)',
+  'Refunded (₹)',
+  'Net total (₹)',
   'Payment',
   'Payment status',
   'City',
@@ -85,6 +88,18 @@ export function orderExportRouter({ db }) {
       .find({ _id: { $in: [...new Set(docs.map((o) => o.userId))] } }, { projection: { name: 1, email: 1 } })
       .toArray();
     const byId = new Map(people.map((u) => [u._id.toString(), u]));
+    // What returns of these orders refunded (approved ones and later, as on the dashboard).
+    const refunds = new Map(
+      (
+        await db
+          .collection('returns')
+          .aggregate([
+            { $match: { orderId: { $in: docs.map((o) => o._id) }, status: { $in: REFUNDED_RETURNS } } },
+            { $group: { _id: '$orderId', refund: { $sum: '$refund' } } },
+          ])
+          .toArray()
+      ).map((r) => [r._id.toString(), r.refund]),
+    );
 
     const rows = docs.map((o) => {
       const customer = byId.get(o.userId.toString());
@@ -103,6 +118,8 @@ export function orderExportRouter({ db }) {
         cell(rupees(o.discount ?? 0)),
         cell(o.coupon?.code ?? '', { text: true }),
         cell(rupees(o.total)),
+        cell(rupees(refunds.get(o._id.toString()) ?? 0)),
+        cell(rupees(o.total - (refunds.get(o._id.toString()) ?? 0))),
         cell(payment.method === 'razorpay' ? 'Online' : 'Cash on Delivery'),
         cell(payment.status ?? ''),
         cell(o.address.city, { text: true }),

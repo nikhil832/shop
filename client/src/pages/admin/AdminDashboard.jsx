@@ -140,6 +140,7 @@ function RevenueChart({ daily }) {
             <span className="muted">
               {shown.orders} {shown.orders === 1 ? 'order' : 'orders'}
             </span>
+            {shown.refunds > 0 && <span className="muted">{formatPrice(shown.refunds)} refunded since</span>}
           </div>
         )}
       </div>
@@ -158,7 +159,8 @@ function RevenueChart({ daily }) {
               <tr>
                 <th>Day</th>
                 <th className="num">Orders</th>
-                <th className="num">Revenue</th>
+                <th className="num">Sales</th>
+                <th className="num">Refunded</th>
               </tr>
             </thead>
             <tbody>
@@ -167,6 +169,7 @@ function RevenueChart({ daily }) {
                   <td>{formatLongDay(d.date)}</td>
                   <td className="num">{d.orders}</td>
                   <td className="num">{formatPrice(d.revenue)}</td>
+                  <td className="num">{d.refunds ? formatPrice(d.refunds) : '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -211,14 +214,21 @@ export default function AdminDashboard() {
         <div className={`dashboard${loading ? ' stale' : ''}`}>
           <p className="muted small">
             Sales are orders placed, shipped or delivered since {formatDay(data.daily[0].date)} (India time), with
-            delivery and after discounts. Cancelled orders and unpaid online orders are left out.
+            delivery and after discounts. Cancelled orders and unpaid online orders are left out. Revenue is after
+            refunds of approved returns, counted on the day of the order they came from; the chart shows sales.
           </p>
 
           <section className="stat-grid" aria-label="Totals">
             <div className="panel stat">
               <h2>Revenue</h2>
-              <p className="stat-value">{formatPrice(data.totals.revenue)}</p>
-              <Change now={data.totals.revenue} before={data.previous.revenue} days={days} />
+              {/* Net of refunds from returns of these orders; the line below splits it. */}
+              <p className="stat-value">{formatPrice(data.totals.netRevenue)}</p>
+              {data.totals.refunds > 0 && (
+                <p className="stat-change muted">
+                  {formatPrice(data.totals.revenue)} in sales − {formatPrice(data.totals.refunds)} refunded
+                </p>
+              )}
+              <Change now={data.totals.netRevenue} before={data.previous.netRevenue} days={days} />
             </div>
             <div className="panel stat">
               <h2>Orders</h2>
@@ -271,7 +281,9 @@ export default function AdminDashboard() {
                   </table>
                 </div>
               )}
-              <p className="muted small">Sales are item prices before discounts and delivery.</p>
+              <p className="muted small">
+                Sold is less any items returned; sales are item prices before discounts and delivery.
+              </p>
             </section>
 
             <section className="panel" aria-labelledby="needs-attention">

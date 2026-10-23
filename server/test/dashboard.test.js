@@ -71,6 +71,9 @@ test('with no orders: zeros for every day, and the low-stock list', async () => 
     itemsSold: 0,
     discount: 0,
     cancelled: 0,
+    refunds: 0,
+    itemsReturned: 0,
+    netRevenue: 0,
   });
   assert.deepEqual(res.body.bestSellers, []);
   assert.equal(res.body.toShip, 0);
@@ -129,13 +132,16 @@ test('counts sales by day, compares with the period before, and ranks best selle
     itemsSold: 7,
     discount: 5000,
     cancelled: 1,
+    refunds: 0,
+    itemsReturned: 0,
+    netRevenue: revenue,
   });
   // The 8-days-ago order is in the 7 days before.
-  assert.deepEqual(previous, { revenue: book.price * 4, orders: 1 });
+  assert.deepEqual(previous, { revenue: book.price * 4, orders: 1, refunds: 0, netRevenue: book.price * 4 });
 
   assert.equal(daily.length, 7);
   const day = (daysAgo) => daily.find((d) => d.date === istDay(Date.now() - daysAgo * DAY));
-  assert.deepEqual(day(0), { date: istDay(Date.now()), revenue: book.price * 2, orders: 1 });
+  assert.deepEqual(day(0), { date: istDay(Date.now()), revenue: book.price * 2, orders: 1, refunds: 0 });
   assert.equal(day(3).revenue, book.price + other.price - 5000);
   assert.equal(day(1).orders, 0);
   assert.equal(
@@ -183,4 +189,46 @@ test('an order placed through checkout shows up today', async () => {
   assert.equal(res.totals.revenue, before.totals.revenue + order.body.total);
   assert.equal(res.daily.at(-1).revenue, before.daily.at(-1).revenue + order.body.total);
   assert.equal(res.toShip, before.toShip + 1);
+});
+
+test("approved returns count against their order's days: net revenue, refunds per day, best sellers net of returns", async () => {
+  // Compared with the figures just before, so the orders of the tests above don't matter.
+  const before = (await admin('GET', '/admin/dashboard?days=7')).body;
+  const book = await product('learning-to-code-with-javascript');
+  await addOrder({ daysAgo: 2, status: 'delivered', items: [line(book, 3)] });
+  const order = await t.db.collection('orders').findOne({}, { sort: { createdAt: -1 } });
+  const ret = (status, qty, refund) => ({
+    orderId: order._id,
+    userId: order.userId,
+    items: [{ index: 0, productId: book._id, title: book.title, price: book.price, qty }],
+    reason: 'damaged',
+    note: '',
+    refund,
+    refundMethod: 'manual',
+    status,
+    createdAt: new Date(),
+  });
+  // One refunded and one approved count; requested and declined ones don't.
+  await t.db
+    .collection('returns')
+    .insertMany([
+      ret('refunded', 1, book.price),
+      ret('approved', 1, book.price),
+      ret('requested', 1, book.price),
+      ret('declined', 1, book.price),
+    ]);
+
+  const after = (await admin('GET', '/admin/dashboard?days=7')).body;
+  assert.equal(after.totals.revenue, before.totals.revenue + book.price * 3);
+  assert.equal(after.totals.refunds, before.totals.refunds + book.price * 2);
+  assert.equal(after.totals.itemsReturned, before.totals.itemsReturned + 2);
+  assert.equal(after.totals.netRevenue, after.totals.revenue - after.totals.refunds);
+  const day = after.daily.find((d) => d.date === istDay(order.createdAt.getTime()));
+  assert.equal(day.refunds, book.price * 2);
+  const seller = after.bestSellers.find((b) => b.slug === book.slug);
+  const sellerBefore = before.bestSellers.find((b) => b.slug === book.slug);
+  assert.equal(seller.qty, (sellerBefore?.qty ?? 0) + 1); // 3 sold, 2 back
+  assert.equal(seller.returned, 2);
+  assert.equal(seller.sales, (sellerBefore?.sales ?? 0) + book.price);
+  await t.db.collection('returns').deleteMany({ orderId: order._id });
 });
