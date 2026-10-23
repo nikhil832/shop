@@ -68,7 +68,7 @@ const NEXT_FROM = { shipped: ['placed'], delivered: ['shipped'], cancelled: ['aw
 
 const PRODUCT_PAGE = 50;
 const ORDER_PAGE = 25;
-const LOW_STOCK = 5;
+export const LOW_STOCK = 5;
 const DEFAULT_ICON = '🛍️';
 
 const toAdminProduct = (doc) => ({

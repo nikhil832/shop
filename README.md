@@ -29,6 +29,8 @@ Built in stages. Done so far:
 
 13. **Coupon codes**: admins create codes (percentage off with an optional cap, an amount off, or free delivery; optional minimum order, last day and total uses) under Admin → Coupons, and switch them on or off. Customers apply one at checkout; each customer can use a code once, and cancelling the order gives the use back.
 
+14. **Sales dashboard**: the admin panel opens on a dashboard for the last 7, 30 or 90 days: revenue, orders, average order and discounts given (compared with the period before), revenue per day as a chart (also as a table), best sellers, orders waiting to ship, and products running low.
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database
@@ -126,6 +128,7 @@ Without keys the store works as before, with Cash on Delivery only. Tests never 
 | PUT    | `/api/wishlist/:productId`          | Login. Saves a product (≤200)                                                                                                                                                                                                                   |
 | DELETE | `/api/wishlist/:productId`          | Login. Removes it                                                                                                                                                                                                                               |
 | GET    | `/api/images/:id`                   | An uploaded product photo (cached for a year)                                                                                                                                                                                                   |
+| GET    | `/api/admin/dashboard`              | Admin. `days` (`7`, `30` default, `90`): sales totals and the period before, revenue per day (India time), top 5 best sellers, orders to ship, low stock                                                                                        |
 | GET    | `/api/admin/products`               | Admin. `q`, `category` (id), `status` (`active`, `hidden`, `low`), `page`; 50 per page, hidden products included                                                                                                                                |
 | GET    | `/api/admin/products/:id`           | Admin                                                                                                                                                                                                                                           |
 | POST   | `/api/admin/products`               | Admin. `{ title, brand, categoryId, price, mrp, stock, description?, highlights?, images?, active? }`; slug made from the title                                                                                                                 |

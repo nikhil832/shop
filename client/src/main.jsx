@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { BrowserRouter, Route, Routes } from 'react-router';
 import { AuthProvider } from './auth.jsx';
 import Layout from './components/Layout.jsx';
 import Home from './pages/Home.jsx';
@@ -17,6 +17,7 @@ import Wishlist from './pages/Wishlist.jsx';
 import Account from './pages/Account.jsx';
 import NotFound from './pages/NotFound.jsx';
 import AdminCategories from './pages/admin/AdminCategories.jsx';
+import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import AdminLayout from './pages/admin/AdminLayout.jsx';
 import AdminOrder from './pages/admin/AdminOrder.jsx';
 import AdminOrders from './pages/admin/AdminOrders.jsx';
@@ -46,7 +47,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="wishlist" element={<Wishlist />} />
             <Route path="account" element={<Account />} />
             <Route path="admin" element={<AdminLayout />}>
-              <Route index element={<Navigate to="orders" replace />} />
+              <Route index element={<AdminDashboard />} />
               <Route path="orders" element={<AdminOrders />} />
               <Route path="orders/:id" element={<AdminOrder />} />
               <Route path="products" element={<AdminProducts />} />

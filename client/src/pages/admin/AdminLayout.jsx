@@ -20,6 +20,9 @@ export default function AdminLayout() {
   return (
     <div className="admin">
       <nav className="admin-tabs" aria-label="Admin">
+        <NavLink to="/admin" end>
+          Dashboard
+        </NavLink>
         <NavLink to="/admin/orders">Orders</NavLink>
         <NavLink to="/admin/products">Products</NavLink>
         <NavLink to="/admin/categories">Categories</NavLink>

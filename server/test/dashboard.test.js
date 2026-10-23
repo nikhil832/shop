@@ -1,0 +1,182 @@
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { ObjectId } from 'mongodb';
+import { startTestServer } from './helpers.js';
+
+let t;
+let admin;
+let customer;
+before(async () => {
+  t = await startTestServer();
+  admin = await register('admin@example.com', 'Store Admin');
+  await t.db.collection('users').updateOne({ email: 'admin@example.com' }, { $set: { role: 'admin' } });
+  customer = await register('customer@example.com', 'Asha Rao');
+});
+after(() => t.stop());
+
+async function register(email, name) {
+  const call = t.browser();
+  const res = await call('POST', '/auth/register', { name, email, password: 'password123' });
+  assert.equal(res.status, 201);
+  return call;
+}
+
+const DAY = 86_400_000;
+const product = (slug) => t.db.collection('products').findOne({ slug });
+// Today's date in India time, as the dashboard counts days.
+const istDay = (time) => new Date(time + 330 * 60_000).toISOString().slice(0, 10);
+
+// An order stored directly, `daysAgo` days before now, so dates and amounts are exact.
+async function addOrder({ daysAgo = 0, status = 'placed', items, discount = 0 }) {
+  const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0);
+  const createdAt = new Date(Date.now() - daysAgo * DAY);
+  await t.db.collection('orders').insertOne({
+    userId: new ObjectId(),
+    items,
+    subtotal,
+    delivery: 0,
+    discount,
+    total: subtotal - discount,
+    status,
+    payment: { method: 'cod' },
+    createdAt,
+    updatedAt: createdAt,
+  });
+}
+const line = (p, qty) => ({ productId: p._id, title: p.title, price: p.price, qty, image: p.images[0] });
+
+test('the dashboard needs an admin: 401 logged out, 403 for customers', async () => {
+  assert.equal((await t.call('GET', '/admin/dashboard')).status, 401);
+  assert.equal((await customer('GET', '/admin/dashboard')).status, 403);
+});
+
+test('validates the period', async () => {
+  for (const days of ['1', '31', 'abc', '']) {
+    const res = await admin('GET', `/admin/dashboard?days=${days}`);
+    assert.equal(res.status, 400, days);
+  }
+});
+
+test('with no orders: zeros for every day, and the low-stock list', async () => {
+  const res = await admin('GET', '/admin/dashboard');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.days, 30);
+  assert.equal(res.body.daily.length, 30);
+  assert.equal(res.body.daily.at(-1).date, istDay(Date.now()));
+  assert.ok(res.body.daily.every((d) => d.revenue === 0 && d.orders === 0));
+  assert.deepEqual(res.body.totals, {
+    revenue: 0,
+    orders: 0,
+    averageOrder: 0,
+    itemsSold: 0,
+    discount: 0,
+    cancelled: 0,
+  });
+  assert.deepEqual(res.body.bestSellers, []);
+  assert.equal(res.body.toShip, 0);
+
+  // Active products with 5 or fewer left, fewest first; hidden ones are left out.
+  const low = await t.db
+    .collection('products')
+    .find({ active: true, stock: { $lte: 5 } })
+    .toArray();
+  assert.equal(res.body.lowStockCount, low.length);
+  assert.ok(res.body.lowStock.length > 0 && res.body.lowStock.length <= 10);
+  const stocks = res.body.lowStock.map((p) => p.stock);
+  assert.deepEqual(
+    stocks,
+    [...stocks].sort((a, b) => a - b),
+  );
+  const hidden = res.body.lowStock[0];
+  await t.db.collection('products').updateOne({ slug: hidden.slug }, { $set: { active: false } });
+  const after = (await admin('GET', '/admin/dashboard')).body;
+  assert.equal(after.lowStockCount, low.length - 1);
+  assert.ok(!after.lowStock.some((p) => p.slug === hidden.slug));
+  await t.db.collection('products').updateOne({ slug: hidden.slug }, { $set: { active: true } });
+});
+
+test('counts sales by day, compares with the period before, and ranks best sellers', async () => {
+  const book = await product('learning-to-code-with-javascript');
+  const other = (
+    await t.db
+      .collection('products')
+      .find({ stock: { $gt: 10 } })
+      .limit(2)
+      .toArray()
+  ).find((p) => !p._id.equals(book._id));
+
+  await addOrder({ items: [line(book, 2)] }); // today
+  await addOrder({ daysAgo: 3, status: 'delivered', items: [line(book, 1), line(other, 1)], discount: 5000 });
+  await addOrder({ daysAgo: 6, status: 'shipped', items: [line(other, 3)] });
+  // Not sales: cancelled, unpaid, or outside the 7 days.
+  await addOrder({ daysAgo: 1, status: 'cancelled', items: [line(other, 5)] });
+  await addOrder({ status: 'awaiting_payment', items: [line(other, 5)] });
+  await addOrder({ daysAgo: 8, items: [line(book, 4)] });
+
+  const res = await admin('GET', '/admin/dashboard?days=7');
+  assert.equal(res.status, 200);
+  const { totals, previous, daily, bestSellers, toShip } = res.body;
+
+  const revenue = book.price * 3 + other.price * 4 - 5000;
+  assert.deepEqual(totals, {
+    revenue,
+    orders: 3,
+    averageOrder: Math.round(revenue / 3),
+    itemsSold: 7,
+    discount: 5000,
+    cancelled: 1,
+  });
+  // The 8-days-ago order is in the 7 days before.
+  assert.deepEqual(previous, { revenue: book.price * 4, orders: 1 });
+
+  assert.equal(daily.length, 7);
+  const day = (daysAgo) => daily.find((d) => d.date === istDay(Date.now() - daysAgo * DAY));
+  assert.deepEqual(day(0), { date: istDay(Date.now()), revenue: book.price * 2, orders: 1 });
+  assert.equal(day(3).revenue, book.price + other.price - 5000);
+  assert.equal(day(1).orders, 0);
+  assert.equal(
+    daily.reduce((sum, d) => sum + d.revenue, 0),
+    revenue,
+  );
+
+  // Ranked by quantity sold; sales are item prices before discounts.
+  assert.deepEqual(
+    bestSellers.map((b) => [b.slug, b.qty, b.sales]),
+    [
+      [other.slug, 4, other.price * 4],
+      [book.slug, 3, book.price * 3],
+    ],
+  );
+  assert.equal(bestSellers[0].title, other.title);
+  // Placed orders of any date are waiting to be shipped.
+  assert.equal(toShip, 2);
+
+  // The 30-day view takes in the older order too.
+  const month = (await admin('GET', '/admin/dashboard?days=30')).body;
+  assert.equal(month.totals.orders, 4);
+  assert.equal(month.daily.length, 30);
+});
+
+test('an order placed through checkout shows up today', async () => {
+  const before = (await admin('GET', '/admin/dashboard?days=7')).body;
+  const p = await product('learning-to-code-with-javascript');
+  const quote = await customer('GET', `/cart?items=${p._id}:1`);
+  const order = await customer('POST', '/orders', {
+    items: [{ productId: p._id.toString(), qty: 1 }],
+    address: {
+      name: 'Asha Rao',
+      phone: '9876543210',
+      line1: '12 MG Road',
+      city: 'Bengaluru',
+      state: 'Karnataka',
+      pincode: '560001',
+    },
+    expectedTotal: quote.body.total,
+  });
+  assert.equal(order.status, 201);
+  const res = (await admin('GET', '/admin/dashboard?days=7')).body;
+  assert.equal(res.totals.orders, before.totals.orders + 1);
+  assert.equal(res.totals.revenue, before.totals.revenue + order.body.total);
+  assert.equal(res.daily.at(-1).revenue, before.daily.at(-1).revenue + order.body.total);
+  assert.equal(res.toShip, before.toShip + 1);
+});

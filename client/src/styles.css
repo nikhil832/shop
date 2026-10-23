@@ -13,6 +13,8 @@
   --rating: #16a34a;
   --warning: #c2410c;
   --danger: #dc2626;
+  /* Chart bars; checked for contrast on the surface in each theme. */
+  --chart: #2563eb;
   --radius: 10px;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 4px 14px rgb(0 0 0 / 0.05);
   color-scheme: light;
@@ -42,6 +44,7 @@
     --rating: #22c55e;
     --warning: #fb923c;
     --danger: #f87171;
+    --chart: #3b82f6;
     --shadow: none;
     color-scheme: dark;
   }
@@ -1322,8 +1325,158 @@ textarea {
   }
 }
 
+/* ---- Admin dashboard ---- */
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dashboard p.small {
+  margin: 0;
+}
+.dashboard h3 {
+  font-size: 0.95rem;
+  margin: 14px 0 4px;
+}
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.stat h2 {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 600;
+  margin: 0;
+}
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 4px 0 2px;
+  font-variant-numeric: tabular-nums;
+}
+.stat-change {
+  font-size: 0.82rem;
+  margin: 0;
+}
+.chart {
+  margin: 12px 0 0;
+}
+.chart-plot {
+  position: relative;
+  height: 220px;
+  /* Room on the left for the axis labels. */
+  margin-left: 48px;
+}
+.chart-grid {
+  position: absolute;
+  inset: 0;
+}
+.chart-tick {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--border);
+}
+.chart-tick span {
+  position: absolute;
+  right: calc(100% + 8px);
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.chart-bars {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+.chart-bars.dense {
+  gap: 1px;
+}
+.chart-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 4px 4px 0 0;
+}
+.chart-col.hover {
+  background: var(--accent-soft);
+}
+.chart-bar {
+  width: 100%;
+  min-height: 2px;
+  background: var(--chart);
+  border-radius: 4px 4px 0 0;
+}
+.chart-bars.dense .chart-bar {
+  border-radius: 2px 2px 0 0;
+}
+.chart-tooltip {
+  position: absolute;
+  bottom: calc(100% - 8px);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+}
+.chart-dates {
+  position: relative;
+  height: 1.2em;
+  margin: 6px 0 0 48px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+/* Centred under their bars; the first and last are kept inside the plot's edges. */
+.chart-dates span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.chart-dates span:first-child {
+  left: 0 !important;
+  transform: none;
+}
+.chart-dates span:last-child {
+  left: auto !important;
+  right: 0;
+  transform: none;
+}
+.chart-table {
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
+.chart-table summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.chart-table .admin-table {
+  max-width: 420px;
+}
+
 /* ---- Mobile ---- */
 @media (max-width: 800px) {
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .stat-value {
+    font-size: 1.3rem;
+  }
+  .chart-plot {
+    height: 180px;
+  }
   .header-inner {
     gap: 8px 12px;
     flex-wrap: wrap;

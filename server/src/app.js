@@ -4,6 +4,7 @@ import { couponsRouter } from './coupons.js';
 import { accountRouter } from './routes/account.js';
 import { authRouter } from './routes/auth.js';
 import { catalogRouter } from './routes/catalog.js';
+import { dashboardRouter } from './routes/dashboard.js';
 import { ordersRouter } from './routes/orders.js';
 import { paymentsRouter } from './routes/payments.js';
 import { adminRouter } from './routes/admin.js';
@@ -40,6 +41,7 @@ export function createApp(ctx) {
   api.use(wishlistRouter(ctx));
   api.use(stockAlertsRouter(ctx));
   api.use(couponsRouter(ctx));
+  api.use(dashboardRouter(ctx));
   api.use(adminRouter(ctx));
   api.use((req, res) => res.status(404).json({ error: 'Not found' }));
   app.use('/api', api);

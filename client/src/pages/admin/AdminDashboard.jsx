@@ -1,0 +1,272 @@
+import { useState } from 'react';
+import { Link, useSearchParams } from 'react-router';
+import { formatPrice } from '../../format.js';
+import { useFetch } from '../../useFetch.js';
+
+const PERIODS = [7, 30, 90];
+
+const compact = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
+// Axis labels: ₹1.2K, ₹3L.
+const formatShort = (paise) => compact.format(paise / 100);
+// Dates from the API are India-time days ("2026-10-23"); shown as "23 Oct", read as UTC so they don't shift.
+const dayFormat = (options) => new Intl.DateTimeFormat('en-IN', { ...options, timeZone: 'UTC' });
+const shortDay = dayFormat({ day: 'numeric', month: 'short' });
+const longDay = dayFormat({ weekday: 'short', day: 'numeric', month: 'short' });
+const formatDay = (date) => shortDay.format(new Date(date));
+const formatLongDay = (date) => longDay.format(new Date(date));
+
+// A round number at or above `value` for the top of the axis: 1, 2 or 5 times a power of ten.
+function niceMax(value) {
+  if (value <= 0) return 100_00;
+  const power = 10 ** Math.floor(Math.log10(value));
+  return [1, 2, 5, 10].map((m) => m * power).find((m) => m >= value);
+}
+
+// "▲ 12% vs the 30 days before", or nothing to compare with.
+function Change({ now, before, days }) {
+  if (!before) return <p className="stat-change muted">No sales in the {days} days before</p>;
+  const percent = Math.round(((now - before) / before) * 100);
+  const arrow = percent > 0 ? '▲' : percent < 0 ? '▼' : '';
+  return (
+    <p className="stat-change muted">
+      {arrow && <span aria-hidden="true">{arrow} </span>}
+      {percent === 0 ? 'Same as' : `${Math.abs(percent)}% ${percent > 0 ? 'more than' : 'less than'}`} the {days} days
+      before
+    </p>
+  );
+}
+
+function RevenueChart({ daily }) {
+  const [hover, setHover] = useState(null);
+  const top = niceMax(Math.max(...daily.map((d) => d.revenue)));
+  const ticks = [0, 0.5, 1].map((f) => f * top);
+  // Three dates under the axis: the first and last bars, and the middle one.
+  const labelled = [0, Math.floor((daily.length - 1) / 2), daily.length - 1];
+  const shown = hover === null ? null : daily[hover];
+
+  return (
+    <figure className="chart">
+      <div className="chart-plot" onMouseLeave={() => setHover(null)}>
+        <div className="chart-grid" aria-hidden="true">
+          {ticks.map((tick) => (
+            <div key={tick} className="chart-tick" style={{ bottom: `${(tick / top) * 100}%` }}>
+              <span>{formatShort(tick)}</span>
+            </div>
+          ))}
+        </div>
+        <div className={`chart-bars${daily.length > 30 ? ' dense' : ''}`} aria-hidden="true">
+          {daily.map((d, i) => (
+            <div key={d.date} className={`chart-col${hover === i ? ' hover' : ''}`} onMouseEnter={() => setHover(i)}>
+              {d.revenue > 0 && <div className="chart-bar" style={{ height: `${(d.revenue / top) * 100}%` }} />}
+            </div>
+          ))}
+        </div>
+        {shown && (
+          <div
+            className="chart-tooltip"
+            role="status"
+            // Centred over the bar, but kept inside the chart: near the edges it opens towards the middle.
+            style={{
+              left: `${((hover + 0.5) / daily.length) * 100}%`,
+              transform: `translateX(${hover < daily.length / 5 ? -10 : hover > (daily.length * 4) / 5 ? -90 : -50}%)`,
+            }}
+          >
+            <strong>{formatLongDay(shown.date)}</strong>
+            <span>{formatPrice(shown.revenue)}</span>
+            <span className="muted">
+              {shown.orders} {shown.orders === 1 ? 'order' : 'orders'}
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="chart-dates" aria-hidden="true">
+        {labelled.map((i) => (
+          <span key={i} style={{ left: `${((i + 0.5) / daily.length) * 100}%` }}>
+            {formatDay(daily[i].date)}
+          </span>
+        ))}
+      </div>
+      <details className="chart-table">
+        <summary>Show as a table</summary>
+        <div className="table-wrap">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th className="num">Orders</th>
+                <th className="num">Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {daily.toReversed().map((d) => (
+                <tr key={d.date}>
+                  <td>{formatLongDay(d.date)}</td>
+                  <td className="num">{d.orders}</td>
+                  <td className="num">{formatPrice(d.revenue)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </figure>
+  );
+}
+
+export default function AdminDashboard() {
+  const [params, setParams] = useSearchParams();
+  const days = PERIODS.includes(Number(params.get('days'))) ? Number(params.get('days')) : 30;
+  const { data, error, loading } = useFetch(`/admin/dashboard?days=${days}`);
+  const setDays = (d) => setParams(d === 30 ? {} : { days: String(d) });
+
+  return (
+    <div className="admin-form">
+      <div className="admin-head">
+        <h1>Dashboard</h1>
+        <div className="status-tabs" role="group" aria-label="Period">
+          {PERIODS.map((d) => (
+            <button
+              key={d}
+              type="button"
+              className={d === days ? 'active' : ''}
+              aria-pressed={d === days}
+              onClick={() => setDays(d)}
+            >
+              Last {d} days
+            </button>
+          ))}
+        </div>
+      </div>
+      {error && (
+        <p className="error" role="alert">
+          {error.message}
+        </p>
+      )}
+      {!data && !error && <p className="muted">Loading…</p>}
+      {data && (
+        <div className={`dashboard${loading ? ' stale' : ''}`}>
+          <p className="muted small">
+            Sales are orders placed, shipped or delivered since {formatDay(data.daily[0].date)} (India time), with
+            delivery and after discounts. Cancelled orders and unpaid online orders are left out.
+          </p>
+
+          <section className="stat-grid" aria-label="Totals">
+            <div className="panel stat">
+              <h2>Revenue</h2>
+              <p className="stat-value">{formatPrice(data.totals.revenue)}</p>
+              <Change now={data.totals.revenue} before={data.previous.revenue} days={days} />
+            </div>
+            <div className="panel stat">
+              <h2>Orders</h2>
+              <p className="stat-value">{data.totals.orders}</p>
+              <Change now={data.totals.orders} before={data.previous.orders} days={days} />
+            </div>
+            <div className="panel stat">
+              <h2>Average order</h2>
+              <p className="stat-value">{formatPrice(data.totals.averageOrder)}</p>
+              <p className="stat-change muted">{data.totals.itemsSold} items sold</p>
+            </div>
+            <div className="panel stat">
+              <h2>Discounts given</h2>
+              <p className="stat-value">{formatPrice(data.totals.discount)}</p>
+              <p className="stat-change muted">
+                {data.totals.cancelled} {data.totals.cancelled === 1 ? 'order' : 'orders'} cancelled
+              </p>
+            </div>
+          </section>
+
+          <section className="panel" aria-labelledby="revenue-per-day">
+            <h2 id="revenue-per-day">Revenue per day</h2>
+            <RevenueChart daily={data.daily} />
+          </section>
+
+          <div className="admin-columns">
+            <section className="panel" aria-labelledby="best-sellers">
+              <h2 id="best-sellers">Best sellers</h2>
+              {data.bestSellers.length === 0 ? (
+                <p className="muted">No sales in this period.</p>
+              ) : (
+                <div className="table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Product</th>
+                        <th className="num">Sold</th>
+                        <th className="num">Sales</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.bestSellers.map((b) => (
+                        <tr key={b.productId}>
+                          <td>{b.slug ? <Link to={`/p/${b.slug}`}>{b.title}</Link> : b.title}</td>
+                          <td className="num">{b.qty}</td>
+                          <td className="num">{formatPrice(b.sales)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <p className="muted small">Sales are item prices before discounts and delivery.</p>
+            </section>
+
+            <section className="panel" aria-labelledby="needs-attention">
+              <h2 id="needs-attention">Needs attention</h2>
+              <p>
+                {data.toShip === 0 ? (
+                  'No orders waiting to be shipped.'
+                ) : (
+                  <Link to="/admin/orders?status=placed">
+                    {data.toShip} {data.toShip === 1 ? 'order' : 'orders'} to ship
+                  </Link>
+                )}
+              </p>
+              <h3>Low stock</h3>
+              {data.lowStock.length === 0 ? (
+                <p className="muted">Every product in the store has more than 5 left.</p>
+              ) : (
+                <div className="table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Product</th>
+                        <th className="num">Left</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.lowStock.map((p) => (
+                        <tr key={p.id}>
+                          <td>
+                            <Link to={`/admin/products/${p.id}`}>{p.title}</Link>
+                          </td>
+                          <td className="num">
+                            {p.stock === 0 ? <span className="status cancelled">Sold out</span> : p.stock}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <p className="muted small">
+                Products in the store with 5 or fewer left.
+                {data.lowStockCount > data.lowStock.length && (
+                  <>
+                    {' '}
+                    Showing {data.lowStock.length} of {data.lowStockCount};{' '}
+                    <Link to="/admin/products?status=low">see them all</Link>.
+                  </>
+                )}
+              </p>
+            </section>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -27,6 +27,8 @@ export async function ensureIndexes(db) {
     db.collection('loginAttempts').createIndex({ key: 1, at: -1 }),
     db.collection('loginAttempts').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     db.collection('orders').createIndex({ userId: 1, createdAt: -1 }),
+    // The admin order list (newest first) and the sales dashboard (orders since a date).
+    db.collection('orders').createIndex({ createdAt: -1 }),
     db
       .collection('orders')
       .createIndex({ status: 1, expiresAt: 1 }, { partialFilterExpression: { status: 'awaiting_payment' } }),

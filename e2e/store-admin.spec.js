@@ -58,9 +58,9 @@ test('customers see "Admins only" and no admin link', async ({ page }) => {
 
 test('admin finds an order and moves it to shipped, then delivered', async ({ page, request }) => {
   const { email, order } = await customerOrder(request);
-  await logIn(page, ADMIN);
+  await logIn(page, ADMIN, '/admin/orders');
   await expect(page.getByRole('link', { name: 'Admin' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Orders' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Orders', level: 1 })).toBeVisible();
 
   await page.getByRole('searchbox', { name: 'Find orders' }).fill(email);
   await page.getByRole('button', { name: 'Find', exact: true }).click();
@@ -160,12 +160,38 @@ test('admin adds, renames, reorders and deletes a category', async ({ page }) =>
   await expect(page.getByLabel(`Name of ${renamed}`)).toHaveCount(0);
 });
 
+test('the dashboard shows sales, best sellers and orders to ship', async ({ page, request }) => {
+  const { order } = await customerOrder(request);
+  await logIn(page, ADMIN);
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Dashboard' })).toHaveClass(/active/);
+  await expect(page.getByRole('button', { name: 'Last 30 days' })).toHaveAttribute('aria-pressed', 'true');
+
+  // The order just placed counts today, so revenue and the best sellers aren't empty.
+  await expect(page.getByRole('region', { name: 'Totals' }).locator('.stat-value').first()).not.toHaveText('₹0');
+  await expect(
+    page.getByRole('region', { name: 'Best sellers' }).getByRole('link', { name: order.items[0].title }),
+  ).toBeVisible();
+  await page.getByText('Show as a table').click();
+  await expect(page.getByRole('region', { name: 'Revenue per day' }).getByRole('row')).toHaveCount(31);
+
+  await page.getByRole('button', { name: 'Last 7 days' }).click();
+  await expect(page).toHaveURL(/\/admin\?days=7$/);
+  await expect(page.getByRole('region', { name: 'Revenue per day' }).getByRole('row')).toHaveCount(8);
+
+  // Sold-out sample products are listed as low stock.
+  await expect(page.getByRole('region', { name: 'Needs attention' }).getByText('Sold out').first()).toBeVisible();
+  await page.getByRole('link', { name: /orders? to ship/ }).click();
+  await expect(page).toHaveURL(/\/admin\/orders\?status=placed/);
+});
+
 test('admin pages fit a phone screen without sideways scrolling', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await logIn(page, ADMIN, '/admin/products');
   await expect(page.locator('.admin-table tbody tr').first()).toBeVisible();
   // Only the table may scroll sideways (inside its own box), never the page.
   for (const path of [
+    '/admin?days=90',
     '/admin/products',
     '/admin/orders',
     '/admin/categories',
