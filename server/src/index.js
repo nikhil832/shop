@@ -1,5 +1,6 @@
 import express from 'express';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { connectDb } from './db.js';
 import { createApp } from './app.js';
@@ -9,6 +10,7 @@ import { expireUnpaidOrders } from './routes/orders.js';
 import { sendBackInStockAlerts } from './routes/stockAlerts.js';
 import { deleteUnusedImages } from './routes/images.js';
 import { loadConfig } from './config.js';
+import { previewRouter } from './preview.js';
 
 const config = loadConfig();
 const CLIENT_DIST = fileURLToPath(new URL('../../client/dist', import.meta.url));
@@ -33,10 +35,11 @@ async function cleanUpImages() {
 cleanUpImages().catch((err) => console.error(err));
 const imageSweeper = setInterval(() => cleanUpImages().catch((err) => console.error(err)), 60 * 60_000);
 
-// In production, serve the built React app from the same server.
+// In production, serve the built React app from the same server. Pages get link-preview tags (preview.js); the
+// static files' own index.html is not served as-is (index: false), so the home page gets them too.
 if (existsSync(CLIENT_DIST)) {
-  app.use(express.static(CLIENT_DIST));
-  app.get('/{*splat}', (req, res) => res.sendFile('index.html', { root: CLIENT_DIST }));
+  app.use(express.static(CLIENT_DIST, { index: false }));
+  app.use(previewRouter(ctx, readFileSync(join(CLIENT_DIST, 'index.html'), 'utf8')));
 }
 
 const server = app.listen(config.port, () => {

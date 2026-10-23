@@ -153,6 +153,8 @@ export default function Product() {
 
   return (
     <>
+      {/* The browser tab's title (React puts it in <head>); link previews get theirs from the server. */}
+      <title>{`${product.title} · Bazaar`}</title>
       <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link to="/">Home</Link>
         {product.category && (

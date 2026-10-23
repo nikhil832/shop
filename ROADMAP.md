@@ -7,12 +7,11 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                      | Why                                                                                                                                                                                                                                | To start               |
-| --- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| 1   | Link previews             | Sharing a product on WhatsApp or Instagram shows a bare link today, because the page's title and picture are filled in by JavaScript. The server can put the product's name, price and photo in the page itself (Open Graph tags). | "add link previews"    |
-| 2   | Returns                   | Customers ask to return a delivered order within 7 days (with a reason); the admin approves or declines, approved ones put the stock back and refund online payments. Most shops need this sooner or later.                        | "add returns"          |
-| 3   | Delivery PIN check        | "Check delivery" on the product page: enter a PIN code, see whether it's delivered there and roughly when, from a list the admin keeps by PIN prefix. Avoids orders that can't be delivered.                                       | "add a PIN code check" |
-| 4   | Two-step login for admins | An admin account can refund money, hide products and see every customer's address; a code from an authenticator app at login (free, no SMS) protects it even if the password leaks.                                                | "add two-step login"   |
+| #   | Idea                      | Why                                                                                                                                                                                                         | To start               |
+| --- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| 1   | Returns                   | Customers ask to return a delivered order within 7 days (with a reason); the admin approves or declines, approved ones put the stock back and refund online payments. Most shops need this sooner or later. | "add returns"          |
+| 2   | Delivery PIN check        | "Check delivery" on the product page: enter a PIN code, see whether it's delivered there and roughly when, from a list the admin keeps by PIN prefix. Avoids orders that can't be delivered.                | "add a PIN code check" |
+| 3   | Two-step login for admins | An admin account can refund money, hide products and see every customer's address; a code from an authenticator app at login (free, no SMS) protects it even if the password leaks.                         | "add two-step login"   |
 
 ## Set aside
 
@@ -51,3 +50,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Two kinds of option (e.g. colour and size) with a combination grid in the admin form                                        | Stage 24 (`git log --grep "Stage 24"`) |
 | Database backups to a dated folder on your computer, and restore                                                            | Stage 25 (`git log --grep "Stage 25"`) |
 | Tracking numbers: courier, number and tracking link on the order page, shipped email and export                             | Stage 26 (`git log --grep "Stage 26"`) |
+| Link previews: product name, price, brand and photo in shared links (Open Graph), store image otherwise                     | Stage 27 (`git log --grep "Stage 27"`) |

@@ -55,6 +55,8 @@ Built in stages. Done so far:
 
 26. **Tracking numbers**: when marking an order shipped, the admin can enter the courier, the tracking number and the courier's tracking link (pasted from its site); they can be added or corrected later. The customer sees them on the order page, with a "Track your parcel" link, and in the shipped email; the order export has them too.
 
+27. **Link previews**: a product link shared on WhatsApp, Instagram, Facebook or X shows a card with its name and price ("from ₹…" for variants at different prices), brand and highlights, and its first uploaded photo; every other page, and products with only the generated sample pictures (previews can't show SVG), use the store's own Bazaar image. The browser tab shows the product's name too.
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database
