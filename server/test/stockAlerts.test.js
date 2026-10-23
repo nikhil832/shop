@@ -1,5 +1,6 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { ensureIndexes } from '../src/db.js';
 import { sendBackInStockAlerts } from '../src/routes/stockAlerts.js';
 import { startTestServer } from './helpers.js';
 
@@ -132,4 +133,87 @@ test('a customer can wait for at most 50 products', async () => {
   assert.equal(res.status, 409);
   assert.equal(res.body.error, 'You can have 50 stock alerts at a time. Cancel one first');
   await alerts.deleteMany({ userId: user._id });
+});
+
+// The sample shoes' sizes (UK 7–10); each test empties the sizes it watches.
+const SHOES = 'stride-running-shoes';
+const sizeOf = (doc, label) => doc.variants.find((v) => v.label === label);
+// Sets one size's stock, keeping the product's total in step (as orders and admin edits do).
+async function setSizeStock(label, stock) {
+  const doc = await product(SHOES);
+  const v = sizeOf(doc, label);
+  await products.updateOne(
+    { _id: doc._id, 'variants._id': v._id },
+    { $set: { 'variants.$.stock': stock }, $inc: { stock: stock - v.stock } },
+  );
+}
+
+test('a sold-out size can be watched while other sizes are in stock, and is emailed by name when back', async () => {
+  await setSizeStock('UK 10', 0);
+  await setSizeStock('UK 9', 0);
+  const shoes = await product(SHOES);
+  const [uk10, uk9, uk8] = [sizeOf(shoes, 'UK 10'), sizeOf(shoes, 'UK 9'), sizeOf(shoes, 'UK 8')];
+  const call = await register();
+
+  // In-stock size, unknown size, or the whole (in-stock) product: refused.
+  const inStock = await call('PUT', `/stock-alerts/${shoes._id}?variant=${uk8._id}`);
+  assert.equal(inStock.status, 409);
+  assert.equal(inStock.body.error, 'This size is in stock: you can buy it now');
+  assert.equal((await call('PUT', `/stock-alerts/${shoes._id}?variant=${'0'.repeat(24)}`)).status, 404);
+  assert.equal((await call('PUT', `/stock-alerts/${shoes._id}?variant=nope`)).status, 400);
+  assert.equal((await call('PUT', `/stock-alerts/${shoes._id}`)).status, 409);
+
+  // Two sizes of one product at once.
+  assert.deepEqual((await call('PUT', `/stock-alerts/${shoes._id}?variant=${uk10._id}`)).body, { stockAlert: true });
+  assert.deepEqual((await call('PUT', `/stock-alerts/${shoes._id}?variant=${uk9._id}`)).body, { stockAlert: true });
+  const page = (await call('GET', `/products/${SHOES}`)).body;
+  assert.equal(page.stockAlert, false);
+  assert.deepEqual(page.stockAlertVariants.sort(), [uk10._id.toString(), uk9._id.toString()].sort());
+
+  // Other sizes selling or coming back don't send anything; only the size asked about does.
+  await setSizeStock('UK 8', 25);
+  await sendBackInStockAlerts(t.ctx);
+  assert.equal(mailsTo(call).length, 0);
+
+  await setSizeStock('UK 10', 3);
+  await sendBackInStockAlerts(t.ctx);
+  const [mail, ...more] = mailsTo(call);
+  assert.equal(more.length, 0);
+  assert.equal(mail.subject, 'Back in stock: Stride Running Shoes (Size: UK 10)');
+  assert.match(mail.text, /Stride Running Shoes \(Size: UK 10\) is back in stock at ₹2,499/);
+  assert.match(mail.text, /Only 3 left/);
+  // UK 9 still waits.
+  assert.deepEqual((await call('GET', `/products/${SHOES}`)).body.stockAlertVariants, [uk9._id.toString()]);
+
+  // Cancelling one size leaves the others.
+  assert.deepEqual((await call('DELETE', `/stock-alerts/${shoes._id}?variant=${uk9._id}`)).body, {
+    stockAlert: false,
+  });
+  assert.deepEqual((await call('GET', `/products/${SHOES}`)).body.stockAlertVariants, []);
+  await setSizeStock('UK 9', 10);
+  await setSizeStock('UK 10', 5);
+});
+
+test('an alert for a size that is later deleted is dropped without an email', async () => {
+  await setSizeStock('UK 7', 0);
+  const shoes = await product(SHOES);
+  const uk7 = sizeOf(shoes, 'UK 7');
+  const call = await register();
+  assert.equal((await call('PUT', `/stock-alerts/${shoes._id}?variant=${uk7._id}`)).status, 200);
+
+  await products.updateOne({ _id: shoes._id }, { $pull: { variants: { _id: uk7._id } } });
+  await sendBackInStockAlerts(t.ctx);
+  assert.equal(mailsTo(call).length, 0);
+  assert.equal(await alerts.countDocuments({ variantId: uk7._id }), 0);
+});
+
+test('starting up replaces the old one-alert-per-product index (as on databases from before sizes)', async () => {
+  await alerts.dropIndex('userId_1_productId_1_variantId_1');
+  await alerts.createIndex({ userId: 1, productId: 1 }, { unique: true });
+  await ensureIndexes(t.db);
+  const names = (await alerts.indexes()).map((i) => i.name);
+  assert.ok(!names.includes('userId_1_productId_1'), names.join());
+  assert.ok(names.includes('userId_1_productId_1_variantId_1'), names.join());
+  // And running it again (every restart) is fine.
+  await ensureIndexes(t.db);
 });

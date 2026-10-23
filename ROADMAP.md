@@ -9,8 +9,7 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 | #   | Idea                | Why                                                                                                                            | To start              |
 | --- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------- |
-| 1   | Alerts per size     | "Email me when it's back" for one sold-out size while others are in stock; now only when the whole product is sold out.        | "add size alerts"     |
-| 2   | Two kinds of option | Colour and size together (every combination with its own stock), for clothes; set aside for one kind when variants were built. | "add a second option" |
+| 1   | Two kinds of option | Colour and size together (every combination with its own stock), for clothes; set aside for one kind when variants were built. | "add a second option" |
 
 ## Set aside
 
@@ -45,3 +44,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Export orders as CSV for a date range (and status) from the admin dashboard                                                 | Stage 20 (`git log --grep "Stage 20"`) |
 | Product variants: one kind of option (size, colour…) with its own price, MRP and stock each                                 | Stage 21 (`git log --grep "Stage 21"`) |
 | Photos per variant, picked from the product's photos                                                                        | Stage 22 (`git log --grep "Stage 22"`) |
+| Back-in-stock alerts for one sold-out size or colour                                                                        | Stage 23 (`git log --grep "Stage 23"`) |

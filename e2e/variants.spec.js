@@ -101,9 +101,27 @@ test('an admin adds a product in two colours; the store offers both', async ({ p
   await page.getByRole('link', { name: 'View in store ↗' }).evaluate((a) => a.removeAttribute('target'));
   await page.getByRole('link', { name: 'View in store ↗' }).click();
   const colours = page.getByRole('group', { name: /^Colour/ });
-  await expect(colours.getByRole('button', { name: 'Red' })).toBeEnabled();
-  await expect(colours.getByRole('button', { name: /Blue/ })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Choose a colour' })).toBeDisabled();
+  await colours.getByRole('button', { name: 'Red' }).click();
+  await expect(page.getByRole('button', { name: 'Add to cart' })).toBeEnabled();
+  // Sold-out Blue can be chosen, to ask for an email when it's back.
+  await expect(colours.getByRole('button', { name: 'Blue (sold out)' })).toBeVisible();
+  await colours.getByRole('button', { name: /Blue/ }).click();
+  await expect(page.getByRole('button', { name: 'Add to cart' })).toHaveCount(0);
+  await page.getByRole('button', { name: "Email me when Blue's back" }).click();
+  await expect(page.getByRole('status')).toHaveText(`We'll email ${ADMIN.email} when Blue's back in stock.`);
+  // Still on after reloading, and only for Blue.
+  await page.reload();
+  await page
+    .getByRole('group', { name: /^Colour/ })
+    .getByRole('button', { name: /Blue/ })
+    .click();
+  await expect(page.getByRole('button', { name: 'Cancel alert' })).toBeVisible();
+  await page
+    .getByRole('group', { name: /^Colour/ })
+    .getByRole('button', { name: 'Red' })
+    .click();
+  await expect(page.getByRole('button', { name: 'Cancel alert' })).toHaveCount(0);
 });
 
 test("choosing a colour shows that colour's photos", async ({ page }) => {

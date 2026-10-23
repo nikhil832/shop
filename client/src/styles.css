@@ -1507,11 +1507,11 @@ textarea {
   color: var(--accent);
   padding: 7px 11px;
 }
-.variant-options button:disabled {
+/* Sold out: still choosable, to ask for an email when it's back. */
+.variant-options button.sold-out {
   color: var(--muted);
   text-decoration: line-through;
-  cursor: not-allowed;
-  opacity: 0.6;
+  border-style: dashed;
 }
 
 /* The admin product form's variant rows. */

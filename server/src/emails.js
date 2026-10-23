@@ -1,3 +1,5 @@
+import { variantTitle } from './variants.js';
+
 // Customer emails: order confirmed (placed), shipped, delivered and cancelled, sent after the change is saved (a failure
 // is logged and never undoes or fails the change itself), the password reset link and back-in-stock alerts. And one for
 // the store's admins: a new order to pack.
@@ -146,14 +148,17 @@ ${button('Choose a new password', url)}
   return { subject, text, html };
 }
 
-// "Back in stock" for a customer who asked to be told. `product` is the product document.
-export function backInStockEmail(user, product, publicUrl = DEFAULT_PUBLIC_URL) {
-  const subject = `Back in stock: ${product.title}`;
+// "Back in stock" for a customer who asked to be told. `product` is the product document; `variant` the size or colour
+// they asked about, if any.
+export function backInStockEmail(user, product, publicUrl = DEFAULT_PUBLIC_URL, variant = null) {
+  const name = variantTitle(product, variant);
+  const { price, stock } = variant ?? product;
+  const subject = `Back in stock: ${name}`;
   const firstName = user.name.split(/\s+/)[0];
   const url = `${publicUrl}/p/${product.slug}`;
   const lines = [
-    `Good news: ${product.title} is back in stock at ${rupees(product.price)}.`,
-    ...(product.stock <= 5 ? [`Only ${product.stock} left, so don't wait too long.`] : []),
+    `Good news: ${name} is back in stock at ${rupees(price)}.`,
+    ...(stock <= 5 ? [`Only ${stock} left, so don't wait too long.`] : []),
     "We only email once. If it sells out again, ask again on the product's page.",
   ];
   const text = [`Hi ${firstName},`, ...lines, `See it: ${url}`, 'Bazaar · a demo store'].join('\n\n');

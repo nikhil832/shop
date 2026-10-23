@@ -47,6 +47,8 @@ Built in stages. Done so far:
 
 22. **Photos per variant**: in the product form, tick which of the product's photos belong to each variant; choosing that variant in the store shows only its photos, and its cart and order lines use its first one. With none ticked, a variant shows all the product's photos. The demo's Ziva Women Handbag has a Black and a Tan.
 
+23. **Alerts per size**: a sold-out size or colour stays choosable (crossed out) while others are in stock; choosing it offers "Email me when UK 10's back", and the email names the size. A customer can watch several sizes of one product; an alert for a size an admin deletes is dropped.
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database
@@ -130,8 +132,8 @@ Without keys the store works as before, with Cash on Delivery only. Tests never 
 | POST   | `/api/account/email`                | Login. `{ newEmail, password }` → 201; emails a confirmation link (24 hours) to the new address; ≤3 an hour; replaces an earlier request                                                                                                        |
 | DELETE | `/api/account/email`                | Login. Cancels the waiting change → 204                                                                                                                                                                                                         |
 | POST   | `/api/auth/confirm-email`           | `{ token }` from the link (no login needed): changes the email, tells the old address → `{ email, user }` (`user` only when logged in as that account)                                                                                          |
-| PUT    | `/api/stock-alerts/:productId`      | Login. Email me when this sold-out product is back → `{ stockAlert: true }`; 409 if it's in stock; ≤50 per customer                                                                                                                             |
-| DELETE | `/api/stock-alerts/:productId`      | Login. Cancels the alert → `{ stockAlert: false }`                                                                                                                                                                                              |
+| PUT    | `/api/stock-alerts/:productId`      | Login. Email me when this sold-out product is back → `{ stockAlert: true }`; 409 if it's in stock; ≤50 per customer; `?variant=<id>` for one sold-out size or colour                                                                            |
+| DELETE | `/api/stock-alerts/:productId`      | Login. Cancels the alert → `{ stockAlert: false }`; `?variant=<id>` for one sold-out size or colour                                                                                                                                             |
 | GET    | `/api/auth/me`                      | `{ user }`, or `{ user: null }` when logged out                                                                                                                                                                                                 |
 | POST   | `/api/orders`                       | Login. `{ items, address, expectedTotal, paymentMethod?, couponCode? }` (`cod` default, or `razorpay`); one transaction; 409 if stock or prices changed. Online orders start `awaiting_payment` and include `checkout` (Razorpay order to open) |
 | GET    | `/api/orders`                       | Login. Your orders, newest first                                                                                                                                                                                                                |

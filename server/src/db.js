@@ -10,6 +10,14 @@ export async function connectDb(uri, dbName) {
 }
 
 export async function ensureIndexes(db) {
+  // Stage 23 lets a customer watch several sizes of one product: the old one-alert-per-product unique index goes, and
+  // the one below (with variantId) replaces it. Missing index or collection (a new database) is fine.
+  await db
+    .collection('stockAlerts')
+    .dropIndex('userId_1_productId_1')
+    .catch((err) => {
+      if (![26, 27].includes(err.code)) throw err; // NamespaceNotFound, IndexNotFound
+    });
   await Promise.all([
     db.collection('categories').createIndex({ slug: 1 }, { unique: true }),
     db.collection('products').createIndex({ slug: 1 }, { unique: true }),
@@ -56,8 +64,9 @@ export async function ensureIndexes(db) {
     db.collection('coupons').createIndex({ code: 1 }, { unique: true }),
     db.collection('couponRedemptions').createIndex({ couponId: 1, userId: 1 }, { unique: true }),
     db.collection('couponRedemptions').createIndex({ orderId: 1 }),
-    // One back-in-stock alert per customer per product; the sweep looks them up by product.
-    db.collection('stockAlerts').createIndex({ userId: 1, productId: 1 }, { unique: true }),
+    // One back-in-stock alert per customer per product, or per variant of it (variantId missing for the whole
+    // product); the sweep looks them up by product.
+    db.collection('stockAlerts').createIndex({ userId: 1, productId: 1, variantId: 1 }, { unique: true }),
     db.collection('stockAlerts').createIndex({ productId: 1 }),
     db.collection('wishlist').createIndex({ userId: 1, addedAt: -1 }),
   ]);

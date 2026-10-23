@@ -218,10 +218,14 @@ export function catalogRouter({ db }) {
     const doc = await products.findOne({ slug: req.params.slug, active: true });
     if (!doc) throw new HttpError(404, 'Product not found');
     const mine = { userId: req.user?._id, productId: doc._id };
-    const [category, saved, alert] = await Promise.all([
+    const [category, saved, alerts] = await Promise.all([
       categories.findOne({ _id: doc.categoryId }),
       req.user && db.collection('wishlist').findOne(mine),
-      req.user && doc.stock === 0 && db.collection('stockAlerts').findOne(mine),
+      req.user &&
+        db
+          .collection('stockAlerts')
+          .find(mine, { projection: { variantId: 1 } })
+          .toArray(),
     ]);
     res.json({
       ...toProductCard(doc),
@@ -231,7 +235,9 @@ export function catalogRouter({ db }) {
       variants: (doc.variants ?? []).map(toVariant),
       category: category && toCategory(category),
       wishlisted: Boolean(saved), // always false when logged out
-      stockAlert: Boolean(alert), // asked to be emailed when it's back (out-of-stock products only)
+      // Asked to be emailed when it's back: the whole product (out of stock), or these sold-out variants.
+      stockAlert: Boolean(alerts && alerts.some((a) => !a.variantId)),
+      stockAlertVariants: alerts ? alerts.filter((a) => a.variantId).map((a) => a.variantId.toString()) : [],
     });
   });
 

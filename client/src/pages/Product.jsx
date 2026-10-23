@@ -70,7 +70,7 @@ function AddToCart({ product, variant }) {
   );
 }
 
-// One button per variant; sold-out ones can't be chosen.
+// One button per variant. Sold-out ones are crossed out but can be chosen, to ask for an email when they're back.
 function VariantPicker({ product, selected, onSelect }) {
   return (
     <fieldset className="variant-picker">
@@ -83,9 +83,8 @@ function VariantPicker({ product, selected, onSelect }) {
           <button
             key={v.id}
             type="button"
-            className={v.id === selected?.id ? 'selected' : ''}
+            className={[v.id === selected?.id && 'selected', v.stock === 0 && 'sold-out'].filter(Boolean).join(' ')}
             aria-pressed={v.id === selected?.id}
-            disabled={v.stock === 0}
             onClick={() => onSelect(v.id)}
           >
             {v.label}
@@ -146,8 +145,15 @@ export default function Product() {
             <VariantPicker product={product} selected={variant} onSelect={setVariantId} />
           )}
           <p className={`stock ${stockClass(shown.stock)}`}>{stockText(shown.stock)}</p>
-          {product.stock === 0 ? (
-            <StockAlertButton key={`alert-${product.id}`} product={product} />
+          {/* Sold out (the whole product, or the chosen variant): ask for an email instead. Remounted when the
+              saved alerts change, so its state follows the reloaded product. */}
+          {product.stock === 0 || variant?.stock === 0 ? (
+            <StockAlertButton
+              key={`alert-${product.id}:${variant?.id ?? ''}:${product.stockAlert}:${product.stockAlertVariants.join()}`}
+              product={product}
+              variant={variant}
+              onChange={() => setVersion((v) => v + 1)}
+            />
           ) : (
             <AddToCart key={product.id} product={product} variant={variant} />
           )}
