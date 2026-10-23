@@ -114,6 +114,26 @@ export function adminRouter(ctx) {
     }
   }
 
+  // ---- Diagnostics ----
+
+  // What the server sees of the admin's own request, to learn which address the host's proxies pass on as the
+  // visitor's (for limiting login tries per network). Only the caller's own addresses; nothing is stored.
+  router.get('/admin/request-info', (req, res) => {
+    const header = (name) => req.get(name) ?? null;
+    res.json({
+      ip: req.ip,
+      ips: req.ips,
+      remoteAddress: req.socket.remoteAddress,
+      headers: {
+        'x-forwarded-for': header('x-forwarded-for'),
+        'cf-connecting-ip': header('cf-connecting-ip'),
+        'true-client-ip': header('true-client-ip'),
+        'x-real-ip': header('x-real-ip'),
+        'x-forwarded-proto': header('x-forwarded-proto'),
+      },
+    });
+  });
+
   // ---- Products ----
 
   router.get('/admin/products', async (req, res) => {

@@ -67,6 +67,22 @@ test('admin routes need an admin: 401 logged out, 403 for customers', async () =
   assert.equal((await admin('GET', '/admin/products')).status, 200);
 });
 
+test("request info shows an admin their own request's addresses, for the per-network login limit", async () => {
+  assert.equal((await t.call('GET', '/admin/request-info')).status, 401);
+  assert.equal((await customer('GET', '/admin/request-info')).status, 403);
+  const res = await admin('GET', '/admin/request-info');
+  assert.equal(res.status, 200);
+  assert.match(res.body.ip, /127\.0\.0\.1|::1/);
+  assert.equal(res.body.headers['x-forwarded-for'], null);
+  assert.deepEqual(Object.keys(res.body.headers), [
+    'x-forwarded-for',
+    'cf-connecting-ip',
+    'true-client-ip',
+    'x-real-ip',
+    'x-forwarded-proto',
+  ]);
+});
+
 test('lists, searches and filters products, including hidden ones', async () => {
   const all = await admin('GET', '/admin/products');
   assert.equal(all.body.total, 38);
