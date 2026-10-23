@@ -69,6 +69,27 @@ test('emails need a sender address along with the Brevo key, which is never prin
   assert.equal(off.status, 0, off.stderr);
   assert.equal(JSON.parse(off.stdout).apiKey, null);
 
+  // The header naming the visitor's IP, as the host's edge sets it: configured, Render's by default there, or none.
+  const ipHeader = (env) =>
+    JSON.parse(
+      spawnSync(
+        process.execPath,
+        [
+          '--input-type=module',
+          '-e',
+          "const { loadConfig } = await import('./src/config.js'); console.log(JSON.stringify(loadConfig().clientIpHeader));",
+        ],
+        {
+          cwd: new URL('..', import.meta.url),
+          env: { PATH: process.env.PATH, MONGODB_URI: 'mongodb://unused', ...env },
+          encoding: 'utf8',
+        },
+      ).stdout,
+    );
+  assert.equal(ipHeader({ CLIENT_IP_HEADER: ' X-Real-IP ' }), 'x-real-ip');
+  assert.equal(ipHeader({ RENDER: 'true' }), 'cf-connecting-ip');
+  assert.equal(ipHeader({}), null);
+
   // New-order alerts: one address or a comma-separated list.
   const admins = run({ ADMIN_EMAIL: ' owner@example.com, , helper@example.com ' });
   assert.equal(admins.status, 0, admins.stderr);

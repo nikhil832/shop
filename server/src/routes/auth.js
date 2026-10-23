@@ -5,6 +5,8 @@ import {
   SESSION_COOKIE,
   SESSION_DAYS,
   checkPassword,
+  clientIp,
+  networkOf,
   clearPasswordAttempts,
   createSession,
   deleteSession,
@@ -102,7 +104,8 @@ export function authRouter(ctx) {
   router.post('/auth/login', async (req, res) => {
     const body = parse(loginBody, req.body);
     const user = await users.findOne({ email: body.email });
-    if (!(await checkPassword(db, body.email, body.password, user?.passwordHash))) {
+    const network = networkOf(clientIp(req, ctx.config));
+    if (!(await checkPassword(db, body.email, body.password, user?.passwordHash, network))) {
       throw new HttpError(401, 'Wrong email or password');
     }
     await startSession(req, res, user);

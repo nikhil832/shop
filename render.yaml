@@ -20,6 +20,10 @@ services:
         sync: false
       - key: MONGODB_DB
         value: shop
+      # The visitor's IP for limiting login tries per network: Render's Cloudflare edge sets this header itself, while
+      # X-Forwarded-For starts with whatever the visitor sent (checked with GET /api/admin/request-info).
+      - key: CLIENT_IP_HEADER
+        value: cf-connecting-ip
       - key: RAZORPAY_KEY_ID
         sync: false
       - key: RAZORPAY_KEY_SECRET

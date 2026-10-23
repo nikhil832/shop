@@ -11,6 +11,11 @@ export function loadConfig() {
     port: Number(process.env.PORT) || 4000,
     mongodbUri: process.env.MONGODB_URI,
     mongodbDb: process.env.MONGODB_DB || 'shop',
+    // The header the host's edge sets to the visitor's IP; unset, Express's req.ip is used. On Render (which sets
+    // RENDER) it defaults to cf-connecting-ip, since req.ip there is Render's own load balancer: without it, every
+    // visitor would share one network for the login limit.
+    clientIpHeader:
+      process.env.CLIENT_IP_HEADER?.trim().toLowerCase() || (process.env.RENDER ? 'cf-connecting-ip' : null),
     razorpay: razorpayConfig(),
     mail: mailConfig(),
   };

@@ -2,6 +2,8 @@ import express from 'express';
 import { z } from 'zod';
 import {
   checkPassword,
+  clientIp,
+  networkOf,
   clearPasswordAttempts,
   hashPassword,
   hashToken,
@@ -21,7 +23,7 @@ const passwordBody = z.object({
   newPassword,
 });
 
-export function accountRouter({ db }) {
+export function accountRouter({ db, config }) {
   const users = db.collection('users');
   const router = express.Router();
   router.use('/account', requireUser);
@@ -50,7 +52,8 @@ export function accountRouter({ db }) {
   router.post('/account/password', async (req, res) => {
     const body = parse(passwordBody, req.body);
     const { _id, email, passwordHash } = req.user;
-    if (!(await checkPassword(db, email, body.currentPassword, passwordHash))) {
+    const network = networkOf(clientIp(req, config));
+    if (!(await checkPassword(db, email, body.currentPassword, passwordHash, network))) {
       throw new HttpError(400, 'Your current password is wrong');
     }
     if (body.newPassword === body.currentPassword) throw new HttpError(400, SAME_PASSWORD);

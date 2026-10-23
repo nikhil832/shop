@@ -35,6 +35,8 @@ Built in stages. Done so far:
 
 16. **Unused uploads cleaned up**: photos uploaded in the admin panel but never saved to a product (or replaced since) are deleted once they're a day old, checked at startup and every hour, so they don't fill the free database. Photos that past orders show are kept.
 
+17. **Login limit per network**: besides the 5-per-email lock, more than 20 wrong passwords from one network (an IP address, or an IPv6 /64) within 15 minutes pause login from that network, whichever emails were tried, so nobody can try one common password on many accounts. Generous on purpose: mobile networks put many people behind one address. On Render the visitor's address comes from the `CF-Connecting-IP` header (`CLIENT_IP_HEADER` in `render.yaml`).
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database

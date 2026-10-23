@@ -1,5 +1,6 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { hashToken, networkOf } from '../src/auth.js';
 import { startTestServer } from './helpers.js';
 
 let t;
@@ -221,7 +222,8 @@ test('unknown emails lock the same way, and attempts sent at once still count', 
   assert.ok(statuses.filter((s) => s === 401).length <= 4);
   assert.equal(statuses.at(-1), 429);
   // Refused attempts aren't kept, so retrying while locked doesn't stretch the lock.
-  assert.ok((await t.db.collection('loginAttempts').countDocuments({})) <= 5);
+  const key = hashToken('login:ghost@example.com');
+  assert.ok((await t.db.collection('loginAttempts').countDocuments({ key })) <= 5);
   await t.db.collection('loginAttempts').deleteMany({});
 });
 
@@ -248,4 +250,84 @@ test('a password reset ends a lock, and must choose a different password', async
   // The link still works for a different password, which also unlocks login.
   assert.equal((await call('POST', '/auth/reset-password', { token, password: 'brand new password' })).status, 200);
   assert.equal((await login(email, 'brand new password')).status, 200);
+});
+
+// A login from a given visitor address, as the host's edge reports it in CF-Connecting-IP.
+async function loginFrom(ip, email, password) {
+  const res = await fetch(`${t.base}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': ip },
+    body: JSON.stringify({ email, password }),
+  });
+  return { status: res.status, body: await res.json() };
+}
+const NETWORK_LOCKED = 'Too many wrong passwords from your network. Try again in 15 minutes.';
+
+test('20 wrong passwords from one network, across any emails, pause login from that network only', async () => {
+  await t.db.collection('loginAttempts').deleteMany({});
+  t.ctx.config.clientIpHeader = 'cf-connecting-ip';
+  try {
+    const email = 'spray-target@example.com';
+    await t.browser()('POST', '/auth/register', { name: 'Lata', email, password: 'right password' });
+    // One common password tried on 20 different accounts (4 each, so no email lock), from one address.
+    for (let i = 0; i < 20; i++) {
+      assert.equal((await loginFrom('203.0.113.7', `user${i % 5}@example.com`, 'password123')).status, 401, `try ${i}`);
+    }
+    const blocked = await loginFrom('203.0.113.7', 'user9@example.com', 'password123');
+    assert.equal(blocked.status, 429);
+    assert.equal(blocked.body.error, NETWORK_LOCKED);
+    // Even the right password, so the network learns nothing while it's paused.
+    assert.equal((await loginFrom('203.0.113.7', email, 'right password')).status, 429);
+    // Another network, and the same email from it, are unaffected.
+    assert.equal((await loginFrom('198.51.100.20', email, 'right password')).status, 200);
+
+    // The pause ends once the attempts are 15 minutes old.
+    const old = new Date(Date.now() - 16 * 60_000);
+    await t.db.collection('loginAttempts').updateMany({}, { $set: { at: old } });
+    assert.equal((await loginFrom('203.0.113.7', email, 'right password')).status, 200);
+  } finally {
+    t.ctx.config.clientIpHeader = null;
+    await t.db.collection('loginAttempts').deleteMany({});
+  }
+});
+
+test("logging in to one's own account doesn't clear the network's wrong passwords", async () => {
+  t.ctx.config.clientIpHeader = 'cf-connecting-ip';
+  try {
+    const email = 'own-account@example.com';
+    await t.browser()('POST', '/auth/register', { name: 'Lata', email, password: 'right password' });
+    for (let i = 0; i < 20; i++) {
+      await loginFrom('203.0.113.8', `other${i % 5}@example.com`, 'guess');
+      // An attacker logging in to their own account between guesses gains nothing.
+      // (Not after the 20th, when the network is already paused.)
+      if (i % 5 === 4 && i < 19) {
+        assert.equal((await loginFrom('203.0.113.8', email, 'right password')).status, 200);
+      }
+    }
+    assert.equal((await loginFrom('203.0.113.8', 'other9@example.com', 'guess')).status, 429);
+  } finally {
+    t.ctx.config.clientIpHeader = null;
+    await t.db.collection('loginAttempts').deleteMany({});
+  }
+});
+
+test('one IPv6 /64 counts as one network; a header that is not an address is ignored', async () => {
+  assert.equal(networkOf('2405:201:abcd:12:aaaa::1'), '2405:201:abcd:12::/64');
+  assert.equal(networkOf('2405:0201:abcd:0012:ffff:1:2:3'), '2405:201:abcd:12::/64');
+  assert.equal(networkOf('2001:db8::1'), '2001:db8:0:0::/64');
+  assert.equal(networkOf('::ffff:203.0.113.7'), '203.0.113.7');
+  assert.equal(networkOf('203.0.113.7'), '203.0.113.7');
+  assert.equal(networkOf(undefined), 'unknown');
+
+  t.ctx.config.clientIpHeader = 'cf-connecting-ip';
+  try {
+    for (let i = 0; i < 20; i++) await loginFrom(`2405:201:abcd:12::${i + 1}`, `v6-${i % 5}@example.com`, 'guess');
+    assert.equal((await loginFrom('2405:201:abcd:12:ffff::9', 'v6-9@example.com', 'guess')).status, 429);
+    assert.equal((await loginFrom('2405:201:abcd:13::1', 'v6-9@example.com', 'guess')).status, 401);
+    // Not an address: falls back to the connection's own address (here, the test's 127.0.0.1), not a made-up network.
+    assert.equal((await loginFrom('not-an-ip', 'v6-9@example.com', 'guess')).status, 401);
+  } finally {
+    t.ctx.config.clientIpHeader = null;
+    await t.db.collection('loginAttempts').deleteMany({});
+  }
 });

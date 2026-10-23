@@ -73,6 +73,7 @@ test("request info shows an admin their own request's addresses, for the per-net
   const res = await admin('GET', '/admin/request-info');
   assert.equal(res.status, 200);
   assert.match(res.body.ip, /127\.0\.0\.1|::1/);
+  assert.equal(res.body.clientIp, res.body.ip); // no CLIENT_IP_HEADER in tests
   assert.equal(res.body.headers['x-forwarded-for'], null);
   assert.deepEqual(Object.keys(res.body.headers), [
     'x-forwarded-for',

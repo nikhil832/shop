@@ -1,7 +1,7 @@
 import express from 'express';
 import { ObjectId } from 'mongodb';
 import { z } from 'zod';
-import { requireAdmin } from '../auth.js';
+import { clientIp, networkOf, requireAdmin } from '../auth.js';
 import { HttpError, escapeRegex, parse, parseObjectId } from '../http.js';
 import { ICONS, image, slugify } from '../seed.js';
 import { refundPayment } from '../payments.js';
@@ -121,6 +121,9 @@ export function adminRouter(ctx) {
   router.get('/admin/request-info', (req, res) => {
     const header = (name) => req.get(name) ?? null;
     res.json({
+      // What the login limit uses, from CLIENT_IP_HEADER when set.
+      clientIp: clientIp(req, ctx.config),
+      network: networkOf(clientIp(req, ctx.config)),
       ip: req.ip,
       ips: req.ips,
       remoteAddress: req.socket.remoteAddress,
