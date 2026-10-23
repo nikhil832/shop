@@ -1563,6 +1563,76 @@ textarea {
   object-fit: cover;
 }
 
+/* ---- Returns ---- */
+.return-page {
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.return-page h1,
+.return-page p {
+  margin: 0;
+}
+.return-page > label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 600;
+}
+.return-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.return-items li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.return-items img {
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.return-title {
+  flex: 1;
+  min-width: 0;
+}
+.return-items label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+.return-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.return-row p {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+.return-row > p.small {
+  flex-basis: 100%;
+}
+.status.return-declined {
+  background: var(--bg);
+  color: var(--muted);
+}
+.status.return-refund_failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 /* ---- Tracking (order pages) ---- */
 .shipment-form {
   display: flex;

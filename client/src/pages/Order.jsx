@@ -4,7 +4,7 @@ import { Link, Navigate, useLocation, useParams } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import OrderSummary from '../components/OrderSummary.jsx';
-import { formatDate, formatPrice, formatTime, orderNumber, paymentLabel } from '../format.js';
+import { formatDate, formatPrice, formatTime, orderNumber, paymentLabel, returnStatusLabel } from '../format.js';
 import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
 import { hasInvoice } from './Invoice.jsx';
@@ -40,6 +40,10 @@ export default function Order() {
   const { user } = useAuth();
   const location = useLocation();
   const { data, error } = useFetch(user ? `/orders/${encodeURIComponent(id)}` : null);
+  // Returns: for delivered orders, what can be returned and what already is.
+  const { data: returnInfo } = useFetch(
+    data?.status === 'delivered' ? `/orders/${encodeURIComponent(id)}/returns` : null,
+  );
   // The order as returned by a cancel or payment, which replaces the loaded one.
   const [updated, setUpdated] = useState(null);
   const [action, setAction] = useState({ busy: false, error: location.state?.paymentError ?? null });
@@ -86,6 +90,11 @@ export default function Order() {
         <span>Order #{orderNumber(order)}</span>
       </nav>
 
+      {location.state?.returnRequested && (
+        <p className="notice" role="status">
+          Return requested. We&rsquo;ll email you once we&rsquo;ve looked at it.
+        </p>
+      )}
       {(location.state?.placed || updated) && order.status === 'placed' && (
         <p className="notice" role="status">
           {paid
@@ -153,6 +162,32 @@ export default function Order() {
             <section className="panel" aria-labelledby="tracking-heading">
               <h2 id="tracking-heading">Tracking</h2>
               <ShipmentDetails shipment={order.shipment} />
+            </section>
+          )}
+
+          {returnInfo && (returnInfo.returns.length > 0 || returnInfo.canReturn) && (
+            <section className="panel" aria-labelledby="returns-heading">
+              <h2 id="returns-heading">Returns</h2>
+              {returnInfo.returns.map((r) => (
+                <div key={r.id} className="return-row">
+                  <p>
+                    {r.items.map((i) => `${i.title} × ${i.qty}`).join(', ')}
+                    <span className="muted small block">
+                      Asked on {formatDate(r.createdAt)} · {r.reasonText} · refund {formatPrice(r.refund)}
+                    </span>
+                  </p>
+                  <span className={`status return-${r.status}`}>{returnStatusLabel(r)}</span>
+                  {r.status === 'declined' && r.declineReason && <p className="muted small">Why: {r.declineReason}</p>}
+                </div>
+              ))}
+              {returnInfo.canReturn && returnInfo.items.some((i) => i.returnable > 0) && (
+                <p>
+                  <Link to={`/orders/${order.id}/return`} className="btn">
+                    Return items
+                  </Link>{' '}
+                  <span className="muted small">until {formatDate(returnInfo.returnableUntil)}</span>
+                </p>
+              )}
             </section>
           )}
 

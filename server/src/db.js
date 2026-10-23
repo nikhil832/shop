@@ -69,5 +69,8 @@ export async function ensureIndexes(db) {
     db.collection('stockAlerts').createIndex({ userId: 1, productId: 1, variantId: 1 }, { unique: true }),
     db.collection('stockAlerts').createIndex({ productId: 1 }),
     db.collection('wishlist').createIndex({ userId: 1, addedAt: -1 }),
+    // Returns: an order's (checked when asking for one) and the admin list by status.
+    db.collection('returns').createIndex({ orderId: 1, createdAt: -1 }),
+    db.collection('returns').createIndex({ status: 1, createdAt: -1 }),
   ]);
 }

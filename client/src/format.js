@@ -37,3 +37,21 @@ export const formatTime = (iso) => new Date(iso).toLocaleTimeString('en-IN', { h
 // Prices are typed in rupees (decimals allowed) and stored in paise.
 export const toPaise = (rupees) => Math.round(Number(rupees) * 100);
 export const toRupees = (paise) => String(paise / 100);
+
+// A return's status in words. Customers aren't told about a failed refund (it is being retried), and Razorpay takes a
+// few working days to return money, so an online refund is "started".
+export function returnStatusLabel(ret, { admin = false } = {}) {
+  const online = ret.refundMethod === 'razorpay';
+  return {
+    requested: 'Waiting for review',
+    approved: online
+      ? 'Approved · refund in progress'
+      : admin
+        ? 'Approved · refund to pay'
+        : 'Approved · refund on its way',
+    refunding: 'Approved · refund in progress',
+    refunded: online ? 'Refund started' : 'Refunded',
+    refund_failed: admin ? 'Refund failed' : 'Approved · refund in progress',
+    declined: 'Declined',
+  }[ret.status];
+}

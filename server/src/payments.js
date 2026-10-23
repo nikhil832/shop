@@ -72,7 +72,7 @@ export async function syncPayment(ctx, order) {
 
 // What an admin sees when a refund fails. Razorpay pays refunds from the account balance, which is short of the
 // payment by its fee, so a refund it refuses is most often a balance problem (its reply just says "invalid request").
-function refundErrorText(err, amount) {
+export function refundErrorText(err, amount) {
   if (!err.razorpayReason) return err.message;
   const rupees = (amount / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 });
   return `Razorpay refused the refund ("${err.razorpayReason}"). Check that your Razorpay balance covers ₹${rupees}, then retry.`;

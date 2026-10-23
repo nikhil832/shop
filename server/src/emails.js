@@ -267,30 +267,146 @@ ${button('Open the order', url)}`,
   return { subject, text, html };
 }
 
+// Who hears about store events (new orders, return requests): ADMIN_EMAIL if set, otherwise every admin account.
+export async function adminRecipients(ctx) {
+  const configured = ctx.config.mail?.adminEmails ?? [];
+  if (configured.length) return configured.map((email) => ({ email }));
+  const admins = await ctx.db
+    .collection('users')
+    .find({ role: 'admin' }, { projection: { name: 1, email: 1 } })
+    .toArray();
+  return admins.map((u) => ({ email: u.email, name: u.name }));
+}
+
+// Sends `email` to each admin separately, so one failed address doesn't stop the rest. Never throws.
+async function sendToAdmins(ctx, email, what) {
+  try {
+    for (const to of await adminRecipients(ctx)) {
+      try {
+        await ctx.mail.send({ to, ...email });
+      } catch (err) {
+        console.error(`Could not send ${what}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error(`Could not send ${what}:`, err.message);
+  }
+}
+
 // Tells the admins about an order that has just been placed (COD at checkout, online once paid). Goes to ADMIN_EMAIL if
 // set, otherwise to every admin account. Never throws, and one failed address doesn't stop the others.
 export async function sendNewOrderAlert(ctx, order) {
   try {
-    const users = ctx.db.collection('users');
-    const configured = ctx.config.mail?.adminEmails ?? [];
-    const recipients = configured.length
-      ? configured.map((email) => ({ email }))
-      : (await users.find({ role: 'admin' }, { projection: { name: 1, email: 1 } }).toArray()).map((u) => ({
-          email: u.email,
-          name: u.name,
-        }));
-    if (!recipients.length) return;
-    const customer = await users.findOne({ _id: order.userId }, { projection: { name: 1, email: 1 } });
-    const email = newOrderEmail(order, customer, ctx.config.mail?.publicUrl);
-    for (const to of recipients) {
-      try {
-        await ctx.mail.send({ to, ...email });
-      } catch (err) {
-        console.error(`Could not send the new-order alert for order ${order._id}:`, err.message);
-      }
-    }
+    const customer = await ctx.db
+      .collection('users')
+      .findOne({ _id: order.userId }, { projection: { name: 1, email: 1 } });
+    await sendToAdmins(
+      ctx,
+      newOrderEmail(order, customer, ctx.config.mail?.publicUrl),
+      `the new-order alert for order ${order._id}`,
+    );
   } catch (err) {
     console.error(`Could not send the new-order alert for order ${order._id}:`, err.message);
+  }
+}
+
+export const RETURN_REASONS = {
+  damaged: 'Arrived damaged or faulty',
+  wrong_item: 'Wrong item sent',
+  not_as_described: "Doesn't match the description",
+  changed_mind: 'Changed my mind',
+  other: 'Other',
+};
+const returnLines = (ret) => ret.items.map((i) => [`${i.title} × ${i.qty}`, rupees(i.price * i.qty)]);
+
+// "Return requested" for the admins: who, which order and items, why, the refund it would mean, and a link to it.
+export function returnRequestedEmail(ret, order, customer, publicUrl = DEFAULT_PUBLIC_URL) {
+  const subject = `Return requested for order #${orderNumber(order)}: ${rupees(ret.refund)}`;
+  const url = `${publicUrl}/admin/returns`;
+  const who = customer ? `${customer.name} (${customer.email})` : order.address.name;
+  const lines = [
+    `${who} asked to return items from order #${orderNumber(order)}.`,
+    `Reason: ${RETURN_REASONS[ret.reason]}${ret.note ? `: ${ret.note}` : ''}`,
+  ];
+  const items = returnLines(ret);
+  const text = [
+    ...lines,
+    [...items, ['Refund if approved', rupees(ret.refund)]].map(([l, v]) => `${l}: ${v}`).join('\n'),
+    `Approve or decline it in the admin panel: ${url}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const cell = 'padding:6px 0;border-bottom:1px solid #e5e7eb';
+  const html = layout(
+    subject,
+    `${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+<table style="width:100%;border-collapse:collapse;margin:16px 0">
+${items.map(([l, v]) => `<tr><td style="${cell}">${escapeHtml(l)}</td><td style="${cell};text-align:right">${v}</td></tr>`).join('\n')}
+<tr><td style="padding:4px 0">Refund if approved</td><td style="padding:4px 0;text-align:right">${rupees(ret.refund)}</td></tr>
+</table>
+${button('Review the return', url)}`,
+    "You're getting this email because you're an admin of the store.",
+  );
+  return { subject, text, html };
+}
+
+// The customer's email when a return is approved (with how the money comes back) or declined (with the reason).
+export function returnDecisionEmail(ret, order, user, publicUrl = DEFAULT_PUBLIC_URL) {
+  const approved = ret.status !== 'declined';
+  const subject = `Your return for order #${orderNumber(order)} was ${approved ? 'approved' : 'declined'}`;
+  const firstName = user.name.split(/\s+/)[0];
+  const orderUrl = `${publicUrl}/orders/${order._id}`;
+  const online = ret.refundMethod === 'razorpay';
+  const lines = approved
+    ? [
+        "We've accepted your return.",
+        online
+          ? `We've started a refund of ${rupees(ret.refund)} to your original payment method. It usually reaches you in 5–7 working days.`
+          : `You paid in cash, so we'll refund ${rupees(ret.refund)} to you directly (UPI or bank transfer) and get in touch for the details.`,
+      ]
+    : ["We're sorry: we can't accept your return.", ...(ret.declineReason ? [`Why: ${ret.declineReason}`] : [])];
+  const items = returnLines(ret);
+  const text = [
+    `Hi ${firstName},`,
+    ...lines,
+    items.map(([l, v]) => `- ${l}: ${v}`).join('\n'),
+    `View your order: ${orderUrl}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+<ul>${items.map(([l, v]) => `<li>${escapeHtml(l)}: ${v}</li>`).join('')}</ul>
+${button('View your order', orderUrl)}`,
+    "You're getting this email because you asked to return items.",
+  );
+  return { subject, text, html };
+}
+
+export async function sendReturnRequestAlert(ctx, ret, order) {
+  try {
+    const customer = await ctx.db
+      .collection('users')
+      .findOne({ _id: order.userId }, { projection: { name: 1, email: 1 } });
+    await sendToAdmins(
+      ctx,
+      returnRequestedEmail(ret, order, customer, ctx.config.mail?.publicUrl),
+      `the return alert for ${ret._id}`,
+    );
+  } catch (err) {
+    console.error(`Could not send the return alert for ${ret._id}:`, err.message);
+  }
+}
+
+// Emails the customer the decision on their return. Never throws: the decision is already saved.
+export async function sendReturnDecision(ctx, ret, order) {
+  try {
+    const user = await ctx.db.collection('users').findOne({ _id: order.userId }, { projection: { name: 1, email: 1 } });
+    if (!user) return;
+    const email = returnDecisionEmail(ret, order, user, ctx.config.mail?.publicUrl);
+    await ctx.mail.send({ to: { email: user.email, name: user.name }, ...email });
+  } catch (err) {
+    console.error(`Could not send the return decision for ${ret._id}:`, err.message);
   }
 }
 

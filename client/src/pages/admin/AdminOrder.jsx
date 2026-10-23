@@ -3,7 +3,7 @@ import { lineKey } from '../../cart.js';
 import { Link, useParams } from 'react-router';
 import { request } from '../../api.js';
 import OrderSummary from '../../components/OrderSummary.jsx';
-import { formatDate, formatPrice, orderNumber, paymentLabel } from '../../format.js';
+import { formatDate, formatPrice, orderNumber, paymentLabel, returnStatusLabel } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 import { hasInvoice } from '../Invoice.jsx';
 import NotFound from '../NotFound.jsx';
@@ -78,6 +78,7 @@ function ShipmentForm({ shipment, submitLabel, busy, onSubmit, onCancel }) {
 export default function AdminOrder() {
   const { id } = useParams();
   const { data, error } = useFetch(`/admin/orders/${encodeURIComponent(id)}`);
+  const { data: returns } = useFetch(`/admin/orders/${encodeURIComponent(id)}/returns`);
   const [updated, setUpdated] = useState(null);
   const [action, setAction] = useState({ busy: false, error: null });
   const [editingShipment, setEditingShipment] = useState(false);
@@ -173,6 +174,26 @@ export default function AdminOrder() {
               </tbody>
             </table>
           </section>
+
+          {returns?.length > 0 && (
+            <section className="panel" aria-labelledby="order-returns">
+              <h2 id="order-returns">Returns</h2>
+              {returns.map((r) => (
+                <div key={r.id} className="return-row">
+                  <p>
+                    {r.items.map((i) => `${i.title} × ${i.qty}`).join(', ')}
+                    <span className="muted small block">
+                      {formatDate(r.createdAt)} · {r.reasonText} · refund {formatPrice(r.refund)}
+                    </span>
+                  </p>
+                  <span className={`status return-${r.status}`}>{returnStatusLabel(r, { admin: true })}</span>
+                </div>
+              ))}
+              <Link to={`/admin/returns${returns.some((r) => r.status === 'requested') ? '' : '?status=all'}`}>
+                Manage returns
+              </Link>
+            </section>
+          )}
 
           <section className="panel admin-columns">
             <div>

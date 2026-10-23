@@ -13,6 +13,8 @@ import ForgotPassword from './pages/ForgotPassword.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 import ConfirmEmail from './pages/ConfirmEmail.jsx';
 import Invoice from './pages/Invoice.jsx';
+import ReturnRequest from './pages/ReturnRequest.jsx';
+import AdminReturns from './pages/admin/AdminReturns.jsx';
 import Order from './pages/Order.jsx';
 import Orders from './pages/Orders.jsx';
 import Wishlist from './pages/Wishlist.jsx';
@@ -48,6 +50,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="orders" element={<Orders />} />
             <Route path="orders/:id" element={<Order />} />
             <Route path="orders/:id/invoice" element={<Invoice />} />
+            <Route path="orders/:id/return" element={<ReturnRequest />} />
             <Route path="wishlist" element={<Wishlist />} />
             <Route path="account" element={<Account />} />
             <Route path="admin" element={<AdminLayout />}>
@@ -61,6 +64,7 @@ createRoot(document.getElementById('root')).render(
               <Route path="categories" element={<AdminCategories />} />
               <Route path="reviews" element={<AdminReviews />} />
               <Route path="coupons" element={<AdminCoupons />} />
+              <Route path="returns" element={<AdminReturns />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Route>
