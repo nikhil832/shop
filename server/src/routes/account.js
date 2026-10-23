@@ -17,6 +17,7 @@ import { HttpError, parse } from '../http.js';
 import { email, newPassword, SAME_PASSWORD } from './auth.js';
 import { newRecoveryCodes, newSecret, otpauthUri, verifyCode } from '../totp.js';
 import { checkSecondStep, hasTwoStep, recoveryHashes } from '../twoStep.js';
+import { takeHourlySlot } from '../rateLimit.js';
 import { address } from './orders.js';
 
 // The logged-in customer's own details. A new email only takes effect once confirmed by a link sent to it.
@@ -187,14 +188,12 @@ export function accountRouter(ctx) {
     // Signing up says the same, so this tells nobody anything new.
     if (await users.findOne({ email: body.newEmail }, { projection: { _id: 1 } }))
       throw new HttpError(409, EMAIL_TAKEN);
-    const now = Date.now();
-    const recent = await emailChanges.countDocuments({ userId: _id, createdAt: { $gt: new Date(now - 3_600_000) } });
-    if (recent >= MAX_EMAIL_CHANGES_PER_HOUR) {
+    // Taken in one atomic update, so requests sent at once can't all pass.
+    if (!(await takeHourlySlot(db, `emailChange:${_id}`, MAX_EMAIL_CHANGES_PER_HOUR))) {
       throw new HttpError(429, 'Too many confirmation emails in the last hour. Try again later.');
     }
+    const now = Date.now();
     const token = randomBytes(32).toString('base64url');
-    // Earlier requests stay (they count towards the hourly limit) but stop working.
-    await emailChanges.updateMany({ userId: _id }, { $set: { expiresAt: new Date(now) } });
     const { insertedId } = await emailChanges.insertOne({
       tokenHash: hashToken(token),
       userId: _id,
@@ -202,6 +201,8 @@ export function accountRouter(ctx) {
       createdAt: new Date(now),
       expiresAt: new Date(now + EMAIL_CHANGE_HOURS * 3_600_000),
     });
+    // Earlier requests stop working.
+    await emailChanges.updateMany({ userId: _id, _id: { $ne: insertedId } }, { $set: { expiresAt: new Date(now) } });
     const url = `${config.mail?.publicUrl ?? 'http://localhost:5173'}/confirm-email#token=${token}`;
     try {
       await ctx.mail.send({

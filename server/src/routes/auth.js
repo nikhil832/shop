@@ -18,6 +18,7 @@ import {
   verifyPassword,
 } from '../auth.js';
 import { passwordResetEmail, RESET_LINK_MINUTES } from '../emails.js';
+import { takeHourlySlot } from '../rateLimit.js';
 import { MAX_WRONG_CODES, checkSecondStep, createLoginTicket, hasTwoStep } from '../twoStep.js';
 import { HttpError, parse } from '../http.js';
 
@@ -64,9 +65,9 @@ export function authRouter(ctx) {
 
   // Emails a one-time link (token after #, so it never reaches server logs or other sites). Only its hash is stored.
   async function sendPasswordReset(user) {
+    // These run in the background, so several can run at once: the limit is taken in one atomic update.
+    if (!(await takeHourlySlot(db, `reset:${user._id}`, MAX_RESETS_PER_HOUR))) return;
     const now = Date.now();
-    const recent = await resets.countDocuments({ userId: user._id, createdAt: { $gt: new Date(now - 3_600_000) } });
-    if (recent >= MAX_RESETS_PER_HOUR) return;
     const token = randomBytes(32).toString('base64url');
     await resets.insertOne({
       tokenHash: hashToken(token),

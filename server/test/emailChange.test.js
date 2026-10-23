@@ -113,7 +113,12 @@ test('a newer request or a cancel stops the older link; links expire', async () 
   assert.equal((await t.call('POST', '/auth/confirm-email', { token: 'x'.repeat(43) })).status, 400);
 });
 
-test('at most 3 confirmation emails an hour', async () => {
+test('at most 3 confirmation emails an hour, even when sent at once', async () => {
+  const racer = await register();
+  const burst = await Promise.all(Array.from({ length: 5 }, (_, i) => change(racer, `burst${i}-${n}@example.com`)));
+  assert.equal(burst.filter((r) => r.status === 201).length, 3);
+  assert.equal(burst.filter((r) => r.status === 429).length, 2);
+
   const call = await register();
   for (let i = 0; i < 3; i++) assert.equal((await change(call, `try${i}-${n}@example.com`)).status, 201);
   const fourth = await change(call, `try3-${n}@example.com`);

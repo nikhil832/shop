@@ -77,5 +77,7 @@ export async function ensureIndexes(db) {
     // Two-step login tickets, between the password and the code.
     db.collection('loginChallenges').createIndex({ tokenHash: 1 }, { unique: true }),
     db.collection('loginChallenges').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    // Hourly limits (takeHourlySlot): gone an hour after their last use.
+    db.collection('rateLimits').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
   ]);
 }

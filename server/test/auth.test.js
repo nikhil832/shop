@@ -177,7 +177,8 @@ test('reset links expire, malformed ones are refused, and only 3 are sent an hou
   assert.equal(bad.status, 400);
   assert.equal(bad.body.error, 'This reset link has expired or was already used. Ask for a new one.');
 
-  for (let i = 0; i < 3; i++) await t.call('POST', '/auth/forgot-password', { email });
+  // Sent at once (the emails go out in the background, so they would race): still only 3 links in all.
+  await Promise.all(Array.from({ length: 5 }, () => t.call('POST', '/auth/forgot-password', { email })));
   await resetMailTo(email, 3);
   await new Promise((resolve) => setTimeout(resolve, 100));
   const sent = t.mail.sent.filter((m) => m.to.email === email).length;
