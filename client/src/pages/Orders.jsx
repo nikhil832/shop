@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { lineKey } from '../cart.js';
 import { Link, Navigate } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
@@ -59,7 +60,7 @@ export default function Orders() {
               <div className="order-thumbs">
                 {o.items
                   .slice(0, 3)
-                  .map((i) => i.image && <img key={i.productId} src={i.image} alt="" width="56" height="56" />)}
+                  .map((i) => i.image && <img key={lineKey(i)} src={i.image} alt="" width="56" height="56" />)}
               </div>
               <div className="order-card-body">
                 <span className="order-number">Order #{orderNumber(o)}</span>

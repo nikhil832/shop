@@ -76,10 +76,121 @@ function Images({ images, onChange }) {
   );
 }
 
+let nextRow = 0;
+const newRow = (v = {}) => ({
+  key: nextRow++,
+  id: v.id,
+  label: v.label ?? '',
+  price: v.price ? toRupees(v.price) : '',
+  mrp: v.mrp ? toRupees(v.mrp) : '',
+  stock: v.stock ?? 0,
+});
+
+// The variants of a product that has them (sizes, colours…), each with its own price, MRP and stock. Rows keep the
+// id of an existing variant, so editing doesn't detach it from carts and past orders.
+function Variants({ name, rows, onChange }) {
+  const set = (key, field, value) => onChange(rows.map((r) => (r.key === key ? { ...r, [field]: value } : r)));
+  return (
+    <fieldset className="variant-editor">
+      <legend>Variants</legend>
+      <label>
+        Option name
+        <input name="variantName" required maxLength={20} placeholder="Size, Colour…" defaultValue={name} />
+      </label>
+      <div className="table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Price (₹)</th>
+              <th>MRP (₹)</th>
+              <th>Stock</th>
+              <th>
+                <span className="sr-only">Remove</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.key}>
+                <td>
+                  <input
+                    value={r.label}
+                    onChange={(e) => set(r.key, 'label', e.target.value)}
+                    required
+                    maxLength={30}
+                    placeholder="UK 8, Blue…"
+                    aria-label={`Label of variant ${i + 1}`}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    required
+                    value={r.price}
+                    onChange={(e) => set(r.key, 'price', e.target.value)}
+                    aria-label={`Price of variant ${i + 1}`}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    required
+                    value={r.mrp}
+                    onChange={(e) => set(r.key, 'mrp', e.target.value)}
+                    aria-label={`MRP of variant ${i + 1}`}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100000"
+                    step="1"
+                    required
+                    value={r.stock}
+                    onChange={(e) => set(r.key, 'stock', e.target.value)}
+                    aria-label={`Stock of variant ${i + 1}`}
+                  />
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    className="link danger"
+                    onClick={() => onChange(rows.filter((x) => x.key !== r.key))}
+                    disabled={rows.length === 1}
+                  >
+                    Remove<span className="sr-only"> variant {i + 1}</span>
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {rows.length < 20 && (
+        <button type="button" className="btn small" onClick={() => onChange([...rows, newRow()])}>
+          Add a variant
+        </button>
+      )}
+      <span className="muted small">
+        The store shows the lowest price (&ldquo;from ₹…&rdquo;) and the total stock. Customers choose one before adding
+        to the cart.
+      </span>
+    </fieldset>
+  );
+}
+
 function ProductForm({ product, categories }) {
   const navigate = useNavigate();
   const [images, setImages] = useState(product?.images ?? []);
   const [state, setState] = useState({ busy: false, error: null });
+  // Variant rows, or null for a product without variants.
+  const [variants, setVariants] = useState(product?.variants.length ? product.variants.map(newRow) : null);
 
   async function submit(e) {
     e.preventDefault();
@@ -94,9 +205,25 @@ function ProductForm({ product, categories }) {
         .split('\n')
         .map((h) => h.trim())
         .filter(Boolean),
-      price: toPaise(form.get('price')),
-      mrp: toPaise(form.get('mrp')),
-      stock: Number(form.get('stock')),
+      // With variants their prices and stock are sent; without, the product's own (and `variants: []` switches
+      // them off).
+      ...(variants
+        ? {
+            variantName: form.get('variantName'),
+            variants: variants.map((v) => ({
+              ...(v.id && { id: v.id }),
+              label: v.label,
+              price: toPaise(v.price),
+              mrp: toPaise(v.mrp),
+              stock: Number(v.stock),
+            })),
+          }
+        : {
+            variants: [],
+            price: toPaise(form.get('price')),
+            mrp: toPaise(form.get('mrp')),
+            stock: Number(form.get('stock')),
+          }),
       images,
       active: form.get('active') === 'on',
     };
@@ -143,32 +270,44 @@ function ProductForm({ product, categories }) {
             ))}
           </select>
         </label>
-        <label>
-          Price (₹)
-          <input
-            name="price"
-            type="number"
-            min="1"
-            step="0.01"
-            required
-            defaultValue={product && toRupees(product.price)}
-          />
-        </label>
-        <label>
-          MRP (₹)
-          <input
-            name="mrp"
-            type="number"
-            min="1"
-            step="0.01"
-            required
-            defaultValue={product && toRupees(product.mrp)}
-          />
-        </label>
-        <label>
-          Stock
-          <input name="stock" type="number" min="0" max="100000" step="1" required defaultValue={product?.stock ?? 0} />
-        </label>
+        {!variants && (
+          <>
+            <label>
+              Price (₹)
+              <input
+                name="price"
+                type="number"
+                min="1"
+                step="0.01"
+                required
+                defaultValue={product && toRupees(product.price)}
+              />
+            </label>
+            <label>
+              MRP (₹)
+              <input
+                name="mrp"
+                type="number"
+                min="1"
+                step="0.01"
+                required
+                defaultValue={product && toRupees(product.mrp)}
+              />
+            </label>
+            <label>
+              Stock
+              <input
+                name="stock"
+                type="number"
+                min="0"
+                max="100000"
+                step="1"
+                required
+                defaultValue={product?.stock ?? 0}
+              />
+            </label>
+          </>
+        )}
         <label className="check">
           <input name="active" type="checkbox" defaultChecked={product?.active ?? true} />
           Show in store
@@ -182,6 +321,15 @@ function ProductForm({ product, categories }) {
           <textarea name="description" rows="5" maxLength={5000} defaultValue={product?.description} />
         </label>
       </div>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={Boolean(variants)}
+          onChange={(e) => setVariants(e.target.checked ? [newRow()] : null)}
+        />
+        Comes in sizes, colours or other options, each with its own price and stock
+      </label>
+      {variants && <Variants name={product?.variantName} rows={variants} onChange={setVariants} />}
       <Images images={images} onChange={setImages} />
       {state.error && (
         <p className="error" role="alert">

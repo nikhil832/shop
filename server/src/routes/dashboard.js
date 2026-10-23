@@ -16,6 +16,8 @@ const IST_OFFSET = 330 * 60_000;
 const DAY = 86_400_000;
 const BEST_SELLERS = 5;
 const LOW_STOCK_LIST = 10;
+// Low: the product, or one of its variants, has LOW_STOCK or fewer left.
+const LOW = { $or: [{ stock: { $lte: LOW_STOCK } }, { 'variants.stock': { $lte: LOW_STOCK } }] };
 
 // The first moment of the period: midnight India time, `days - 1` days before today.
 function periodStart(now, days) {
@@ -88,11 +90,16 @@ export function dashboardRouter({ db }) {
         .toArray(),
       orders.countDocuments({ status: 'placed' }),
       products
-        .find({ active: true, stock: { $lte: LOW_STOCK } }, { projection: { slug: 1, title: 1, stock: 1 } })
-        .sort({ stock: 1, title: 1 })
-        .limit(LOW_STOCK_LIST)
+        .aggregate([
+          { $match: { active: true, ...LOW } },
+          // A product with variants is as low as its lowest variant.
+          { $addFields: { lowest: { $min: ['$stock', { $min: '$variants.stock' }] } } },
+          { $sort: { lowest: 1, title: 1 } },
+          { $limit: LOW_STOCK_LIST },
+          { $project: { slug: 1, title: 1, stock: 1, variants: 1 } },
+        ])
         .toArray(),
-      products.countDocuments({ active: true, stock: { $lte: LOW_STOCK } }),
+      products.countDocuments({ active: true, ...LOW }),
     ]);
 
     const totals = stats.current[0] ?? { revenue: 0, orders: 0, discount: 0, itemsSold: 0 };
@@ -103,13 +110,14 @@ export function dashboardRouter({ db }) {
       const date = isoDay(from.getTime() + i * DAY);
       return { date, revenue: byDay.get(date)?.revenue ?? 0, orders: byDay.get(date)?.orders ?? 0 };
     });
-    // Slugs (for links) from the products as they are now; titles from the orders, as sold.
-    const slugs = new Map(
+    // Slugs (for links) and titles from the products as they are now: order lines name the variant bought ("… (Size:
+    // UK 8)"), while a best seller counts all of them. A product since deleted keeps the title from its orders.
+    const liveProducts = new Map(
       (
         await products
-          .find({ _id: { $in: stats.bestSellers.map((b) => b._id) } }, { projection: { slug: 1 } })
+          .find({ _id: { $in: stats.bestSellers.map((b) => b._id) } }, { projection: { slug: 1, title: 1 } })
           .toArray()
-      ).map((p) => [p._id.toString(), p.slug]),
+      ).map((p) => [p._id.toString(), p]),
     );
 
     res.json({
@@ -127,13 +135,22 @@ export function dashboardRouter({ db }) {
       daily,
       bestSellers: stats.bestSellers.map((b) => ({
         productId: b._id.toString(),
-        slug: slugs.get(b._id.toString()) ?? null,
-        title: b.title,
+        slug: liveProducts.get(b._id.toString())?.slug ?? null,
+        title: liveProducts.get(b._id.toString())?.title ?? b.title,
         qty: b.qty,
         sales: b.sales,
       })),
       toShip,
-      lowStock: lowStock.map((p) => ({ id: p._id.toString(), slug: p.slug, title: p.title, stock: p.stock })),
+      lowStock: lowStock.map((p) => ({
+        id: p._id.toString(),
+        slug: p.slug,
+        title: p.title,
+        stock: p.stock,
+        // The variants that are low themselves, e.g. [{ label: 'UK 10', stock: 2 }].
+        variants: (p.variants ?? [])
+          .filter((v) => v.stock <= LOW_STOCK)
+          .map((v) => ({ label: v.label, stock: v.stock })),
+      })),
       lowStockCount,
     });
   });

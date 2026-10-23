@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongodb';
 import { pathToFileURL } from 'node:url';
 import { connectDb } from './db.js';
 import { loadConfig } from './config.js';
@@ -11,6 +12,29 @@ const CATEGORIES = [
   { slug: 'home-kitchen', name: 'Home & Kitchen' },
   { slug: 'books', name: 'Books' },
 ];
+
+// Sample products with sizes: [option name, [label, price ₹, mrp ₹, stock]…]. The cheapest price and the total stock
+// match the product's row below, so catalog counts and price filters are the same with or without them.
+const VARIANTS = {
+  'Stride Running Shoes': [
+    'Size',
+    [
+      ['UK 7', 2499, 4499, 15],
+      ['UK 8', 2499, 4499, 20],
+      ['UK 9', 2499, 4499, 10],
+      ['UK 10', 2499, 4499, 5],
+    ],
+  ],
+  'Urbane Women Kurta Set': [
+    'Size',
+    [
+      ['S', 1499, 2999, 10],
+      ['M', 1499, 2999, 12],
+      ['L', 1499, 2999, 8],
+      ['XL', 1599, 2999, 5],
+    ],
+  ],
+};
 
 // [category, brand, title, price ₹, mrp ₹, stock, highlights]
 const PRODUCTS = [
@@ -273,6 +297,16 @@ export async function seedCatalog(db, { force = false } = {}) {
         price: price * 100,
         mrp: mrp * 100,
         stock,
+        ...(VARIANTS[title] && {
+          variantName: VARIANTS[title][0],
+          variants: VARIANTS[title][1].map(([label, vPrice, vMrp, vStock]) => ({
+            _id: new ObjectId(),
+            label,
+            price: vPrice * 100,
+            mrp: vMrp * 100,
+            stock: vStock,
+          })),
+        }),
         images: [0, 1, 2].map((view) => image(slug, ICONS[category], brand, view)),
         rating: ratingFor(i + 1),
         active: true,

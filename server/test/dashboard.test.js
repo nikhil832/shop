@@ -75,18 +75,22 @@ test('with no orders: zeros for every day, and the low-stock list', async () => 
   assert.deepEqual(res.body.bestSellers, []);
   assert.equal(res.body.toShip, 0);
 
-  // Active products with 5 or fewer left, fewest first; hidden ones are left out.
+  // Active products with 5 or fewer left (or a variant with that few), fewest first; hidden ones are left out.
   const low = await t.db
     .collection('products')
-    .find({ active: true, stock: { $lte: 5 } })
+    .find({ active: true, $or: [{ stock: { $lte: 5 } }, { 'variants.stock': { $lte: 5 } }] })
     .toArray();
   assert.equal(res.body.lowStockCount, low.length);
   assert.ok(res.body.lowStock.length > 0 && res.body.lowStock.length <= 10);
-  const stocks = res.body.lowStock.map((p) => p.stock);
+  // Sorted by the lowest stock of the product or any of its variants.
+  const lowest = res.body.lowStock.map((p) => Math.min(p.stock, ...p.variants.map((v) => v.stock)));
   assert.deepEqual(
-    stocks,
-    [...stocks].sort((a, b) => a - b),
+    lowest,
+    [...lowest].sort((a, b) => a - b),
   );
+  // The sample shoes are listed by their low size only.
+  const shoes = res.body.lowStock.find((p) => p.slug === 'stride-running-shoes');
+  assert.deepEqual(shoes?.variants, [{ label: 'UK 10', stock: 5 }]);
   const hidden = res.body.lowStock[0];
   await t.db.collection('products').updateOne({ slug: hidden.slug }, { $set: { active: false } });
   const after = (await admin('GET', '/admin/dashboard')).body;

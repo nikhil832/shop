@@ -35,10 +35,12 @@ test('lists products with paging and totals', async () => {
     'image',
     'mrp',
     'price',
+    'priceFrom',
     'rating',
     'slug',
     'stock',
     'title',
+    'variantName',
   ]);
 });
 

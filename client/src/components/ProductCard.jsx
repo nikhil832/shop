@@ -14,7 +14,7 @@ export default function ProductCard({ product }) {
         <span className="brand">{product.brand}</span>
         <span className="card-title">{product.title}</span>
         <Rating rating={product.rating} />
-        <PriceTag price={product.price} mrp={product.mrp} />
+        <PriceTag price={product.price} mrp={product.mrp} from={product.priceFrom} />
         {!soldOut && product.stock <= 5 && <span className="low-stock">Only {product.stock} left</span>}
       </div>
     </Link>

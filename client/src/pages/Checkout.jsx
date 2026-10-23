@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
-import { cartCount, cartQuery, clearCart, useCart } from '../cart.js';
+import { cartCount, cartQuery, clearCart, lineKey, useCart } from '../cart.js';
 import AddressFields from '../components/AddressFields.jsx';
 import OrderSummary from '../components/OrderSummary.jsx';
 import { formatPrice } from '../format.js';
@@ -146,9 +146,10 @@ export default function Checkout() {
           </div>
           <ul className="checkout-items">
             {quote.items.map((line) => (
-              <li key={line.productId}>
+              <li key={lineKey(line)}>
                 <span>
-                  {line.product?.title ?? 'Unavailable item'} × {line.qty}
+                  {line.product?.title ?? 'Unavailable item'}
+                  {line.variant && ` (${line.variant.name}: ${line.variant.label})`} × {line.qty}
                   {line.problem && <span className="problem"> · {line.problem}</span>}
                 </span>
                 <span>{formatPrice(line.lineTotal)}</span>

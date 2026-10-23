@@ -33,12 +33,20 @@ function WishRow({ product, onRemoved }) {
         <Link to={`/p/${product.slug}`} className="card-title">
           {product.title}
         </Link>
-        <PriceTag price={product.price} mrp={product.mrp} />
+        <PriceTag price={product.price} mrp={product.mrp} from={product.priceFrom} />
         {soldOut && <span className="stock out">Out of stock</span>}
         {state.error && <p className="error small">{state.error}</p>}
       </div>
       <div className="wish-actions">
+        {/* A product with sizes is added from its page, where the size is chosen. */}
+        {!soldOut && product.variantName && (
+          <Link to={`/p/${product.slug}`} className="btn primary small">
+            Choose {product.variantName.toLowerCase()}
+            <span className="sr-only"> for {product.title}</span>
+          </Link>
+        )}
         {!soldOut &&
+          !product.variantName &&
           (inCart ? (
             <Link to="/cart" className="btn small">
               In cart ({inCart})

@@ -1,4 +1,5 @@
 import express from 'express';
+import { toVariant } from '../variants.js';
 import { z } from 'zod';
 import { HttpError, escapeRegex, parse } from '../http.js';
 
@@ -112,6 +113,9 @@ export const toProductCard = (doc) => ({
   stock: doc.stock,
   image: doc.images[0] ?? null,
   rating: doc.rating,
+  // Variants: the option's name ("Size"), or null; `priceFrom` when they don't all cost the same ("from ₹X").
+  variantName: doc.variants?.length ? doc.variantName : null,
+  priceFrom: Boolean(doc.variants?.some((v) => v.price !== doc.price)),
 });
 
 export function catalogRouter({ db }) {
@@ -224,6 +228,7 @@ export function catalogRouter({ db }) {
       description: doc.description,
       highlights: doc.highlights ?? [],
       images: doc.images,
+      variants: (doc.variants ?? []).map(toVariant),
       category: category && toCategory(category),
       wishlisted: Boolean(saved), // always false when logged out
       stockAlert: Boolean(alert), // asked to be emailed when it's back (out-of-stock products only)

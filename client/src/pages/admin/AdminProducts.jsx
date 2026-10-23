@@ -153,11 +153,22 @@ export default function AdminProducts() {
                   </td>
                   <td>{categoryName.get(p.categoryId) ?? '—'}</td>
                   <td className="num">
+                    {p.variants.length > 0 && <span className="muted small">from </span>}
                     {formatPrice(p.price)}
                     {p.mrp > p.price && <s className="muted small block">{formatPrice(p.mrp)}</s>}
                   </td>
                   <td>
-                    <StockForm key={`${p.id}:${p.stock}`} product={p} onSaved={refresh} />
+                    {/* With variants, stock is per variant: edited on the product's page. */}
+                    {p.variants.length > 0 ? (
+                      <span className="small">
+                        {p.stock} in {p.variants.length} {p.variantName.toLowerCase()}s
+                        <span className="muted block">
+                          {p.variants.map((v) => `${v.label}: ${v.stock}`).join(' · ')}
+                        </span>
+                      </span>
+                    ) : (
+                      <StockForm key={`${p.id}:${p.stock}`} product={p} onSaved={refresh} />
+                    )}
                   </td>
                   <td>
                     <div className="status-cell">

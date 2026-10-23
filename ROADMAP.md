@@ -7,9 +7,11 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea             | Why                                                                                                                                                                                         | To start               |
-| --- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| 1   | Product variants | Sizes or colours of one product, each with its own stock and price, instead of separate products (shoes, clothes). The biggest of the three: touches the catalog, cart, checkout and admin. | "add product variants" |
+| #   | Idea                | Why                                                                                                                            | To start              |
+| --- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------- |
+| 1   | Photos per variant  | Each colour shows its own photos when chosen; now all variants share the product's.                                            | "add variant photos"  |
+| 2   | Alerts per size     | "Email me when it's back" for one sold-out size while others are in stock; now only when the whole product is sold out.        | "add size alerts"     |
+| 3   | Two kinds of option | Colour and size together (every combination with its own stock), for clothes; set aside for one kind when variants were built. | "add a second option" |
 
 ## Set aside
 
@@ -42,3 +44,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Change email: confirmed by a link to the new address (24 hours), the old address told, old reset links stop                 | Stage 18 (`git log --grep "Stage 18"`) |
 | Printable invoices for customers and admins (print or save as PDF)                                                          | Stage 19 (`git log --grep "Stage 19"`) |
 | Export orders as CSV for a date range (and status) from the admin dashboard                                                 | Stage 20 (`git log --grep "Stage 20"`) |
+| Product variants: one kind of option (size, colour…) with its own price, MRP and stock each                                 | Stage 21 (`git log --grep "Stage 21"`) |

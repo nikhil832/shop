@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { lineKey } from '../cart.js';
 import { Link, Navigate, useLocation, useParams } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
@@ -105,7 +106,7 @@ export default function Order() {
             </div>
             <ul className="cart-lines">
               {order.items.map((i) => (
-                <li key={i.productId} className="cart-line">
+                <li key={lineKey(i)} className="cart-line">
                   <Link to={`/p/${i.slug}`} className="cart-thumb">
                     {i.image && <img src={i.image} alt="" width="96" height="96" />}
                   </Link>

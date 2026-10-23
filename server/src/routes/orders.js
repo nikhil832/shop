@@ -6,6 +6,7 @@ import { couponDiscount, redeemCoupon, releaseCoupon } from '../coupons.js';
 import { sendNewOrderAlert, sendOrderEmail } from '../emails.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
 import { checkoutParams, PAYMENT_WINDOW_MS, refundPayment, syncPayment } from '../payments.js';
+import { findVariant, variantTitle } from '../variants.js';
 import { toProductCard } from './catalog.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
@@ -26,18 +27,24 @@ export const orderTotals = (subtotal) => {
   return { subtotal, delivery, total: subtotal + delivery };
 };
 
+// A cart line: a product, and which variant for a product that has them (e.g. its size).
+const lineKey = (i) => (i.variantId ? `${i.productId}.${i.variantId}` : i.productId);
 const cartItems = z
   .array(
     z.object({
       productId: z.string().regex(/^[0-9a-f]{24}$/, 'Invalid product id'),
+      variantId: z
+        .string()
+        .regex(/^[0-9a-f]{24}$/, 'Invalid variant id')
+        .optional(),
       qty: z.number().int().min(1).max(MAX_QTY),
     }),
   )
   .min(1, 'Your cart is empty')
   .max(MAX_CART_ITEMS)
-  .refine((items) => new Set(items.map((i) => i.productId)).size === items.length, 'Duplicate product in cart');
+  .refine((items) => new Set(items.map(lineKey)).size === items.length, 'Duplicate product in cart');
 
-// GET /cart?items=<productId>:<qty>,<productId>:<qty>
+// GET /cart?items=<productId>[.<variantId>]:<qty>,…
 const quoteQuery = z.object({
   coupon: z.string().trim().max(40).optional(),
   items: z
@@ -48,8 +55,9 @@ const quoteQuery = z.object({
         .split(',')
         .filter(Boolean)
         .map((part) => {
-          const [productId, qty] = part.split(':');
-          return { productId, qty: Number(qty) };
+          const [key, qty] = part.split(':');
+          const [productId, variantId] = key.split('.');
+          return { productId, ...(variantId && { variantId }), qty: Number(qty) };
         }),
     )
     .pipe(cartItems),
@@ -91,7 +99,11 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   id: doc._id.toString(),
   // Orders placed before numbering (stage 2) have none; the client falls back to the end of the id.
   number: doc.number ?? null,
-  items: doc.items.map((i) => ({ ...i, productId: i.productId.toString() })),
+  items: doc.items.map((i) => ({
+    ...i,
+    productId: i.productId.toString(),
+    ...(i.variantId && { variantId: i.variantId.toString() }),
+  })),
   subtotal: doc.subtotal,
   delivery: doc.delivery,
   // Orders from before coupons have no discount.
@@ -134,9 +146,15 @@ export async function cancelOrder(ctx, filter, { from, by, notify = true }) {
         if (!existing) throw new HttpError(404, 'Order not found');
         throw new HttpError(409, `This order can't be cancelled (it is ${existing.status})`);
       }
+      // Stock goes back to the variant bought and to the product's total; a variant deleted since gets nothing back.
       await db.collection('products').bulkWrite(
         order.items.map((i) => ({
-          updateOne: { filter: { _id: i.productId }, update: { $inc: { stock: i.qty }, $set: { updatedAt: now } } },
+          updateOne: i.variantId
+            ? {
+                filter: { _id: i.productId, 'variants._id': i.variantId },
+                update: { $inc: { stock: i.qty, 'variants.$.stock': i.qty }, $set: { updatedAt: now } },
+              }
+            : { filter: { _id: i.productId }, update: { $inc: { stock: i.qty }, $set: { updatedAt: now } } },
         })),
         { session },
       );
@@ -192,11 +210,29 @@ export function ordersRouter(ctx) {
       .find({ _id: { $in: items.map((i) => new ObjectId(i.productId)) }, active: true })
       .toArray();
     const byId = new Map(docs.map((d) => [d._id.toString(), d]));
-    const lines = items.map(({ productId, qty }) => {
+    const lines = items.map(({ productId, variantId = null, qty }) => {
       const doc = byId.get(productId);
-      if (!doc) return { productId, qty, product: null, lineTotal: 0, problem: 'No longer available' };
-      const problem = doc.stock === 0 ? 'Out of stock' : doc.stock < qty ? `Only ${doc.stock} left` : null;
-      return { productId, qty, product: toProductCard(doc), lineTotal: doc.price * qty, problem };
+      const line = { productId, variantId, qty, variant: null, price: 0, mrp: 0, stock: 0, lineTotal: 0 };
+      if (!doc) return { ...line, product: null, problem: 'No longer available' };
+      const product = toProductCard(doc);
+      if (doc.variants?.length && !variantId) {
+        return { ...line, product, problem: `Choose a ${doc.variantName.toLowerCase()}` };
+      }
+      const variant = variantId ? findVariant(doc, variantId) : null;
+      if (variantId && !variant) return { ...line, product, problem: 'No longer available' };
+      // The variant's own price, MRP and stock, or the product's.
+      const { price, mrp, stock } = variant ?? doc;
+      const problem = stock === 0 ? 'Out of stock' : stock < qty ? `Only ${stock} left` : null;
+      return {
+        ...line,
+        product,
+        variant: variant && { id: variant._id.toString(), name: doc.variantName, label: variant.label },
+        price,
+        mrp,
+        stock,
+        lineTotal: price * qty,
+        problem,
+      };
     });
     const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
     const totals = orderTotals(subtotal);
@@ -232,32 +268,46 @@ export function ordersRouter(ctx) {
       await session.withTransaction(async () => {
         const now = new Date();
         const items = [];
-        for (const { productId, qty } of body.items) {
+        for (const { productId, variantId, qty } of body.items) {
           const _id = new ObjectId(productId);
-          // The stock check is part of the update, so two buyers can't both take the last unit.
+          const vid = variantId && new ObjectId(variantId);
+          // The stock check is part of the update, so two buyers can't both take the last unit. A variant's stock and
+          // the product's total go down together. A product with variants can't be bought without choosing one.
           const doc = await products.findOneAndUpdate(
-            { _id, active: true, stock: { $gte: qty } },
-            { $inc: { stock: -qty }, $set: { updatedAt: now } },
+            vid
+              ? { _id, active: true, variants: { $elemMatch: { _id: vid, stock: { $gte: qty } } } }
+              : { _id, active: true, stock: { $gte: qty }, 'variants.0': { $exists: false } },
+            vid
+              ? { $inc: { stock: -qty, 'variants.$.stock': -qty }, $set: { updatedAt: now } }
+              : { $inc: { stock: -qty }, $set: { updatedAt: now } },
             { session },
           );
           if (!doc) {
             const current = await products.findOne({ _id, active: true }, { session });
+            const variant = current && vid && findVariant(current, vid);
+            const name = current && variantTitle(current, variant);
+            const left = variant ? variant.stock : current?.stock;
             throw new HttpError(
               409,
-              !current
+              !current || (vid && !variant)
                 ? 'An item in your cart is no longer available'
-                : current.stock === 0
-                  ? `${current.title} is out of stock`
-                  : `Only ${current.stock} left of ${current.title}`,
+                : !vid && current.variants?.length
+                  ? `Choose a ${current.variantName.toLowerCase()} for ${current.title}`
+                  : left === 0
+                    ? `${name} is out of stock`
+                    : `Only ${left} left of ${name}`,
             );
           }
+          const variant = vid ? findVariant(doc, vid) : null;
           items.push({
             productId: _id,
+            ...(variant && { variantId: variant._id, variant: variant.label }),
             slug: doc.slug,
-            title: doc.title,
+            // Snapshotted with the variant in it, so emails, invoices and exports name it as bought.
+            title: variantTitle(doc, variant),
             brand: doc.brand,
             image: doc.images[0] ?? null,
-            price: doc.price,
+            price: (variant ?? doc).price,
             qty,
           });
         }

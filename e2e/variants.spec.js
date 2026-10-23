@@ -1,0 +1,107 @@
+import { test, expect } from '@playwright/test';
+
+// Sample sizes from server/src/seed.js. Shares the demo server with the other files: it buys a few pairs of shoes,
+// whose stock no other test counts.
+const SHOES = '/p/stride-running-shoes'; // UK 7–10 at ₹2,499
+const ADMIN = { email: 'admin@bazaar.demo', password: 'demo-admin-123' }; // created by server/src/demo.js
+const unique = () => `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+const sizes = (page) => page.getByRole('group', { name: /^Size/ });
+
+test('a size must be chosen; each size is its own cart line and order line', async ({ page }) => {
+  // Different prices per size show as "from" until one is chosen.
+  await page.goto('/search?q=kurta');
+  await expect(page.locator('.card').first()).toContainText('from ₹1,499');
+  await page.goto('/p/urbane-women-kurta-set');
+  await sizes(page).getByRole('button', { name: 'XL' }).click();
+  await expect(page.locator('.product-info .price')).toHaveText('₹1,599');
+
+  await page.goto(SHOES);
+  await expect(page.getByRole('button', { name: 'Choose a size' })).toBeDisabled();
+  await sizes(page).getByRole('button', { name: 'UK 8' }).click();
+  await expect(sizes(page).getByRole('button', { name: 'UK 8' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(sizes(page)).toContainText('Size: UK 8');
+  await page.getByRole('button', { name: 'Add to cart' }).click();
+  await expect(page.getByRole('link', { name: 'Go to cart (1 added)' })).toBeVisible();
+  // Another size starts at none in the cart.
+  await sizes(page).getByRole('button', { name: 'UK 9' }).click();
+  await expect(page.getByRole('link', { name: /Go to cart/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Add to cart' }).click();
+
+  await page.goto('/cart');
+  const lines = page.locator('.cart-line');
+  await expect(lines).toHaveCount(2);
+  await expect(lines.nth(0)).toContainText('Size: UK 8');
+  await expect(lines.nth(1)).toContainText('Size: UK 9');
+  await lines
+    .nth(1)
+    .getByLabel(/Quantity/)
+    .selectOption('2');
+  await expect(page.getByRole('complementary', { name: 'Order summary' })).toContainText('Total₹7,497');
+
+  // Check out as a new customer.
+  await page.getByRole('button', { name: 'Checkout' }).click();
+  await page.getByRole('link', { name: 'Create an account' }).click();
+  await page.getByLabel('Name').fill('Asha Rao');
+  await page.getByLabel('Email').fill(`sizes-${unique()}@example.com`);
+  await page.getByLabel('Password').fill('password123');
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page).toHaveURL('/checkout');
+  await expect(page.locator('.checkout-items')).toContainText('Stride Running Shoes (Size: UK 9) × 2');
+  for (const [label, value] of Object.entries({
+    'Mobile number': '9876543210',
+    'Address (house, street, area)': '12 MG Road',
+    City: 'Bengaluru',
+    State: 'Karnataka',
+    'PIN code': '560001',
+  })) {
+    await page.getByLabel(label).fill(value);
+  }
+  await page.getByRole('radio', { name: /Cash on Delivery/ }).check();
+  await page.getByRole('button', { name: 'Place order · ₹7,497' }).click();
+  await expect(page).toHaveURL(/\/orders\/[0-9a-f]{24}$/);
+  await expect(page.getByText('Stride Running Shoes (Size: UK 8)')).toBeVisible();
+  await expect(page.getByText('Stride Running Shoes (Size: UK 9)')).toBeVisible();
+});
+
+test('an admin adds a product in two colours; the store offers both', async ({ page }) => {
+  const title = `Ziva Scarf ${unique()}`;
+  await page.goto('/login?next=/admin/products/new');
+  await page.getByLabel('Email').fill(ADMIN.email);
+  await page.getByLabel('Password').fill(ADMIN.password);
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await expect(page.getByRole('heading', { name: 'Add product' })).toBeVisible();
+
+  await page.getByLabel('Title').fill(title);
+  await page.getByLabel('Brand').fill('Ziva');
+  await page.getByLabel('Category').selectOption({ label: 'Fashion' });
+  await page.getByLabel(/Comes in sizes, colours/).check();
+  // The product's own price and stock give way to the variants'.
+  await expect(page.getByLabel('Price (₹)')).toHaveCount(0);
+  await page.getByLabel('Option name').fill('Colour');
+  await page.getByLabel('Label of variant 1').fill('Red');
+  await page.getByLabel('Price of variant 1').fill('699');
+  await page.getByLabel('MRP of variant 1').fill('999');
+  await page.getByLabel('Stock of variant 1').fill('4');
+  await page.getByRole('button', { name: 'Add a variant' }).click();
+  await page.getByLabel('Label of variant 2').fill('Blue');
+  await page.getByLabel('Price of variant 2').fill('599');
+  await page.getByLabel('MRP of variant 2').fill('999');
+  await page.getByLabel('Stock of variant 2').fill('0');
+  await page.getByRole('button', { name: 'Add product' }).click();
+
+  await expect(page).toHaveURL('/admin/products');
+  await page.getByRole('searchbox').fill(title);
+  await page.getByRole('searchbox').press('Enter');
+  const row = page.getByRole('row', { name: new RegExp(title) });
+  await expect(row).toContainText('from ₹599');
+  await expect(row).toContainText('4 in 2 colours');
+  await expect(row).toContainText('Red: 4 · Blue: 0');
+
+  await row.getByRole('link', { name: title }).click();
+  await page.getByRole('link', { name: 'View in store ↗' }).evaluate((a) => a.removeAttribute('target'));
+  await page.getByRole('link', { name: 'View in store ↗' }).click();
+  const colours = page.getByRole('group', { name: /^Colour/ });
+  await expect(colours.getByRole('button', { name: 'Red' })).toBeEnabled();
+  await expect(colours.getByRole('button', { name: /Blue/ })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Choose a colour' })).toBeDisabled();
+});

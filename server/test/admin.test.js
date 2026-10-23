@@ -97,8 +97,11 @@ test('lists, searches and filters products, including hidden ones', async () => 
   assert.equal(mobiles.body.total, 7);
 
   const low = await admin('GET', '/admin/products?status=low');
-  assert.equal(low.body.total, await t.db.collection('products').countDocuments({ stock: { $lte: 5 } }));
-  assert.ok(low.body.items.every((p) => p.stock <= 5));
+  // Low: the product, or one of its variants (the sample shoes' UK 10 has 5), has 5 or fewer left.
+  const lowFilter = { $or: [{ stock: { $lte: 5 } }, { 'variants.stock': { $lte: 5 } }] };
+  assert.equal(low.body.total, await t.db.collection('products').countDocuments(lowFilter));
+  assert.ok(low.body.items.every((p) => p.stock <= 5 || p.variants.some((v) => v.stock <= 5)));
+  assert.ok(low.body.items.some((p) => p.slug === 'stride-running-shoes'));
 
   await t.db.collection('products').updateOne({ slug: 'bolt-bass-neckband' }, { $set: { active: false } });
   const hidden = await admin('GET', '/admin/products?status=hidden');

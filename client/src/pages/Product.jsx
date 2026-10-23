@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { MAX_QTY, addToCart, useCart } from '../cart.js';
+import { MAX_QTY, addToCart, qtyInCart, useCart } from '../cart.js';
 import PriceTag from '../components/PriceTag.jsx';
 import Rating from '../components/Rating.jsx';
 import Reviews from '../components/Reviews.jsx';
@@ -36,20 +36,29 @@ function Gallery({ images, title }) {
   );
 }
 
-function AddToCart({ product }) {
+// `variant` is the chosen size/colour of a product that has them (null until chosen); its own stock limits the quantity.
+function AddToCart({ product, variant }) {
   const items = useCart();
   const [full, setFull] = useState(false);
-  const inCart = items.find((i) => i.productId === product.id)?.qty ?? 0;
-  const atLimit = inCart >= Math.min(MAX_QTY, product.stock);
+  const needsChoice = product.variants.length > 0 && !variant;
+  const stock = variant ? variant.stock : product.stock;
+  const inCart = qtyInCart(items, product.id, variant?.id);
+  const atLimit = !needsChoice && inCart >= Math.min(MAX_QTY, stock);
   return (
     <div className="buy-buttons">
       <button
         type="button"
         className="btn primary"
-        disabled={atLimit}
-        onClick={() => setFull(!addToCart(product.id, product.stock))}
+        disabled={needsChoice || atLimit || stock === 0}
+        onClick={() => setFull(!addToCart(product.id, stock, variant?.id))}
       >
-        {atLimit ? 'Maximum quantity in cart' : 'Add to cart'}
+        {needsChoice
+          ? `Choose a ${product.variantName.toLowerCase()}`
+          : stock === 0
+            ? 'Out of stock'
+            : atLimit
+              ? 'Maximum quantity in cart'
+              : 'Add to cart'}
       </button>
       {inCart > 0 && (
         <Link to="/cart" className="btn">
@@ -61,18 +70,51 @@ function AddToCart({ product }) {
   );
 }
 
+// One button per variant; sold-out ones can't be chosen.
+function VariantPicker({ product, selected, onSelect }) {
+  return (
+    <fieldset className="variant-picker">
+      <legend>
+        {product.variantName}
+        {selected && <span className="muted">: {selected.label}</span>}
+      </legend>
+      <div className="variant-options">
+        {product.variants.map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            className={v.id === selected?.id ? 'selected' : ''}
+            aria-pressed={v.id === selected?.id}
+            disabled={v.stock === 0}
+            onClick={() => onSelect(v.id)}
+          >
+            {v.label}
+            {v.stock === 0 && <span className="sr-only"> (sold out)</span>}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+const stockText = (stock) => (stock === 0 ? 'Out of stock' : stock <= 5 ? `Only ${stock} left` : 'In stock');
+const stockClass = (stock) => (stock === 0 ? 'out' : stock <= 5 ? 'low' : 'in');
+
 export default function Product() {
   const { slug } = useParams();
   // Bumped after a review changes the rating; the page keeps showing the product while it reloads.
   const [version, setVersion] = useState(0);
   const { data: product, error, loading } = useFetch(`/products/${encodeURIComponent(slug)}`, version);
+  // The chosen variant, by id; it stays chosen while the product reloads (e.g. after a review).
+  const [variantId, setVariantId] = useState(null);
 
   if (error?.status === 404) return <NotFound message="This product doesn't exist or is no longer sold." />;
   if (error) return <p className="error">{error.message}</p>;
   if (!product || (loading && product.slug !== slug)) return <p className="muted">Loading…</p>;
 
-  const stockText =
-    product.stock === 0 ? 'Out of stock' : product.stock <= 5 ? `Only ${product.stock} left` : 'In stock';
+  const variant = product.variants.find((v) => v.id === variantId) ?? null;
+  // Shown for the chosen variant, or the whole product.
+  const shown = variant ?? product;
 
   return (
     <>
@@ -93,13 +135,16 @@ export default function Product() {
           <span className="brand">{product.brand}</span>
           <h1>{product.title}</h1>
           <Rating rating={product.rating} />
-          <PriceTag price={product.price} mrp={product.mrp} large />
+          <PriceTag price={shown.price} mrp={shown.mrp} large from={!variant && product.priceFrom} />
           <span className="muted small">Inclusive of all taxes</span>
-          <p className={`stock ${product.stock === 0 ? 'out' : product.stock <= 5 ? 'low' : 'in'}`}>{stockText}</p>
+          {product.variants.length > 0 && product.stock > 0 && (
+            <VariantPicker product={product} selected={variant} onSelect={setVariantId} />
+          )}
+          <p className={`stock ${stockClass(shown.stock)}`}>{stockText(shown.stock)}</p>
           {product.stock === 0 ? (
             <StockAlertButton key={`alert-${product.id}`} product={product} />
           ) : (
-            <AddToCart key={product.id} product={product} />
+            <AddToCart key={product.id} product={product} variant={variant} />
           )}
           <WishlistButton key={`wish-${product.id}`} product={product} />
 

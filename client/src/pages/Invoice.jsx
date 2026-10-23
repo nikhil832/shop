@@ -1,4 +1,5 @@
 import { Link, Navigate, useLocation, useParams } from 'react-router';
+import { lineKey } from '../cart.js';
 import { useAuth } from '../auth.jsx';
 import { formatDate, formatPrice, orderNumber } from '../format.js';
 import { useFetch } from '../useFetch.js';
@@ -118,7 +119,7 @@ export default function Invoice({ admin = false }) {
           </thead>
           <tbody>
             {order.items.map((i) => (
-              <tr key={i.productId}>
+              <tr key={lineKey(i)}>
                 <td>
                   {i.title}
                   {i.brand && <span className="muted small"> · {i.brand}</span>}

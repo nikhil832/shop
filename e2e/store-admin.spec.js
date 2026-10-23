@@ -219,4 +219,10 @@ test('admin pages fit a phone screen without sideways scrolling', async ({ page 
     await expect(page.locator('.panel').first()).toBeVisible();
     expect(await page.locator('html').evaluate((html) => html.scrollWidth), path).toBeLessThanOrEqual(390);
   }
+
+  // A product with variants: its table of sizes scrolls inside its own box.
+  const { items } = await (await page.request.get('/api/admin/products?q=kurta')).json();
+  await page.goto(`/admin/products/${items[0].id}`);
+  await expect(page.getByLabel('Label of variant 1')).toBeVisible();
+  expect(await page.locator('html').evaluate((html) => html.scrollWidth)).toBeLessThanOrEqual(390);
 });

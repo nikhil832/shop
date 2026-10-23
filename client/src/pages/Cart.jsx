@@ -1,19 +1,20 @@
 import { Link, useNavigate } from 'react-router';
 import OrderSummary from '../components/OrderSummary.jsx';
 import PriceTag from '../components/PriceTag.jsx';
-import { MAX_QTY, cartCount, cartQuery, removeFromCart, setQty, useCart } from '../cart.js';
+import { MAX_QTY, cartCount, cartQuery, lineKey, removeFromCart, setQty, useCart } from '../cart.js';
 import { formatPrice } from '../format.js';
 import { useFetch } from '../useFetch.js';
 
 // `qty` comes from the cart itself, so the select changes at once while the new quote loads.
 function CartLine({ line, qty }) {
-  const { product, problem } = line;
+  // `stock`, `price` and `mrp` are the chosen variant's, or the product's.
+  const { product, problem, variant, stock } = line;
   if (!product) {
     return (
       <li className="cart-line">
         <div className="cart-line-body">
           <span className="muted">This product is no longer sold.</span>
-          <button type="button" className="link" onClick={() => removeFromCart(line.productId)}>
+          <button type="button" className="link" onClick={() => removeFromCart(lineKey(line))}>
             Remove
           </button>
         </div>
@@ -21,7 +22,7 @@ function CartLine({ line, qty }) {
     );
   }
   // Offer up to what's in stock, but keep the current quantity selectable so the select shows it.
-  const options = Math.max(qty, Math.min(MAX_QTY, product.stock));
+  const options = Math.max(qty, Math.min(MAX_QTY, stock));
   return (
     <li className="cart-line">
       <Link to={`/p/${product.slug}`} className="cart-thumb">
@@ -32,24 +33,29 @@ function CartLine({ line, qty }) {
         <Link to={`/p/${product.slug}`} className="cart-title">
           {product.title}
         </Link>
-        <PriceTag price={product.price} mrp={product.mrp} />
+        {variant && (
+          <span className="muted small">
+            {variant.name}: {variant.label}
+          </span>
+        )}
+        <PriceTag price={line.price || product.price} mrp={line.mrp || product.mrp} />
         {problem && <span className="problem">{problem}</span>}
         <div className="cart-actions">
           <label className="qty">
             Qty
             <select
               value={qty}
-              onChange={(e) => setQty(line.productId, Number(e.target.value))}
+              onChange={(e) => setQty(lineKey(line), Number(e.target.value))}
               aria-label={`Quantity of ${product.title}`}
             >
               {Array.from({ length: options }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n} disabled={n > product.stock}>
+                <option key={n} value={n} disabled={n > stock}>
                   {n}
                 </option>
               ))}
             </select>
           </label>
-          <button type="button" className="link" onClick={() => removeFromCart(line.productId)}>
+          <button type="button" className="link" onClick={() => removeFromCart(lineKey(line))}>
             Remove
           </button>
         </div>
@@ -78,8 +84,8 @@ export default function Cart() {
   if (error) return <p className="error">{error.message}</p>;
   if (!quote) return <p className="muted">Loading…</p>;
 
-  const qtyOf = new Map(items.map((i) => [i.productId, i.qty]));
-  const lines = quote.items.filter((line) => qtyOf.has(line.productId));
+  const qtyOf = new Map(items.map((i) => [lineKey(i), i.qty]));
+  const lines = quote.items.filter((line) => qtyOf.has(lineKey(line)));
 
   return (
     <div className="cart-page">
@@ -87,7 +93,7 @@ export default function Cart() {
         <h1>Cart ({cartCount(items)})</h1>
         <ul className="cart-lines">
           {lines.map((line) => (
-            <CartLine key={line.productId} line={line} qty={qtyOf.get(line.productId)} />
+            <CartLine key={lineKey(line)} line={line} qty={qtyOf.get(lineKey(line))} />
           ))}
         </ul>
       </section>

@@ -302,6 +302,13 @@ export default function AdminDashboard() {
                         <tr key={p.id}>
                           <td>
                             <Link to={`/admin/products/${p.id}`}>{p.title}</Link>
+                            {p.variants.length > 0 && (
+                              <span className="muted small block">
+                                {p.variants
+                                  .map((v) => `${v.label}: ${v.stock === 0 ? 'sold out' : `${v.stock} left`}`)
+                                  .join(' · ')}
+                              </span>
+                            )}
                           </td>
                           <td className="num">
                             {p.stock === 0 ? <span className="status cancelled">Sold out</span> : p.stock}

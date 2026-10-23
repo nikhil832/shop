@@ -6,6 +6,7 @@ import { HttpError, escapeRegex, parse, parseObjectId } from '../http.js';
 import { ICONS, image, slugify } from '../seed.js';
 import { refundPayment } from '../payments.js';
 import { missingImages } from './images.js';
+import { toVariant, variantTotals } from '../variants.js';
 import { cancelOrder, ORDER_STATUSES, toOrder } from './orders.js';
 import { sendOrderEmail } from '../emails.js';
 import { changeRating, inTransaction, toReview } from './reviews.js';
@@ -31,13 +32,72 @@ const productFields = z.object({
   images: z.array(imageRef).max(5),
   active: z.boolean(),
 });
-const createProduct = productFields.extend({
-  description: productFields.shape.description.default(''),
-  highlights: productFields.shape.highlights.default([]),
-  images: productFields.shape.images.default([]),
-  active: productFields.shape.active.default(true),
+// Variants (one kind of option, e.g. Size): each with its own price, MRP and stock. `id` keeps an existing variant
+// when editing (so stock and orders stay attached); new ones get one.
+const variantFields = z.object({
+  id: z
+    .string()
+    .regex(/^[0-9a-f]{24}$/)
+    .optional(),
+  label: z.string().trim().min(1, 'Enter a label for each variant').max(30),
+  price: productFields.shape.price,
+  mrp: productFields.shape.mrp,
+  stock: productFields.shape.stock,
 });
-const updateProduct = productFields.partial();
+const variantList = z
+  .array(variantFields)
+  .max(20, 'At most 20 variants')
+  .refine(
+    (vs) => new Set(vs.map((v) => v.label.toLowerCase())).size === vs.length,
+    'Each variant needs a different label',
+  )
+  .refine((vs) => vs.every((v) => v.mrp >= v.price), "A variant's MRP must be at least its price");
+const variantName = z.string().trim().max(20);
+
+const createProduct = productFields
+  .extend({
+    description: productFields.shape.description.default(''),
+    highlights: productFields.shape.highlights.default([]),
+    images: productFields.shape.images.default([]),
+    active: productFields.shape.active.default(true),
+    // With variants, the product's own price, MRP and stock come from them.
+    price: productFields.shape.price.optional(),
+    mrp: productFields.shape.mrp.optional(),
+    stock: productFields.shape.stock.optional(),
+    variantName: variantName.default(''),
+    variants: variantList.default([]),
+  })
+  .superRefine(checkVariantInput);
+const updateProduct = productFields
+  .partial()
+  .extend({ variantName: variantName.optional(), variants: variantList.optional() })
+  .superRefine(checkVariantInput);
+
+// A product has variants (and then their name) or its own price, MRP and stock. `variants: []` means none: on create
+// (the default) or when switching them off, the product's own numbers are needed.
+function checkVariantInput(body, ctx) {
+  if (body.variants?.length && !body.variantName) {
+    ctx.addIssue({ code: 'custom', path: ['variantName'], message: 'Name the option, e.g. Size or Colour' });
+  }
+  if (body.variants?.length === 0) {
+    for (const field of ['price', 'mrp', 'stock']) {
+      if (body[field] === undefined) ctx.addIssue({ code: 'custom', path: [field], message: `Enter the ${field}` });
+    }
+  }
+}
+
+// The variants to store (existing ids kept, new ones made) and the product totals they give.
+function storedVariants(variants, current = []) {
+  const known = new Set(current.map((v) => v._id.toString()));
+  const list = variants.map((v) => ({
+    _id: v.id && known.has(v.id) ? new ObjectId(v.id) : new ObjectId(),
+    label: v.label,
+    price: v.price,
+    mrp: v.mrp,
+    stock: v.stock,
+  }));
+  return { variants: list, ...variantTotals(list) };
+}
 
 const productQuery = z.object({
   q: z.string().trim().max(100).optional(),
@@ -85,6 +145,8 @@ const toAdminProduct = (doc) => ({
   stock: doc.stock,
   images: doc.images,
   active: doc.active,
+  variantName: doc.variants?.length ? doc.variantName : '',
+  variants: (doc.variants ?? []).map(toVariant),
   updatedAt: doc.updatedAt,
 });
 
@@ -149,7 +211,9 @@ export function adminRouter(ctx) {
     if (query.category) filter.categoryId = new ObjectId(query.category);
     if (query.status === 'active') filter.active = true;
     if (query.status === 'hidden') filter.active = false;
-    if (query.status === 'low') filter.stock = { $lte: LOW_STOCK };
+    // Low: the product, or any one of its variants, has LOW_STOCK or fewer left.
+    if (query.status === 'low')
+      filter.$and = [{ $or: [{ stock: { $lte: LOW_STOCK } }, { 'variants.stock': { $lte: LOW_STOCK } }] }];
     const [items, total] = await Promise.all([
       products
         .find(filter)
@@ -169,8 +233,8 @@ export function adminRouter(ctx) {
   });
 
   router.post('/admin/products', async (req, res) => {
-    const body = parse(createProduct, req.body);
-    if (body.mrp < body.price) throw new HttpError(400, 'mrp: MRP must be at least the price');
+    const { variants, variantName, ...body } = parse(createProduct, req.body);
+    if (!variants.length && body.mrp < body.price) throw new HttpError(400, 'mrp: MRP must be at least the price');
     const category = await findCategory(body.categoryId);
     await checkImages(body.images);
     const now = new Date();
@@ -180,6 +244,7 @@ export function adminRouter(ctx) {
       const slug = n === 1 ? base : `${base}-${n}`;
       const doc = {
         ...body,
+        ...(variants.length && { variantName, ...storedVariants(variants) }),
         slug,
         categoryId: category._id,
         images: body.images.length ? body.images : [image(slug, categoryIcon(category), body.brand)],
@@ -202,11 +267,22 @@ export function adminRouter(ctx) {
     const body = parse(updateProduct, req.body);
     const current = await products.findOne({ _id });
     if (!current) throw new HttpError(404, 'Product not found');
-    if ((body.mrp ?? current.mrp) < (body.price ?? current.price)) {
-      throw new HttpError(400, 'mrp: MRP must be at least the price');
+    const { variants, variantName, ...fields } = body;
+    const update = { ...fields, updatedAt: new Date() };
+    const unset = {};
+    if (variants?.length) {
+      // The product's price, MRP and stock follow its variants.
+      Object.assign(update, { variantName, ...storedVariants(variants, current.variants) });
+    } else {
+      if (variants === undefined && current.variants?.length && ['price', 'mrp', 'stock'].some((f) => f in fields)) {
+        throw new HttpError(400, 'This product has variants: change the price and stock of each one');
+      }
+      if ((fields.mrp ?? current.mrp) < (fields.price ?? current.price)) {
+        throw new HttpError(400, 'mrp: MRP must be at least the price');
+      }
+      if (variants) Object.assign(unset, { variants: '', variantName: '' });
     }
     if (body.images) await checkImages(body.images);
-    const update = { ...body, updatedAt: new Date() };
     if (body.categoryId) update.categoryId = (await findCategory(body.categoryId))._id;
     if (body.images?.length === 0) {
       const category = await categories.findOne({ _id: update.categoryId ?? current.categoryId });
@@ -214,7 +290,11 @@ export function adminRouter(ctx) {
         image(current.slug, category ? categoryIcon(category) : DEFAULT_ICON, body.brand ?? current.brand),
       ];
     }
-    const doc = await products.findOneAndUpdate({ _id }, { $set: update }, { returnDocument: 'after' });
+    const doc = await products.findOneAndUpdate(
+      { _id },
+      { $set: update, ...(Object.keys(unset).length && { $unset: unset }) },
+      { returnDocument: 'after' },
+    );
     res.json(toAdminProduct(doc));
   });
 

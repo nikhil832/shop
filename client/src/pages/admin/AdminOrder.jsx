@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { lineKey } from '../../cart.js';
 import { Link, useParams } from 'react-router';
 import { request } from '../../api.js';
 import OrderSummary from '../../components/OrderSummary.jsx';
@@ -100,7 +101,7 @@ export default function AdminOrder() {
               </thead>
               <tbody>
                 {order.items.map((i) => (
-                  <tr key={i.productId}>
+                  <tr key={lineKey(i)}>
                     <td>
                       <Link to={`/admin/products/${i.productId}`}>{i.title}</Link>
                     </td>

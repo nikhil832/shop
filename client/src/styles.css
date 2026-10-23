@@ -1466,6 +1466,81 @@ textarea {
   max-width: 420px;
 }
 
+/* ---- Variants (sizes, colours) ---- */
+.price-from {
+  font-size: 0.7em;
+  font-weight: 500;
+  color: var(--muted);
+}
+.variant-picker {
+  border: none;
+  padding: 0;
+  margin: 12px 0 0;
+}
+.variant-picker legend {
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 8px;
+}
+.variant-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.variant-options button {
+  min-width: 52px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.variant-options button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.variant-options button.selected {
+  border: 2px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding: 7px 11px;
+}
+.variant-options button:disabled {
+  color: var(--muted);
+  text-decoration: line-through;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* The admin product form's variant rows. */
+.variant-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* A fieldset is otherwise as wide as its widest content, so the table would widen the page on phones instead of
+     scrolling inside its own box. */
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+.variant-editor > label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 240px;
+  font-weight: 600;
+}
+.variant-editor td input {
+  width: 100%;
+  min-width: 80px;
+}
+.variant-editor .btn {
+  align-self: flex-start;
+}
+
 /* ---- Order export (admin dashboard) ---- */
 .export-form h2 {
   margin-bottom: 4px;
