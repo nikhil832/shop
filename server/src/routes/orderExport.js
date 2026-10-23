@@ -58,6 +58,8 @@ const COLUMNS = [
   'City',
   'State',
   'PIN code',
+  'Courier',
+  'Tracking number',
 ];
 
 // Admins download orders placed between two dates (both included) as a CSV for a spreadsheet, one row per order.
@@ -106,6 +108,8 @@ export function orderExportRouter({ db }) {
         cell(o.address.city, { text: true }),
         cell(o.address.state, { text: true }),
         cell(o.address.pincode, { text: true }),
+        cell(o.shipment?.courier ?? '', { text: true }),
+        cell(o.shipment?.trackingNumber ?? '', { text: true }),
       ].join(',');
     });
 

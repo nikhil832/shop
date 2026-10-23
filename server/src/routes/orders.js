@@ -117,6 +117,8 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   expiresAt: doc.expiresAt ?? null,
   createdAt: doc.createdAt,
   shippedAt: doc.shippedAt ?? null,
+  // { courier, trackingNumber, trackingUrl } once the admin has entered them.
+  shipment: doc.shipment ?? null,
   deliveredAt: doc.deliveredAt ?? null,
   cancelledAt: doc.cancelledAt ?? null,
   cancelledBy: doc.cancelledBy ?? null,

@@ -1563,6 +1563,41 @@ textarea {
   object-fit: cover;
 }
 
+/* ---- Tracking (order pages) ---- */
+.shipment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+.shipment-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.shipment-form label .small {
+  font-weight: 400;
+}
+.shipment-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.shipment-details p,
+.shipment-info p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.shipment-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
 /* ---- Order export (admin dashboard) ---- */
 .export-form h2 {
   margin-bottom: 4px;

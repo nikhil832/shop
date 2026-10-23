@@ -11,6 +11,30 @@ import { hasInvoice } from './Invoice.jsx';
 import NotFound from './NotFound.jsx';
 import { StatusBadge } from './Orders.jsx';
 
+// The courier and tracking number of a shipped order, with a link to the courier's tracking page when there is one.
+export function ShipmentDetails({ shipment }) {
+  return (
+    <div className="shipment-details">
+      {shipment.courier && (
+        <p>
+          Shipped with <strong>{shipment.courier}</strong>
+          {shipment.trackingNumber && (
+            <>
+              {' '}
+              · Tracking number <strong>{shipment.trackingNumber}</strong>
+            </>
+          )}
+        </p>
+      )}
+      {shipment.trackingUrl && (
+        <a href={shipment.trackingUrl} target="_blank" rel="noopener noreferrer" className="btn small">
+          Track your parcel ↗
+        </a>
+      )}
+    </div>
+  );
+}
+
 export default function Order() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -124,6 +148,13 @@ export default function Order() {
               ))}
             </ul>
           </section>
+
+          {order.shipment && order.status !== 'cancelled' && (
+            <section className="panel" aria-labelledby="tracking-heading">
+              <h2 id="tracking-heading">Tracking</h2>
+              <ShipmentDetails shipment={order.shipment} />
+            </section>
+          )}
 
           <section className="panel">
             <h2>Delivery address</h2>

@@ -46,7 +46,15 @@ function intro(order, event) {
       ? [`Thanks for your order! We've received your payment of ${rupees(order.total)}.`]
       : [`Thanks for your order! You'll pay ${rupees(order.total)} in cash when it arrives.`];
   }
-  if (event === 'shipped') return [`Good news: your order is on its way to ${order.address.city}.`];
+  if (event === 'shipped') {
+    const { courier, trackingNumber } = order.shipment ?? {};
+    return [
+      `Good news: your order is on its way to ${order.address.city}.`,
+      ...(courier
+        ? [`It's travelling with ${courier}${trackingNumber ? `, tracking number ${trackingNumber}` : ''}.`]
+        : []),
+    ];
+  }
   if (event === 'delivered') return ['Your order has been delivered. We hope you like it!'];
 
   const lines = [CANCELLED_BY[order.cancelledBy] ?? CANCELLED_BY.admin];
@@ -68,6 +76,8 @@ export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL) {
   const subject = `Order #${orderNumber(order)} ${SUBJECTS[event]}`;
   const firstName = user.name.split(/\s+/)[0];
   const orderUrl = `${publicUrl}/orders/${order._id}`;
+  // The courier's own tracking page, when the admin pasted one.
+  const trackUrl = event === 'shipped' ? order.shipment?.trackingUrl || null : null;
   const paragraphs = intro(order, event);
   const items = order.items.map((i) => ({
     text: `${i.title} × ${i.qty}`,
@@ -99,6 +109,7 @@ export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL) {
     ].join('\n'),
     ...(reviewNote ? [reviewNote] : []),
     ...(address.length ? [`Delivering to:\n${address.join('\n')}`] : []),
+    ...(trackUrl ? [`Track your parcel: ${trackUrl}`] : []),
     `View your order: ${orderUrl}`,
     'Bazaar · a demo store',
   ].join('\n\n');
@@ -119,6 +130,7 @@ ${totals.map(([label, value]) => `<tr><td style="padding:4px 0">${label}</td><td
 </table>
 ${reviewNote ? `<p>${escapeHtml(reviewNote)}</p>` : ''}
 ${address.length ? `<p><strong>Delivering to</strong><br>${address.map(escapeHtml).join('<br>')}</p>` : ''}
+${trackUrl ? button('Track your parcel', trackUrl) : ''}
 ${button('View your order', orderUrl)}`,
     "You're getting this email because you placed an order.",
   );

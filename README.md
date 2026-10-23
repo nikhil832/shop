@@ -53,6 +53,8 @@ Built in stages. Done so far:
 
 25. **Database backups**: `npm run backup` saves the Atlas database to a dated folder on your computer (outside the project), and `npm run restore` puts one back (see [Backups](#backups)).
 
+26. **Tracking numbers**: when marking an order shipped, the admin can enter the courier, the tracking number and the courier's tracking link (pasted from its site); they can be added or corrected later. The customer sees them on the order page, with a "Track your parcel" link, and in the shipped email; the order export has them too.
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database
@@ -190,7 +192,8 @@ Without keys the store works as before, with Cash on Delivery only. Tests never 
 | DELETE | `/api/admin/categories/:id`         | Admin. Only when no products (hidden ones included) use it                                                                                                                                                                                                   |
 | GET    | `/api/admin/orders`                 | Admin. `status`, `q` (order number, customer name or email), `page`; with customer and per-status counts                                                                                                                                                     |
 | GET    | `/api/admin/orders/:id`             | Admin                                                                                                                                                                                                                                                        |
-| POST   | `/api/admin/orders/:id/status`      | Admin. `{ status }`: `shipped` (from placed), `delivered` (from shipped), `cancelled` (from awaiting payment, placed or shipped; restores stock, refunds if paid)                                                                                            |
+| POST   | `/api/admin/orders/:id/status`      | Admin. `{ status }`: `shipped` (from placed), `delivered` (from shipped), `cancelled` (from awaiting payment, placed or shipped; restores stock, refunds if paid); shipping takes an optional `shipment: { courier, trackingNumber, trackingUrl }`           |
+| PUT    | `/api/admin/orders/:id/shipment`    | Admin. `{ courier, trackingNumber, trackingUrl }` for a shipped or delivered order (all empty removes it); no email                                                                                                                                          |
 | POST   | `/api/admin/orders/:id/refund`      | Admin. Retries a refund that failed                                                                                                                                                                                                                          |
 | GET    | `/api/admin/reviews`                | Admin. `status` (`visible`, `hidden`), `page`; with product, customer and counts                                                                                                                                                                             |
 | POST   | `/api/admin/reviews/:id/visibility` | Admin. `{ hidden }`: hides or shows a review (and takes it out of / back into the rating)                                                                                                                                                                    |

@@ -7,6 +7,7 @@ import { formatDate, formatPrice, orderNumber, paymentLabel } from '../../format
 import { useFetch } from '../../useFetch.js';
 import { hasInvoice } from '../Invoice.jsx';
 import NotFound from '../NotFound.jsx';
+import { ShipmentDetails } from '../Order.jsx';
 import { StatusBadge } from '../Orders.jsx';
 
 // The next steps an admin can take from each status (the server enforces the same rules).
@@ -14,21 +15,72 @@ const ACTIONS = {
   awaiting_payment: [
     { status: 'cancelled', label: 'Cancel order', confirm: 'Cancel this unpaid order and put the stock back?' },
   ],
-  placed: [
-    { status: 'shipped', label: 'Mark as shipped', primary: true },
-    { status: 'cancelled', label: 'Cancel order', confirm: 'Cancel this order and put the stock back?' },
-  ],
+  // Shipping is done with the tracking form below.
+  placed: [{ status: 'cancelled', label: 'Cancel order', confirm: 'Cancel this order and put the stock back?' }],
   shipped: [
     { status: 'delivered', label: 'Mark as delivered', primary: true },
     { status: 'cancelled', label: 'Cancel order', confirm: 'Cancel this shipped order and put the stock back?' },
   ],
 };
 
+// Couriers suggested in the form; any other name can be typed.
+const COURIERS = ['India Post', 'Delhivery', 'Blue Dart', 'DTDC', 'Ekart', 'Xpressbees', 'Shadowfax', 'Ecom Express'];
+
+// The courier, tracking number and tracking link: filled in when marking a placed order shipped (`onSubmit` ships
+// it), or edited later. All optional.
+function ShipmentForm({ shipment, submitLabel, busy, onSubmit, onCancel }) {
+  function submit(e) {
+    e.preventDefault();
+    onSubmit(Object.fromEntries(new FormData(e.currentTarget)));
+  }
+  return (
+    <form className="shipment-form" onSubmit={submit} aria-label="Tracking">
+      <label>
+        Courier
+        <input name="courier" list="couriers" maxLength={40} defaultValue={shipment?.courier} />
+      </label>
+      <datalist id="couriers">
+        {COURIERS.map((c) => (
+          <option key={c} value={c} />
+        ))}
+      </datalist>
+      <label>
+        Tracking number
+        <input name="trackingNumber" maxLength={40} defaultValue={shipment?.trackingNumber} />
+      </label>
+      <label>
+        Tracking link (optional)
+        <input
+          name="trackingUrl"
+          type="url"
+          maxLength={500}
+          placeholder="https://…"
+          defaultValue={shipment?.trackingUrl}
+        />
+        <span className="muted small">
+          Paste it from the courier&rsquo;s site; customers get a &ldquo;Track your parcel&rdquo; link.
+        </span>
+      </label>
+      <div className="form-actions">
+        <button type="submit" className="btn primary" disabled={busy}>
+          {submitLabel}
+        </button>
+        {onCancel && (
+          <button type="button" className="btn" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}
+
 export default function AdminOrder() {
   const { id } = useParams();
   const { data, error } = useFetch(`/admin/orders/${encodeURIComponent(id)}`);
   const [updated, setUpdated] = useState(null);
   const [action, setAction] = useState({ busy: false, error: null });
+  const [editingShipment, setEditingShipment] = useState(false);
 
   if (error?.status === 404 || error?.status === 400) return <NotFound message="We couldn't find that order." />;
   if (error) return <p className="error">{error.message}</p>;
@@ -56,6 +108,14 @@ export default function AdminOrder() {
     run(() => request(`/admin/orders/${order.id}/status`, { method: 'POST', body: { status } }));
   };
   const retryRefund = () => run(() => request(`/admin/orders/${order.id}/refund`, { method: 'POST' }));
+  const shipOrder = (shipment) =>
+    run(() => request(`/admin/orders/${order.id}/status`, { method: 'POST', body: { status: 'shipped', shipment } }));
+  const saveShipment = (shipment) =>
+    run(async () => {
+      const saved = await request(`/admin/orders/${order.id}/shipment`, { method: 'PUT', body: shipment });
+      setEditingShipment(false);
+      return saved;
+    });
 
   const timeline = [
     ['Ordered', order.createdAt],
@@ -166,6 +226,30 @@ export default function AdminOrder() {
               {action.error}
             </p>
           )}
+          {order.status === 'placed' && (
+            <ShipmentForm submitLabel="Mark as shipped" busy={action.busy} onSubmit={shipOrder} />
+          )}
+          {(order.status === 'shipped' || order.status === 'delivered') &&
+            (editingShipment ? (
+              <ShipmentForm
+                shipment={order.shipment}
+                submitLabel="Save tracking"
+                busy={action.busy}
+                onSubmit={saveShipment}
+                onCancel={() => setEditingShipment(false)}
+              />
+            ) : (
+              <div className="shipment-info small">
+                {order.shipment ? (
+                  <ShipmentDetails shipment={order.shipment} />
+                ) : (
+                  <p className="muted">No tracking added.</p>
+                )}
+                <button type="button" className="link" onClick={() => setEditingShipment(true)}>
+                  {order.shipment ? 'Edit tracking' : 'Add tracking'}
+                </button>
+              </div>
+            ))}
           {ACTIONS[order.status]?.map((a) => (
             <button
               key={a.status}

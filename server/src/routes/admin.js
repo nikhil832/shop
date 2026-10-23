@@ -164,7 +164,32 @@ const reviewQuery = z.object({
 });
 const reviewVisibility = z.object({ hidden: z.boolean() });
 
-const statusBody = z.object({ status: z.enum(['shipped', 'delivered', 'cancelled']) });
+// How a shipped order travels: the courier, its tracking number and (pasted by the admin) the courier's tracking page.
+// All optional, so an order can still be shipped without them and tracking added later.
+const shipmentFields = z
+  .object({
+    courier: z.string().trim().max(40).default(''),
+    trackingNumber: z
+      .string()
+      .trim()
+      .max(40)
+      .regex(/^[A-Za-z0-9 -]*$/, 'Use letters, digits, spaces and dashes')
+      .default(''),
+    // Only http(s) links, since it becomes a link on the customer's order page and in the email.
+    trackingUrl: z
+      .string()
+      .trim()
+      .max(500)
+      .refine((u) => u === '' || /^https?:\/\/[^\s]+$/i.test(u), 'Paste a link starting with https://')
+      .default(''),
+  })
+  .refine((s) => !s.trackingNumber || s.courier, { message: 'Name the courier', path: ['courier'] });
+const statusBody = z.object({
+  status: z.enum(['shipped', 'delivered', 'cancelled']),
+  shipment: shipmentFields.optional(),
+});
+// Stored only when something was entered.
+const toShipment = (s) => (s && (s.courier || s.trackingNumber || s.trackingUrl) ? s : null);
 // Which status each step moves on from. Cancelling also puts the stock back (see cancelOrder).
 const NEXT_FROM = { shipped: ['placed'], delivered: ['shipped'], cancelled: ['awaiting_payment', 'placed', 'shipped'] };
 
@@ -490,7 +515,7 @@ export function adminRouter(ctx) {
 
   router.post('/admin/orders/:id/status', async (req, res) => {
     const _id = parseObjectId(req.params.id, 'order id');
-    const { status } = parse(statusBody, req.body);
+    const { status, shipment } = parse(statusBody, req.body);
     let doc;
     if (status === 'cancelled') {
       doc = await cancelOrder(ctx, { _id }, { from: NEXT_FROM.cancelled, by: 'admin' });
@@ -499,7 +524,14 @@ export function adminRouter(ctx) {
       // The expected current status is part of the filter, so two admins clicking at once can't skip a step.
       doc = await orders.findOneAndUpdate(
         { _id, status: { $in: NEXT_FROM[status] } },
-        { $set: { status, [`${status}At`]: now, updatedAt: now } },
+        {
+          $set: {
+            status,
+            [`${status}At`]: now,
+            updatedAt: now,
+            ...(status === 'shipped' && toShipment(shipment) && { shipment: toShipment(shipment) }),
+          },
+        },
         { returnDocument: 'after' },
       );
       if (!doc) {
@@ -508,6 +540,26 @@ export function adminRouter(ctx) {
         throw new HttpError(409, `A ${existing.status} order can't be marked ${status}`);
       }
       await sendOrderEmail(ctx, doc, status);
+    }
+    res.json((await withCustomers([doc]))[0]);
+  });
+
+  // Adds or corrects the tracking details of a shipped (or delivered) order; empty fields remove them. No email: the
+  // customer sees them on the order page.
+  router.put('/admin/orders/:id/shipment', async (req, res) => {
+    const _id = parseObjectId(req.params.id, 'order id');
+    const shipment = toShipment(parse(shipmentFields, req.body));
+    const doc = await orders.findOneAndUpdate(
+      { _id, status: { $in: ['shipped', 'delivered'] } },
+      shipment
+        ? { $set: { shipment, updatedAt: new Date() } }
+        : { $unset: { shipment: '' }, $set: { updatedAt: new Date() } },
+      { returnDocument: 'after' },
+    );
+    if (!doc) {
+      const existing = await orders.findOne({ _id });
+      if (!existing) throw new HttpError(404, 'Order not found');
+      throw new HttpError(409, `A ${existing.status} order has no shipment to edit`);
     }
     res.json((await withCustomers([doc]))[0]);
   });
