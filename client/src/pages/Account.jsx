@@ -4,6 +4,7 @@ import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import AccountNav from '../components/AccountNav.jsx';
 import AddressFields from '../components/AddressFields.jsx';
+import { useFetch } from '../useFetch.js';
 
 // Each section saves on its own: { busy, error, done } where `done` is the confirmation to show.
 function useSave() {
@@ -36,6 +37,10 @@ export default function Account() {
   const [details, saveDetails] = useSave();
   const [address, saveAddress] = useSave();
   const [password, savePassword] = useSave();
+  const [emailChange, saveEmailChange] = useSave();
+  // Bumped to reload the pending email change after asking for one or cancelling it.
+  const [emailVersion, setEmailVersion] = useState(0);
+  const { data: pending } = useFetch(user ? '/account/email' : null, emailVersion);
   // Bumped to remount the address inputs after removing it (they are uncontrolled).
   const [addressVersion, setAddressVersion] = useState(0);
 
@@ -77,6 +82,24 @@ export default function Account() {
     }, "Password changed. You've been logged out on your other devices.");
   }
 
+  function submitEmail(e) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const { newEmail, password } = fields(e);
+    saveEmailChange(async () => {
+      await request('/account/email', { method: 'POST', body: { newEmail, password } });
+      form.reset();
+      setEmailVersion((v) => v + 1);
+    }, 'Check your inbox at the new address and open the link to finish.');
+  }
+
+  function cancelEmail() {
+    saveEmailChange(async () => {
+      await request('/account/email', { method: 'DELETE' });
+      setEmailVersion((v) => v + 1);
+    }, 'Email change cancelled.');
+  }
+
   return (
     <div className="orders-page">
       <AccountNav />
@@ -87,11 +110,43 @@ export default function Account() {
           Name
           <input name="name" defaultValue={user.name} autoComplete="name" required maxLength={80} />
         </label>
-        <p className="muted small">Email: {user.email} (can't be changed yet)</p>
         <Feedback state={details} />
         <button type="submit" className="btn primary" disabled={details.busy}>
           Save
         </button>
+      </form>
+
+      <form className="panel account-section" onSubmit={submitEmail} aria-labelledby="email-heading">
+        <h2 id="email-heading">Email</h2>
+        <p>
+          You log in with <strong>{user.email}</strong>. Order emails go there too.
+        </p>
+        {pending?.pendingEmail && (
+          <div className="notice" role="status">
+            <p>
+              Waiting for you to confirm <strong>{pending.pendingEmail}</strong>: open the link we sent there. Until
+              then nothing changes.
+            </p>
+            <button type="button" className="btn" onClick={cancelEmail} disabled={emailChange.busy}>
+              Cancel the change
+            </button>
+          </div>
+        )}
+        <label>
+          New email
+          <input name="newEmail" type="email" autoComplete="email" required maxLength={254} />
+        </label>
+        <label>
+          Your password
+          <input name="password" type="password" autoComplete="current-password" required maxLength={128} />
+        </label>
+        <Feedback state={emailChange} />
+        <button type="submit" className="btn primary" disabled={emailChange.busy}>
+          Send confirmation link
+        </button>
+        <p className="muted small">
+          We email a link to the new address; your email changes once you open it. Your old address is told.
+        </p>
       </form>
 
       <form className="panel account-section" onSubmit={submitAddress} aria-labelledby="address-heading">

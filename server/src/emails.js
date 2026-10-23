@@ -171,6 +171,46 @@ ${button('View the product', url)}
   return { subject, text, html };
 }
 
+export const EMAIL_CHANGE_HOURS = 24;
+
+// Sent to the new address: the one-time link that confirms it. `url` carries the token.
+export function confirmEmailChangeEmail(user, newEmail, url) {
+  const subject = 'Confirm your new Bazaar email';
+  const firstName = user.name.split(/\s+/)[0];
+  const lines = [
+    `You asked to change the email for your Bazaar account to ${newEmail}. Confirm it with this link:`,
+    `It works once, for the next ${EMAIL_CHANGE_HOURS} hours. Until then you keep logging in with ${user.email}. If you didn't ask, ignore this email: nothing changes.`,
+  ];
+  const text = [`Hi ${firstName},`, lines[0], url, lines[1], 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p>${escapeHtml(lines[0])}</p>
+${button('Confirm this email', url)}
+<p>${escapeHtml(lines[1])}</p>`,
+    "You're getting this email because someone asked to use this address for a Bazaar account.",
+  );
+  return { subject, text, html };
+}
+
+// Sent to the old address once the change is done, so a change the owner didn't make doesn't go unnoticed.
+export function emailChangedEmail(user, oldEmail, newEmail) {
+  const subject = 'Your Bazaar email was changed';
+  const firstName = user.name.split(/\s+/)[0];
+  const lines = [
+    `The email for your Bazaar account was changed from ${oldEmail} to ${newEmail}. You now log in with the new one, and order emails go there.`,
+    "If you didn't make this change, reply to this email so we can secure your account.",
+  ];
+  const text = [`Hi ${firstName},`, ...lines, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}`,
+    "You're getting this email because it was the address of a Bazaar account.",
+  );
+  return { subject, text, html };
+}
+
 const PAYMENT_NAMES = { cod: 'Cash on Delivery', razorpay: 'Paid online' };
 
 // "New order" for the admins: who ordered, what, the total and how it's paid, and a link to it in the admin panel.

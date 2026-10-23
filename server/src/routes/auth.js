@@ -20,7 +20,7 @@ import {
 import { passwordResetEmail, RESET_LINK_MINUTES } from '../emails.js';
 import { HttpError, parse } from '../http.js';
 
-const email = z.string().trim().toLowerCase().max(254).pipe(z.email('Enter a valid email'));
+export const email = z.string().trim().toLowerCase().max(254).pipe(z.email('Enter a valid email'));
 
 export const newPassword = z.string().min(8, 'Password must be at least 8 characters').max(128);
 

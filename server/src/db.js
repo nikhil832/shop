@@ -23,6 +23,10 @@ export async function ensureIndexes(db) {
     db.collection('passwordResets').createIndex({ tokenHash: 1 }, { unique: true }),
     db.collection('passwordResets').createIndex({ userId: 1, createdAt: -1 }),
     db.collection('passwordResets').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    // Email change links: one-time tokens, counted per user per hour, deleted a day after they stop working.
+    db.collection('emailChanges').createIndex({ tokenHash: 1 }, { unique: true }),
+    db.collection('emailChanges').createIndex({ userId: 1, createdAt: -1 }),
+    db.collection('emailChanges').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 86_400 }),
     // Login attempts per (hashed) email, counted for the lock and deleted once they no longer count.
     db.collection('loginAttempts').createIndex({ key: 1, at: -1 }),
     db.collection('loginAttempts').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),

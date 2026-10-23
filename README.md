@@ -37,6 +37,8 @@ Built in stages. Done so far:
 
 17. **Login limit per network**: besides the 5-per-email lock, more than 20 wrong passwords from one network (an IP address, or an IPv6 /64) within 15 minutes pause login from that network, whichever emails were tried, so nobody can try one common password on many accounts. Generous on purpose: mobile networks put many people behind one address. On Render the visitor's address comes from the `CF-Connecting-IP` header (`CLIENT_IP_HEADER` in `render.yaml`).
 
+18. **Change email**: on the account page, enter the new address and your password; a link (valid 24 hours) goes to the new address, and the email changes only once it's opened (on any device). The old address is then told, and reset links sent to it stop working. A waiting change shows on the account page and can be cancelled.
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database
@@ -116,6 +118,10 @@ Without keys the store works as before, with Cash on Delivery only. Tests never 
 | PUT    | `/api/account/address`              | Login. `{ address }` (same rules as checkout) → `{ user }`                                                                                                                                                                                      |
 | DELETE | `/api/account/address`              | Login. Removes the saved address → `{ user }`                                                                                                                                                                                                   |
 | POST   | `/api/account/password`             | Login. `{ currentPassword, newPassword }` → 204; wrong current passwords count towards the login lock; logs out other devices                                                                                                                   |
+| GET    | `/api/account/email`                | Login. The email change waiting for confirmation → `{ pendingEmail, expiresAt }` (nulls when none)                                                                                                                                              |
+| POST   | `/api/account/email`                | Login. `{ newEmail, password }` → 201; emails a confirmation link (24 hours) to the new address; ≤3 an hour; replaces an earlier request                                                                                                        |
+| DELETE | `/api/account/email`                | Login. Cancels the waiting change → 204                                                                                                                                                                                                         |
+| POST   | `/api/auth/confirm-email`           | `{ token }` from the link (no login needed): changes the email, tells the old address → `{ email, user }` (`user` only when logged in as that account)                                                                                          |
 | PUT    | `/api/stock-alerts/:productId`      | Login. Email me when this sold-out product is back → `{ stockAlert: true }`; 409 if it's in stock; ≤50 per customer                                                                                                                             |
 | DELETE | `/api/stock-alerts/:productId`      | Login. Cancels the alert → `{ stockAlert: false }`                                                                                                                                                                                              |
 | GET    | `/api/auth/me`                      | `{ user }`, or `{ user: null }` when logged out                                                                                                                                                                                                 |

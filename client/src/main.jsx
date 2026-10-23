@@ -11,6 +11,7 @@ import Checkout from './pages/Checkout.jsx';
 import Login from './pages/Login.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
+import ConfirmEmail from './pages/ConfirmEmail.jsx';
 import Order from './pages/Order.jsx';
 import Orders from './pages/Orders.jsx';
 import Wishlist from './pages/Wishlist.jsx';
@@ -42,6 +43,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="register" element={<Login key="register" mode="register" />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="reset-password" element={<ResetPassword />} />
+            <Route path="confirm-email" element={<ConfirmEmail />} />
             <Route path="orders" element={<Orders />} />
             <Route path="orders/:id" element={<Order />} />
             <Route path="wishlist" element={<Wishlist />} />
