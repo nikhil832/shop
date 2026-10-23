@@ -14,6 +14,10 @@ const RULES = [
     'force-pushes, which can overwrite commits on GitHub',
   ],
   [/\bgit\s+reset\b.*--hard\b/, 'discards uncommitted changes for good'],
+  [
+    /\bnpm\s+run\s+restore\b|\bbackups\.js\s+restore\b/,
+    'replaces the data in the database from server/.env (Atlas) with a backup',
+  ],
 ];
 
 const hit = RULES.find(([pattern]) => pattern.test(command));

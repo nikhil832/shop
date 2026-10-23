@@ -51,6 +51,8 @@ Built in stages. Done so far:
 
 24. **Two options**: a product can have two kinds of option, e.g. Colour and Waist, each combination with its own price, stock and photos (combinations not sold are simply left out). In the store, the second row of choices follows the first (a waist not made in the chosen colour can't be picked) and choosing just a colour already shows its photos; lines read "Urbane Men Slim Fit Jeans (Colour: Black, Waist: 32)". In the admin form, "Add a second option" adds a column, and "Add missing combinations" fills in the grid. The demo's jeans come in Blue and Black.
 
+25. **Database backups**: `npm run backup` saves the Atlas database to a dated folder on your computer (outside the project), and `npm run restore` puts one back (see [Backups](#backups)).
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database
@@ -80,6 +82,23 @@ npm run make-admin -- you@example.com   # give a registered account the admin ro
 ```
 
 Env vars (`server/.env` or the environment): `MONGODB_URI` (required except in demo mode), `MONGODB_DB` (default `shop`), `PORT` (default 4000).
+
+### Backups
+
+Atlas's free tier keeps no backups of its own, so make one now and then (say, weekly, and before any big change):
+
+```bash
+npm run backup                                   # saves the database to ~/Bazaar-backups/shop-<date-time>/
+npm run restore -- ~/Bazaar-backups/shop-2026-10-23-1405           # says what a restore would replace
+npm run restore -- ~/Bazaar-backups/shop-2026-10-23-1405 --yes     # replaces the data with the backup
+```
+
+A backup is a folder with one file per collection (products, orders, customers, uploaded photos, coupons…) and a
+`manifest.json` of the counts. Logins and one-time links are left out. The files hold customers' addresses and password
+hashes, so they're readable only by your Mac user and kept outside the project folder (the command refuses a
+`BACKUP_DIR` inside it): don't upload them anywhere public. A restore first saves what's there now
+(`shop-before-restore-…`), so it can be undone, and the project's hook asks before running one. To check a backup without
+touching the live data, restore it into another database: `MONGODB_DB=shop-restore-test npm run restore -- <folder> --yes`.
 
 ### Order emails (optional)
 

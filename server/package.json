@@ -7,6 +7,8 @@
     "demo": "node src/demo.js",
     "seed": "node src/seed.js",
     "make-admin": "node src/make-admin.js",
+    "backup": "node src/backups.js backup",
+    "restore": "node src/backups.js restore",
     "start": "node src/index.js",
     "test": "node --test 'test/**/*.test.js'"
   },
