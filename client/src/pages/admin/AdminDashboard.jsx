@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { formatPrice } from '../../format.js';
+import { ORDER_STATUS, formatPrice } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 
 const PERIODS = [7, 30, 90];
@@ -19,6 +19,65 @@ const shortDay = dayFormat({ day: 'numeric', month: 'short' });
 const longDay = dayFormat({ weekday: 'short', day: 'numeric', month: 'short' });
 const formatDay = (date) => shortDay.format(new Date(date));
 const formatLongDay = (date) => longDay.format(new Date(date));
+
+// Downloads orders between two dates as a CSV. A plain GET form: the browser saves the file the API sends.
+// The dates start as the dashboard's period (remounted with a `key` when it changes).
+function ExportOrders({ from, to }) {
+  const [error, setError] = useState(null);
+  function check(e) {
+    const { from: start, to: end } = Object.fromEntries(new FormData(e.currentTarget));
+    if (start > end) {
+      e.preventDefault();
+      setError('The end date must be on or after the start date');
+    } else {
+      setError(null);
+    }
+  }
+  return (
+    <form
+      className="panel export-form"
+      method="get"
+      action="/api/admin/orders/export"
+      onSubmit={check}
+      aria-labelledby="export-orders"
+    >
+      <h2 id="export-orders">Export orders</h2>
+      <p className="muted small">
+        A CSV file for Excel or Google Sheets: one row per order placed between the two dates (India time, both
+        included), with the customer, items, amounts in rupees, payment and delivery city.
+      </p>
+      <div className="export-fields">
+        <label>
+          From
+          <input type="date" name="from" defaultValue={from} max={to} required />
+        </label>
+        <label>
+          To
+          <input type="date" name="to" defaultValue={to} max={to} required />
+        </label>
+        <label>
+          Status
+          <select name="status" defaultValue="">
+            <option value="">All</option>
+            {Object.entries(ORDER_STATUS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="submit" className="btn primary">
+          Download CSV
+        </button>
+      </div>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+    </form>
+  );
+}
 
 // A round number at or above `value` for the top of the axis: 1, 2 or 5 times a power of ten.
 function niceMax(value) {
@@ -265,6 +324,8 @@ export default function AdminDashboard() {
               </p>
             </section>
           </div>
+
+          <ExportOrders key={days} from={data.daily[0].date} to={data.daily.at(-1).date} />
         </div>
       )}
     </div>

@@ -1466,6 +1466,34 @@ textarea {
   max-width: 420px;
 }
 
+/* ---- Order export (admin dashboard) ---- */
+.export-form h2 {
+  margin-bottom: 4px;
+}
+.dashboard .export-form p.small {
+  margin: 0 0 12px;
+}
+.export-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+.export-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+/* One height for the dates, the status and the button, so the labels line up. */
+.export-fields input,
+.export-fields select,
+.export-fields .btn {
+  height: 40px;
+  box-sizing: border-box;
+}
+
 /* ---- Invoice ---- */
 .invoice-page {
   max-width: 820px;

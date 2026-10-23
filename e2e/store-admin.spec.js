@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 
 // Named to run after catalog.spec.js (files run alphabetically on one shared demo server), since adding
@@ -181,6 +182,18 @@ test('the dashboard shows sales, best sellers and orders to ship', async ({ page
 
   // Sold-out sample products are listed as low stock.
   await expect(page.getByRole('region', { name: 'Needs attention' }).getByText('Sold out').first()).toBeVisible();
+
+  // Export: the CSV for the period downloads with the new order in it.
+  const exportForm = page.getByRole('form', { name: 'Export orders' });
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    exportForm.getByRole('button', { name: 'Download CSV' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^orders-\d{4}-\d{2}-\d{2}-to-\d{4}-\d{2}-\d{2}\.csv$/);
+  const file = (await readFile(await download.path(), 'utf8')).replace(/^\uFEFF/, '');
+  expect(file.split('\r\n')[0]).toMatch(/^Order,Date \(India time\),Status,/);
+  expect(file).toContain(`${order.number},`);
+
   await page.getByRole('link', { name: /orders? to ship/ }).click();
   await expect(page).toHaveURL(/\/admin\/orders\?status=placed/);
 });

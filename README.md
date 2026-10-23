@@ -41,6 +41,8 @@ Built in stages. Done so far:
 
 19. **Printable invoices**: placed, shipped and delivered orders have an Invoice button (for the customer on their order page, for admins on the admin order page) that opens a bill with the order number and date, billing address and email, items, delivery, coupon, total and how it's paid. "Print or save as PDF" prints just the invoice, black on white.
 
+20. **Export orders**: on the admin dashboard, choose two dates (India time, both included) and optionally a status, and download a CSV for Excel or Google Sheets: one row per order with its number, date and time, status, customer and email, items, amounts in rupees (items, delivery, discount, coupon, total), payment and delivery city, state and PIN code.
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database
@@ -144,6 +146,7 @@ Without keys the store works as before, with Cash on Delivery only. Tests never 
 | DELETE | `/api/wishlist/:productId`          | Login. Removes it                                                                                                                                                                                                                               |
 | GET    | `/api/images/:id`                   | An uploaded product photo (cached for a year)                                                                                                                                                                                                   |
 | GET    | `/api/admin/request-info`           | Admin. The addresses and proxy headers the server sees for your own request (to check which one is the visitor's IP)                                                                                                                            |
+| GET    | `/api/admin/orders/export`          | Admin. `from`, `to` (`YYYY-MM-DD`, India time, both included, ≤366 days), `status?` → CSV download, one row per order                                                                                                                           |
 | GET    | `/api/admin/dashboard`              | Admin. `days` (`7`, `30` default, `90`): sales totals and the period before, revenue per day (India time), top 5 best sellers, orders to ship, low stock                                                                                        |
 | GET    | `/api/admin/products`               | Admin. `q`, `category` (id), `status` (`active`, `hidden`, `low`), `page`; 50 per page, hidden products included                                                                                                                                |
 | GET    | `/api/admin/products/:id`           | Admin                                                                                                                                                                                                                                           |
