@@ -39,6 +39,8 @@ Built in stages. Done so far:
 
 18. **Change email**: on the account page, enter the new address and your password; a link (valid 24 hours) goes to the new address, and the email changes only once it's opened (on any device). The old address is then told, and reset links sent to it stop working. A waiting change shows on the account page and can be cancelled.
 
+19. **Printable invoices**: placed, shipped and delivered orders have an Invoice button (for the customer on their order page, for admins on the admin order page) that opens a bill with the order number and date, billing address and email, items, delivery, coupon, total and how it's paid. "Print or save as PDF" prints just the invoice, black on white.
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database

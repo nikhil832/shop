@@ -4,6 +4,7 @@ import { request } from '../../api.js';
 import OrderSummary from '../../components/OrderSummary.jsx';
 import { formatDate, formatPrice, orderNumber, paymentLabel } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
+import { hasInvoice } from '../Invoice.jsx';
 import NotFound from '../NotFound.jsx';
 import { StatusBadge } from '../Orders.jsx';
 
@@ -149,6 +150,11 @@ export default function AdminOrder() {
             {payment.refundId && <p>Refund {payment.refundId}</p>}
             {payment.refundError && <p className="error">Refund error: {payment.refundError}</p>}
           </div>
+          {hasInvoice(order) && (
+            <Link to={`/admin/orders/${order.id}/invoice`} className="btn">
+              Invoice
+            </Link>
+          )}
           {payment.status === 'refund_failed' && (
             <button type="button" className="btn primary" onClick={retryRefund} disabled={action.busy}>
               Retry refund

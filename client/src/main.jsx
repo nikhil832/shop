@@ -12,6 +12,7 @@ import Login from './pages/Login.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 import ConfirmEmail from './pages/ConfirmEmail.jsx';
+import Invoice from './pages/Invoice.jsx';
 import Order from './pages/Order.jsx';
 import Orders from './pages/Orders.jsx';
 import Wishlist from './pages/Wishlist.jsx';
@@ -46,12 +47,14 @@ createRoot(document.getElementById('root')).render(
             <Route path="confirm-email" element={<ConfirmEmail />} />
             <Route path="orders" element={<Orders />} />
             <Route path="orders/:id" element={<Order />} />
+            <Route path="orders/:id/invoice" element={<Invoice />} />
             <Route path="wishlist" element={<Wishlist />} />
             <Route path="account" element={<Account />} />
             <Route path="admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="orders" element={<AdminOrders />} />
               <Route path="orders/:id" element={<AdminOrder />} />
+              <Route path="orders/:id/invoice" element={<Invoice admin />} />
               <Route path="products" element={<AdminProducts />} />
               <Route path="products/new" element={<AdminProduct />} />
               <Route path="products/:id" element={<AdminProduct />} />

@@ -7,11 +7,10 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea               | Why                                                                                                                                                                                         | To start               |
-| --- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| 1   | Printable invoices | A bill per order (items, discount, delivery, address, order number) that customers and admins can print or save as PDF from the browser; shops are usually asked for one.                   | "add invoices"         |
-| 2   | Export orders      | Admins download orders for a date range as a CSV for a spreadsheet (accounts, taxes), next to the sales dashboard.                                                                          | "export orders"        |
-| 3   | Product variants   | Sizes or colours of one product, each with its own stock and price, instead of separate products (shoes, clothes). The biggest of the three: touches the catalog, cart, checkout and admin. | "add product variants" |
+| #   | Idea             | Why                                                                                                                                                                                         | To start               |
+| --- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| 1   | Export orders    | Admins download orders for a date range as a CSV for a spreadsheet (accounts, taxes), next to the sales dashboard.                                                                          | "export orders"        |
+| 2   | Product variants | Sizes or colours of one product, each with its own stock and price, instead of separate products (shoes, clothes). The biggest of the three: touches the catalog, cart, checkout and admin. | "add product variants" |
 
 ## Set aside
 
@@ -42,3 +41,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Unused uploads deleted after a day (photos that products or past orders use are kept)                                       | Stage 16 (`git log --grep "Stage 16"`) |
 | Login limit per network: 20 wrong passwords from one address (or IPv6 /64) in 15 minutes, using Render's `CF-Connecting-IP` | Stage 17 (`git log --grep "Stage 17"`) |
 | Change email: confirmed by a link to the new address (24 hours), the old address told, old reset links stop                 | Stage 18 (`git log --grep "Stage 18"`) |
+| Printable invoices for customers and admins (print or save as PDF)                                                          | Stage 19 (`git log --grep "Stage 19"`) |

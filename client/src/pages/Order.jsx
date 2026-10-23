@@ -6,6 +6,7 @@ import OrderSummary from '../components/OrderSummary.jsx';
 import { formatDate, formatPrice, formatTime, orderNumber, paymentLabel } from '../format.js';
 import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
+import { hasInvoice } from './Invoice.jsx';
 import NotFound from './NotFound.jsx';
 import { StatusBadge } from './Orders.jsx';
 
@@ -152,6 +153,11 @@ export default function Order() {
           total={order.total}
         >
           <p className="muted small">Payment: {paymentLabel(order.payment)}</p>
+          {hasInvoice(order) && (
+            <Link to={`/orders/${order.id}/invoice`} className="btn">
+              Invoice
+            </Link>
+          )}
           {action.error && (
             <p className="error" role="alert">
               {action.error}
