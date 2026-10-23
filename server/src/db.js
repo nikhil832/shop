@@ -47,6 +47,8 @@ export async function ensureIndexes(db) {
     db.collection('reviews').createIndex({ createdAt: -1 }),
     db.collection('wishlist').createIndex({ userId: 1, productId: 1 }, { unique: true }),
     // Coupons by code; each customer uses a coupon once; a cancelled order's use is found by order.
+    // The unused-upload sweep looks at uploads older than a day.
+    db.collection('images').createIndex({ createdAt: 1 }),
     db.collection('coupons').createIndex({ code: 1 }, { unique: true }),
     db.collection('couponRedemptions').createIndex({ couponId: 1, userId: 1 }, { unique: true }),
     db.collection('couponRedemptions').createIndex({ orderId: 1 }),

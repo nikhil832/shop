@@ -1,5 +1,5 @@
 import express from 'express';
-import { Binary } from 'mongodb';
+import { Binary, ObjectId } from 'mongodb';
 import { requireAdmin } from '../auth.js';
 import { HttpError, parseObjectId } from '../http.js';
 
@@ -14,6 +14,59 @@ const SIGNATURES = {
 };
 
 export const imageUrl = (id) => `/api/images/${id}`;
+
+// How long an upload is kept before it can count as unused: the admin may still be filling in the product form.
+export const UNUSED_IMAGE_GRACE_MS = 24 * 60 * 60 * 1000;
+const UPLOAD_URL = /^\/api\/images\/([0-9a-f]{24})$/;
+
+// Ids of uploads still in use: by a product (shown or hidden), or by an order item, which keeps the photo it was
+// bought with even after the product's photos change.
+async function imagesInUse(db) {
+  const referenced = (collection, field) =>
+    db
+      .collection(collection)
+      .aggregate([
+        { $project: { url: `$${field}` } },
+        { $unwind: '$url' },
+        { $match: { url: { $regex: '^/api/images/' } } },
+        { $group: { _id: '$url' } },
+      ])
+      .toArray();
+  const [inProducts, inOrders] = await Promise.all([
+    referenced('products', 'images'),
+    referenced('orders', 'items.image'),
+  ]);
+  return new Set([...inProducts, ...inOrders].map((r) => r._id.match(UPLOAD_URL)?.[1]).filter(Boolean));
+}
+
+// The uploads among `urls` that no longer exist (deleted as unused), for the product form's check.
+export async function missingImages({ db }, urls) {
+  const ids = urls.map((u) => u.match(UPLOAD_URL)?.[1]).filter(Boolean);
+  if (!ids.length) return [];
+  const found = await db
+    .collection('images')
+    .find({ _id: { $in: ids.map((id) => ObjectId.createFromHexString(id)) } }, { projection: { _id: 1 } })
+    .toArray();
+  const present = new Set(found.map((img) => img._id.toString()));
+  return ids.filter((id) => !present.has(id));
+}
+
+// Deletes uploaded photos that nothing refers to, once they're older than the grace period (an hourly sweep in
+// index.js; Atlas's free tier holds 512 MB). Returns how many were deleted and their total size in bytes. Saving a
+// product checks its uploads still exist (`missingImages`), so a form left open past the sweep can't save a gone photo.
+export async function deleteUnusedImages({ db }, { now = new Date() } = {}) {
+  const images = db.collection('images');
+  const old = await images
+    .find({ createdAt: { $lt: new Date(now.getTime() - UNUSED_IMAGE_GRACE_MS) } }, { projection: { size: 1 } })
+    .toArray();
+  if (!old.length) return { deleted: 0, bytes: 0 };
+  const used = await imagesInUse(db);
+  const unused = old.filter((img) => !used.has(img._id.toString()));
+  if (!unused.length) return { deleted: 0, bytes: 0 };
+  const { deletedCount } = await images.deleteMany({ _id: { $in: unused.map((img) => img._id) } });
+  const bytes = unused.reduce((sum, img) => sum + (img.size ?? 0), 0);
+  return { deleted: deletedCount, bytes };
+}
 
 // Product photos uploaded by admins, stored in the `images` collection so nothing depends on an outside service.
 export function imagesRouter({ db }) {

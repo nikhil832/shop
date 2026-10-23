@@ -33,6 +33,8 @@ Built in stages. Done so far:
 
 15. **New-order alerts**: admins get an email for every new order (Cash on Delivery straight away, online orders once paid) with the customer, items, total, payment and delivery city, and a link to the order in the admin panel. They go to every admin account, or to `ADMIN_EMAIL` if it's set.
 
+16. **Unused uploads cleaned up**: photos uploaded in the admin panel but never saved to a product (or replaced since) are deleted once they're a day old, checked at startup and every hour, so they don't fill the free database. Photos that past orders show are kept.
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database

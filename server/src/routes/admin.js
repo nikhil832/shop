@@ -5,6 +5,7 @@ import { requireAdmin } from '../auth.js';
 import { HttpError, escapeRegex, parse, parseObjectId } from '../http.js';
 import { ICONS, image, slugify } from '../seed.js';
 import { refundPayment } from '../payments.js';
+import { missingImages } from './images.js';
 import { cancelOrder, ORDER_STATUSES, toOrder } from './orders.js';
 import { sendOrderEmail } from '../emails.js';
 import { changeRating, inTransaction, toReview } from './reviews.js';
@@ -106,6 +107,13 @@ export function adminRouter(ctx) {
     return category;
   }
 
+  // Uploads unused for a day are deleted (deleteUnusedImages), so a form left open that long may hold a gone photo.
+  async function checkImages(urls) {
+    if ((await missingImages(ctx, urls)).length) {
+      throw new HttpError(400, 'images: A photo was removed because it went unused for a day. Upload it again.');
+    }
+  }
+
   // ---- Products ----
 
   router.get('/admin/products', async (req, res) => {
@@ -141,6 +149,7 @@ export function adminRouter(ctx) {
     const body = parse(createProduct, req.body);
     if (body.mrp < body.price) throw new HttpError(400, 'mrp: MRP must be at least the price');
     const category = await findCategory(body.categoryId);
+    await checkImages(body.images);
     const now = new Date();
     const base = slugify(body.title) || 'product';
     // The slug comes from the title and never changes afterwards, so product links keep working.
@@ -173,6 +182,7 @@ export function adminRouter(ctx) {
     if ((body.mrp ?? current.mrp) < (body.price ?? current.price)) {
       throw new HttpError(400, 'mrp: MRP must be at least the price');
     }
+    if (body.images) await checkImages(body.images);
     const update = { ...body, updatedAt: new Date() };
     if (body.categoryId) update.categoryId = (await findCategory(body.categoryId))._id;
     if (body.images?.length === 0) {

@@ -7,6 +7,7 @@ import { razorpayClient } from './razorpay.js';
 import { mailClient } from './mail.js';
 import { expireUnpaidOrders } from './routes/orders.js';
 import { sendBackInStockAlerts } from './routes/stockAlerts.js';
+import { deleteUnusedImages } from './routes/images.js';
 import { loadConfig } from './config.js';
 
 const config = loadConfig();
@@ -23,6 +24,15 @@ const sweeper = setInterval(async () => {
   await sendBackInStockAlerts(ctx).catch((err) => console.error(err));
 }, 60_000);
 
+// At startup (the free plan sleeps, so hourly runs may not come) and then every hour: delete uploaded photos that no
+// product or order uses and that are more than a day old.
+async function cleanUpImages() {
+  const { deleted, bytes } = await deleteUnusedImages(ctx);
+  if (deleted) console.log(`Deleted ${deleted} unused uploaded photo(s), ${(bytes / 1024 / 1024).toFixed(1)} MB.`);
+}
+cleanUpImages().catch((err) => console.error(err));
+const imageSweeper = setInterval(() => cleanUpImages().catch((err) => console.error(err)), 60 * 60_000);
+
 // In production, serve the built React app from the same server.
 if (existsSync(CLIENT_DIST)) {
   app.use(express.static(CLIENT_DIST));
@@ -38,6 +48,7 @@ const server = app.listen(config.port, () => {
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.once(signal, () => {
     clearInterval(sweeper);
+    clearInterval(imageSweeper);
     server.close();
     client.close().finally(() => process.exit(0));
   });
