@@ -1526,11 +1526,17 @@ textarea {
   border-radius: var(--radius);
   padding: 14px;
 }
-.variant-editor > label {
+.variant-names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+.variant-names label {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-width: 240px;
+  width: 200px;
   font-weight: 600;
 }
 .variant-editor td input:not([type='checkbox']) {

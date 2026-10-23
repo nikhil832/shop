@@ -80,32 +80,86 @@ let nextRow = 0;
 const newRow = (v = {}) => ({
   key: nextRow++,
   id: v.id,
-  label: v.label ?? '',
+  // One value per option, in order (one option: just the label).
+  values: v.values ?? (v.label ? [v.label] : []),
   price: v.price ? toRupees(v.price) : '',
   mrp: v.mrp ? toRupees(v.mrp) : '',
   stock: v.stock ?? 0,
   images: v.images ?? [],
 });
+const MAX_VARIANTS = 40;
 
-// The variants of a product that has them (sizes, colours…), each with its own price, MRP and stock. Rows keep the
-// id of an existing variant, so editing doesn't detach it from carts and past orders.
-// `photos` are the product's images: each variant can show some of them (none ticked means all).
-function Variants({ name, rows, photos, onChange }) {
+// The variants of a product that has them, for one or two options (`names`, e.g. Colour and Size): each row is one
+// value per option (one combination) with its own price, MRP and stock. Rows keep the id of an existing variant, so
+// editing doesn't detach it from carts and past orders. `photos` are the product's images: each variant can show some
+// of them (none ticked means all).
+function Variants({ names, onNames, rows, photos, onChange }) {
   const set = (key, field, value) => onChange(rows.map((r) => (r.key === key ? { ...r, [field]: value } : r)));
+  const setValue = (r, k, value) => {
+    const values = [...r.values];
+    values[k] = value;
+    set(r.key, 'values', values);
+  };
   const togglePhoto = (r, src) =>
     set(r.key, 'images', r.images.includes(src) ? r.images.filter((x) => x !== src) : [...r.images, src]);
+  const columnName = (k) => names[k] || `Option ${k + 1}`;
+
+  // With two options: a row for every pair of values already used that isn't listed yet (stock 0, the first row's
+  // prices, and the photos of the first row in the same first value), so the grid needn't be typed in full.
+  function addCombinations() {
+    const used = (k) => [...new Set(rows.map((r) => r.values[k]?.trim()).filter(Boolean))];
+    const has = new Set(rows.map((r) => `${r.values[0]?.trim()}\u0000${r.values[1]?.trim()}`));
+    const added = [];
+    for (const a of used(0)) {
+      for (const b of used(1)) {
+        if (has.has(`${a}\u0000${b}`)) continue;
+        const like = rows.find((r) => r.values[0]?.trim() === a) ?? rows[0];
+        added.push({ ...newRow(), values: [a, b], price: rows[0].price, mrp: rows[0].mrp, images: like.images });
+      }
+    }
+    onChange([...rows, ...added].slice(0, MAX_VARIANTS));
+  }
+
   return (
     <fieldset className="variant-editor">
       <legend>Variants</legend>
-      <label>
-        Option name
-        <input name="variantName" required maxLength={20} placeholder="Size, Colour…" defaultValue={name} />
-      </label>
+      <div className="variant-names">
+        {names.map((name, k) => (
+          <label key={k}>
+            {k === 0 ? 'Option name' : 'Second option'}
+            <input
+              value={name}
+              onChange={(e) => onNames(names.map((n, x) => (x === k ? e.target.value : n)))}
+              required
+              maxLength={20}
+              placeholder={k === 0 ? 'Size, Colour…' : 'e.g. Size'}
+            />
+          </label>
+        ))}
+        {names.length === 1 ? (
+          <button type="button" className="btn small" onClick={() => onNames([...names, ''])}>
+            Add a second option
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="link danger"
+            onClick={() => {
+              onNames(names.slice(0, 1));
+              onChange(rows.map((r) => ({ ...r, values: r.values.slice(0, 1) })));
+            }}
+          >
+            Remove the second option
+          </button>
+        )}
+      </div>
       <div className="table-wrap">
         <table className="admin-table">
           <thead>
             <tr>
-              <th>Label</th>
+              {names.map((_, k) => (
+                <th key={k}>{names.length > 1 ? columnName(k) : 'Label'}</th>
+              ))}
               <th>Price (₹)</th>
               <th>MRP (₹)</th>
               <th>Stock</th>
@@ -118,16 +172,18 @@ function Variants({ name, rows, photos, onChange }) {
           <tbody>
             {rows.map((r, i) => (
               <tr key={r.key}>
-                <td>
-                  <input
-                    value={r.label}
-                    onChange={(e) => set(r.key, 'label', e.target.value)}
-                    required
-                    maxLength={30}
-                    placeholder="UK 8, Blue…"
-                    aria-label={`Label of variant ${i + 1}`}
-                  />
-                </td>
+                {names.map((_, k) => (
+                  <td key={k}>
+                    <input
+                      value={r.values[k] ?? ''}
+                      onChange={(e) => setValue(r, k, e.target.value)}
+                      required
+                      maxLength={30}
+                      placeholder={k === 0 ? 'UK 8, Blue…' : ''}
+                      aria-label={`${names.length > 1 ? columnName(k) : 'Label'} of variant ${i + 1}`}
+                    />
+                  </td>
+                ))}
                 <td>
                   <input
                     type="number"
@@ -194,15 +250,22 @@ function Variants({ name, rows, photos, onChange }) {
           </tbody>
         </table>
       </div>
-      {rows.length < 20 && (
-        <button type="button" className="btn small" onClick={() => onChange([...rows, newRow()])}>
-          Add a variant
-        </button>
-      )}
+      <div className="form-actions">
+        {rows.length < MAX_VARIANTS && (
+          <button type="button" className="btn small" onClick={() => onChange([...rows, newRow()])}>
+            Add a variant
+          </button>
+        )}
+        {names.length > 1 && rows.length < MAX_VARIANTS && (
+          <button type="button" className="btn small" onClick={addCombinations}>
+            Add missing combinations
+          </button>
+        )}
+      </div>
       <span className="muted small">
         The store shows the lowest price (&ldquo;from ₹…&rdquo;) and the total stock. Customers choose one before adding
-        to the cart. Tick a variant&rsquo;s photos to show only those when it&rsquo;s chosen; with none ticked, all are
-        shown.
+        to the cart. With two options, each row is one combination (e.g. Black, 32); leave out ones you don&rsquo;t
+        sell. Tick a variant&rsquo;s photos to show only those when it&rsquo;s chosen; with none ticked, all are shown.
       </span>
     </fieldset>
   );
@@ -212,8 +275,9 @@ function ProductForm({ product, categories }) {
   const navigate = useNavigate();
   const [images, setImages] = useState(product?.images ?? []);
   const [state, setState] = useState({ busy: false, error: null });
-  // Variant rows, or null for a product without variants.
+  // Variant rows, or null for a product without variants, and the names of their one or two options.
   const [variants, setVariants] = useState(product?.variants.length ? product.variants.map(newRow) : null);
+  const [optionNames, setOptionNames] = useState(product?.options?.length ? product.options : ['']);
 
   async function submit(e) {
     e.preventDefault();
@@ -232,10 +296,10 @@ function ProductForm({ product, categories }) {
       // them off).
       ...(variants
         ? {
-            variantName: form.get('variantName'),
+            options: optionNames.map((n) => n.trim()),
             variants: variants.map((v) => ({
               ...(v.id && { id: v.id }),
-              label: v.label,
+              values: optionNames.map((_, k) => (v.values[k] ?? '').trim()),
               price: toPaise(v.price),
               mrp: toPaise(v.mrp),
               stock: Number(v.stock),
@@ -355,7 +419,9 @@ function ProductForm({ product, categories }) {
         />
         Comes in sizes, colours or other options, each with its own price and stock
       </label>
-      {variants && <Variants name={product?.variantName} rows={variants} photos={images} onChange={setVariants} />}
+      {variants && (
+        <Variants names={optionNames} onNames={setOptionNames} rows={variants} photos={images} onChange={setVariants} />
+      )}
       {state.error && (
         <p className="error" role="alert">
           {state.error}

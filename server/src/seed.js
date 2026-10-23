@@ -1,5 +1,6 @@
 import { ObjectId } from 'mongodb';
 import { pathToFileURL } from 'node:url';
+import { optionsPhrase, variantLabel } from './variants.js';
 import { connectDb } from './db.js';
 import { loadConfig } from './config.js';
 
@@ -13,7 +14,7 @@ const CATEGORIES = [
   { slug: 'books', name: 'Books' },
 ];
 
-// Sample products with variants: [option name, [label, price ₹, mrp ₹, stock, photo views?]…]. The cheapest price and
+// Sample products with variants: [option name(s), [value(s), price ₹, mrp ₹, stock, photo views?]…]. The cheapest price and
 // the total stock match the product's row below, so catalog counts and price filters are the same with or without
 // them. Photo views pick from the product's own images (0–2) for that variant.
 const VARIANTS = {
@@ -31,6 +32,17 @@ const VARIANTS = {
     [
       ['Black', 1299, 2799, 12, [0, 2]],
       ['Tan', 1299, 2799, 10, [1]],
+    ],
+  ],
+  // Two options: not every combination exists (no Black 34), and Blue 30 is sold out.
+  'Urbane Men Slim Fit Jeans': [
+    ['Colour', 'Waist'],
+    [
+      [['Blue', '30'], 1199, 2499, 0, [0]],
+      [['Blue', '32'], 1199, 2499, 20, [0]],
+      [['Blue', '34'], 1299, 2499, 14, [0]],
+      [['Black', '30'], 1199, 2499, 12, [1]],
+      [['Black', '32'], 1199, 2499, 18, [1]],
     ],
   ],
   'Urbane Women Kurta Set': [
@@ -306,10 +318,13 @@ export async function seedCatalog(db, { force = false } = {}) {
         mrp: mrp * 100,
         stock,
         ...(VARIANTS[title] && {
-          variantName: VARIANTS[title][0],
-          variants: VARIANTS[title][1].map(([label, vPrice, vMrp, vStock, views = []]) => ({
+          // One option name, or two (`[['Colour', 'Size'], …]` with each row's values as a list).
+          options: [VARIANTS[title][0]].flat(),
+          variantName: optionsPhrase([VARIANTS[title][0]].flat()),
+          variants: VARIANTS[title][1].map(([value, vPrice, vMrp, vStock, views = []]) => ({
             _id: new ObjectId(),
-            label,
+            values: [value].flat(),
+            label: variantLabel([value].flat()),
             price: vPrice * 100,
             mrp: vMrp * 100,
             stock: vStock,

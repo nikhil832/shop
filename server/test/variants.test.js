@@ -301,3 +301,109 @@ test("admins pick each variant's photos from the product's; removing a photo dro
     [[red], []],
   );
 });
+
+const JEANS = 'urbane-men-slim-fit-jeans'; // Colour × Waist: Blue 30 (sold out), 32, 34; Black 30, 32 (no Black 34)
+const combo = (doc, colour, waist) => doc.variants.find((v) => v.values[0] === colour && v.values[1] === waist);
+
+test('two options: the page lists both, and lines are named by both', async () => {
+  const page = (await t.call('GET', `/products/${JEANS}`)).body;
+  assert.deepEqual(page.options, ['Colour', 'Waist']);
+  assert.equal(page.variantName, 'Colour and waist');
+  assert.deepEqual(
+    page.variants.map((v) => [v.values, v.label, v.stock]),
+    [
+      [['Blue', '30'], 'Blue / 30', 0],
+      [['Blue', '32'], 'Blue / 32', 20],
+      [['Blue', '34'], 'Blue / 34', 14],
+      [['Black', '30'], 'Black / 30', 12],
+      [['Black', '32'], 'Black / 32', 18],
+    ],
+  );
+  assert.equal(page.priceFrom, true);
+  // One-option products list their one option.
+  assert.deepEqual((await t.call('GET', `/products/${SHOES}`)).body.options, ['Size']);
+
+  const jeans = await product(JEANS);
+  const black32 = combo(jeans, 'Black', '32');
+  const items = [{ productId: jeans._id.toString(), variantId: black32._id.toString(), qty: 1 }];
+  const q = await quote(items);
+  assert.equal(q.body.items[0].variant.description, 'Colour: Black, Waist: 32');
+  assert.equal(
+    (await quote([{ productId: jeans._id.toString(), qty: 1 }])).body.items[0].problem,
+    'Choose a colour and waist',
+  );
+  const res = await order(items);
+  assert.equal(res.status, 201);
+  assert.equal(res.body.items[0].title, 'Urbane Men Slim Fit Jeans (Colour: Black, Waist: 32)');
+  assert.equal(res.body.items[0].variant, 'Black / 32');
+  assert.equal(variant(await product(JEANS), 'Black / 32').stock, black32.stock - 1);
+  assert.equal((await buyer('POST', `/orders/${res.body.id}/cancel`)).status, 200);
+
+  // A sold-out combination can be watched while the rest are in stock.
+  const blue30 = combo(jeans, 'Blue', '30');
+  const watch = await buyer('PUT', `/stock-alerts/${jeans._id}?variant=${blue30._id}`);
+  assert.equal(watch.status, 200);
+  const black30 = combo(jeans, 'Black', '30');
+  const inStock = await buyer('PUT', `/stock-alerts/${jeans._id}?variant=${black30._id}`);
+  assert.equal(inStock.body.error, 'This colour and waist is in stock: you can buy it now');
+});
+
+test('admins give two options names and every variant a value for each, once per combination', async () => {
+  const categoryId = (await t.db.collection('categories').findOne({ slug: 'fashion' }))._id.toString();
+  const row = (values, stock = 1) => ({ values, price: 99900, mrp: 129900, stock });
+  const base = { title: 'Urbane Chinos', brand: 'Urbane', categoryId, options: ['Colour', 'Waist'] };
+
+  for (const [variants, error, options = base.options] of [
+    [[row(['Khaki'])], 'Give each variant a value for every option'],
+    [[row(['Khaki', '32']), row(['khaki', '32'])], 'Each combination can be listed once'],
+    [[row(['Khaki', '32'])], 'Give the two options different names', ['Colour', 'colour']],
+    [[row(['Khaki', '32', 'Slim'])], null, ['Colour', 'Waist']],
+  ]) {
+    const res = await admin('POST', '/admin/products', { ...base, options, variants });
+    assert.equal(res.status, 400, JSON.stringify(variants));
+    if (error) assert.ok(res.body.error.includes(error), `${res.body.error} / ${error}`);
+  }
+  const tooMany = await admin('POST', '/admin/products', {
+    ...base,
+    options: ['Colour', 'Waist', 'Fit'],
+    variants: [row(['Khaki', '32', 'Slim'])],
+  });
+  assert.equal(tooMany.status, 400);
+
+  const created = await admin('POST', '/admin/products', {
+    ...base,
+    variants: [row(['Khaki', '30'], 2), row(['Khaki', '32'], 3), row(['Navy', '32'], 0)],
+  });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  assert.deepEqual(created.body.options, ['Colour', 'Waist']);
+  assert.equal(created.body.variantName, 'Colour and waist');
+  assert.deepEqual(
+    created.body.variants.map((v) => v.label),
+    ['Khaki / 30', 'Khaki / 32', 'Navy / 32'],
+  );
+  assert.equal(created.body.stock, 5);
+
+  // Back to one option: the values become plain labels.
+  const one = await admin('PATCH', `/admin/products/${created.body.id}`, {
+    options: ['Waist'],
+    variants: created.body.variants.slice(0, 2).map((v) => ({ id: v.id, values: [v.values[1]], ...v })),
+  });
+  assert.equal(one.status, 400); // still two values each
+  const fixed = await admin('PATCH', `/admin/products/${created.body.id}`, {
+    options: ['Waist'],
+    variants: created.body.variants.slice(0, 2).map((v) => ({
+      id: v.id,
+      values: [v.values[1]],
+      price: v.price,
+      mrp: v.mrp,
+      stock: v.stock,
+    })),
+  });
+  assert.equal(fixed.status, 200, JSON.stringify(fixed.body));
+  assert.deepEqual(fixed.body.options, ['Waist']);
+  assert.equal(fixed.body.variantName, 'Waist');
+  assert.deepEqual(
+    fixed.body.variants.map((v) => v.label),
+    ['30', '32'],
+  );
+});

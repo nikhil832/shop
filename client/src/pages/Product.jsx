@@ -37,7 +37,8 @@ function Gallery({ images, title }) {
 }
 
 // `variant` is the chosen size/colour of a product that has them (null until chosen); its own stock limits the quantity.
-function AddToCart({ product, variant }) {
+// `missing` names the options still to choose ("size", or "colour and size").
+function AddToCart({ product, variant, missing }) {
   const items = useCart();
   const [full, setFull] = useState(false);
   const needsChoice = product.variants.length > 0 && !variant;
@@ -53,7 +54,7 @@ function AddToCart({ product, variant }) {
         onClick={() => setFull(!addToCart(product.id, stock, variant?.id))}
       >
         {needsChoice
-          ? `Choose a ${product.variantName.toLowerCase()}`
+          ? `Choose a ${missing}`
           : stock === 0
             ? 'Out of stock'
             : atLimit
@@ -70,30 +71,43 @@ function AddToCart({ product, variant }) {
   );
 }
 
-// One button per variant. Sold-out ones are crossed out but can be chosen, to ask for an email when they're back.
-function VariantPicker({ product, selected, onSelect }) {
-  return (
-    <fieldset className="variant-picker">
-      <legend>
-        {product.variantName}
-        {selected && <span className="muted">: {selected.label}</span>}
-      </legend>
-      <div className="variant-options">
-        {product.variants.map((v) => (
-          <button
-            key={v.id}
-            type="button"
-            className={[v.id === selected?.id && 'selected', v.stock === 0 && 'sold-out'].filter(Boolean).join(' ')}
-            aria-pressed={v.id === selected?.id}
-            onClick={() => onSelect(v.id)}
-          >
-            {v.label}
-            {v.stock === 0 && <span className="sr-only"> (sold out)</span>}
-          </button>
-        ))}
-      </div>
-    </fieldset>
-  );
+// One row of buttons per option (one or two, e.g. Colour and Size), with `chosen` holding the value picked in each.
+// Each row depends on the rows before it: a size with no variant in the chosen colour can't be picked. A value whose
+// variants are all sold out is crossed out but can be chosen, to ask for an email when it's back.
+function VariantPicker({ product, chosen, onChoose }) {
+  return product.options.map((name, i) => {
+    const values = [...new Set(product.variants.map((v) => v.values[i]))];
+    return (
+      <fieldset key={name} className="variant-picker">
+        <legend>
+          {name}
+          {chosen[i] !== undefined && <span className="muted">: {chosen[i]}</span>}
+        </legend>
+        <div className="variant-options">
+          {values.map((value) => {
+            const matching = product.variants.filter(
+              (v) => v.values[i] === value && chosen.every((c, j) => j >= i || c === undefined || v.values[j] === c),
+            );
+            const soldOut = matching.length > 0 && matching.every((v) => v.stock === 0);
+            return (
+              <button
+                key={value}
+                type="button"
+                className={[chosen[i] === value && 'selected', soldOut && 'sold-out'].filter(Boolean).join(' ')}
+                aria-pressed={chosen[i] === value}
+                disabled={matching.length === 0}
+                onClick={() => onChoose(i, value)}
+              >
+                {value}
+                {soldOut && <span className="sr-only"> (sold out)</span>}
+                {matching.length === 0 && <span className="sr-only"> (not available)</span>}
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+    );
+  });
 }
 
 const stockText = (stock) => (stock === 0 ? 'Out of stock' : stock <= 5 ? `Only ${stock} left` : 'In stock');
@@ -104,16 +118,38 @@ export default function Product() {
   // Bumped after a review changes the rating; the page keeps showing the product while it reloads.
   const [version, setVersion] = useState(0);
   const { data: product, error, loading } = useFetch(`/products/${encodeURIComponent(slug)}`, version);
-  // The chosen variant, by id; it stays chosen while the product reloads (e.g. after a review).
-  const [variantId, setVariantId] = useState(null);
+  // The value chosen for each option, for this product; kept while it reloads (e.g. after a review).
+  const [choice, setChoice] = useState({ productId: null, values: [] });
 
   if (error?.status === 404) return <NotFound message="This product doesn't exist or is no longer sold." />;
   if (error) return <p className="error">{error.message}</p>;
   if (!product || (loading && product.slug !== slug)) return <p className="muted">Loading…</p>;
 
-  const variant = product.variants.find((v) => v.id === variantId) ?? null;
+  const chosen = choice.productId === product.id ? choice.values : [];
+  // Choosing a value keeps later choices only while a variant still has them all (Blue 34 → Black clears the 34).
+  const choose = (i, value) => {
+    const values = [...chosen];
+    values[i] = value;
+    const exists = (vals) => product.variants.some((v) => vals.every((c, j) => c === undefined || v.values[j] === c));
+    for (let j = i + 1; j < values.length; j++) {
+      if (!exists(values)) values[j] = undefined;
+    }
+    setChoice({ productId: product.id, values });
+  };
+  // The variant once every option is chosen.
+  const variant = product.variants.find((v) => product.options.every((_, i) => v.values[i] === chosen[i])) ?? null;
+  const missing = product.options
+    .filter((_, i) => chosen[i] === undefined)
+    .map((n) => n.toLowerCase())
+    .join(' and ');
   // Shown for the chosen variant, or the whole product.
   const shown = variant ?? product;
+  // Photos: the chosen variant's, or (with only a colour chosen) those of the first variant that matches so far.
+  const photoSource = chosen.some((c) => c !== undefined)
+    ? ((variant?.images.length ? variant : null) ??
+      product.variants.find((v) => v.images.length && chosen.every((c, i) => c === undefined || v.values[i] === c)))
+    : null;
+  const choiceText = chosen.filter((c) => c !== undefined).join(', ');
 
   return (
     <>
@@ -131,9 +167,9 @@ export default function Product() {
         {/* Remount per product and variant so the gallery starts at the first image. A chosen variant with its own
             photos shows only those. */}
         <Gallery
-          key={`${product.id}:${variant?.id ?? ''}`}
-          images={variant?.images.length ? variant.images : product.images}
-          title={variant ? `${product.title}, ${variant.label}` : product.title}
+          key={`${product.id}:${photoSource?.id ?? ''}`}
+          images={photoSource?.images ?? product.images}
+          title={choiceText ? `${product.title}, ${choiceText}` : product.title}
         />
         <div className="product-info">
           <span className="brand">{product.brand}</span>
@@ -142,7 +178,7 @@ export default function Product() {
           <PriceTag price={shown.price} mrp={shown.mrp} large from={!variant && product.priceFrom} />
           <span className="muted small">Inclusive of all taxes</span>
           {product.variants.length > 0 && product.stock > 0 && (
-            <VariantPicker product={product} selected={variant} onSelect={setVariantId} />
+            <VariantPicker product={product} chosen={chosen} onChoose={choose} />
           )}
           <p className={`stock ${stockClass(shown.stock)}`}>{stockText(shown.stock)}</p>
           {/* Sold out (the whole product, or the chosen variant): ask for an email instead. Remounted when the
@@ -155,7 +191,7 @@ export default function Product() {
               onChange={() => setVersion((v) => v + 1)}
             />
           ) : (
-            <AddToCart key={product.id} product={product} variant={variant} />
+            <AddToCart key={product.id} product={product} variant={variant} missing={missing} />
           )}
           <WishlistButton key={`wish-${product.id}`} product={product} />
 

@@ -6,7 +6,7 @@ import { couponDiscount, redeemCoupon, releaseCoupon } from '../coupons.js';
 import { sendNewOrderAlert, sendOrderEmail } from '../emails.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
 import { checkoutParams, PAYMENT_WINDOW_MS, refundPayment, syncPayment } from '../payments.js';
-import { findVariant, imageFor, variantTitle } from '../variants.js';
+import { findVariant, imageFor, variantDescription, variantTitle } from '../variants.js';
 import { toProductCard } from './catalog.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
@@ -226,7 +226,13 @@ export function ordersRouter(ctx) {
       return {
         ...line,
         product,
-        variant: variant && { id: variant._id.toString(), name: doc.variantName, label: variant.label },
+        // `description` names it for the cart: "Size: UK 8", or "Colour: Black, Size: 32".
+        variant: variant && {
+          id: variant._id.toString(),
+          name: doc.variantName,
+          label: variant.label,
+          description: variantDescription(doc, variant),
+        },
         image: imageFor(doc, variant),
         price,
         mrp,

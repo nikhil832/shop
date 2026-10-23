@@ -7,9 +7,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                | Why                                                                                                                            | To start              |
-| --- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------- |
-| 1   | Two kinds of option | Colour and size together (every combination with its own stock), for clothes; set aside for one kind when variants were built. | "add a second option" |
+| #   | Idea | Why | To start |
+| --- | ---- | --- | -------- |
 
 ## Set aside
 
@@ -45,3 +44,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Product variants: one kind of option (size, colour…) with its own price, MRP and stock each                                 | Stage 21 (`git log --grep "Stage 21"`) |
 | Photos per variant, picked from the product's photos                                                                        | Stage 22 (`git log --grep "Stage 22"`) |
 | Back-in-stock alerts for one sold-out size or colour                                                                        | Stage 23 (`git log --grep "Stage 23"`) |
+| Two kinds of option (e.g. colour and size) with a combination grid in the admin form                                        | Stage 24 (`git log --grep "Stage 24"`) |

@@ -149,7 +149,7 @@ export default function Checkout() {
               <li key={lineKey(line)}>
                 <span>
                   {line.product?.title ?? 'Unavailable item'}
-                  {line.variant && ` (${line.variant.name}: ${line.variant.label})`} × {line.qty}
+                  {line.variant && ` (${line.variant.description})`} × {line.qty}
                   {line.problem && <span className="problem"> · {line.problem}</span>}
                 </span>
                 <span>{formatPrice(line.lineTotal)}</span>

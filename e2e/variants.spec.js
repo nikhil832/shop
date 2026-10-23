@@ -148,3 +148,75 @@ test("choosing a colour shows that colour's photos", async ({ page }) => {
   await expect(main).toHaveAttribute('src', black.images[0]);
   await expect(thumbs).toHaveCount(black.images.length);
 });
+
+test('two options: waists depend on the colour, and the choice names both', async ({ page }) => {
+  // Colour × Waist from the sample data: Blue 30 (sold out), 32, 34 (₹1,299); Black 30, 32; no Black 34.
+  const { images } = await (await page.request.get('/api/products/urbane-men-slim-fit-jeans')).json();
+  await page.goto('/p/urbane-men-slim-fit-jeans');
+  const colour = page.getByRole('group', { name: /^Colour/ });
+  const waist = page.getByRole('group', { name: /^Waist/ });
+  await expect(page.getByRole('button', { name: 'Choose a colour and waist' })).toBeDisabled();
+
+  await colour.getByRole('button', { name: 'Blue' }).click();
+  await expect(page.getByRole('button', { name: 'Choose a waist' })).toBeDisabled();
+  await expect(waist.getByRole('button', { name: '30 (sold out)' })).toBeEnabled();
+  await waist.getByRole('button', { name: '34' }).click();
+  await expect(page.locator('.product-info .price')).toHaveText('₹1,299');
+  await expect(page.getByRole('button', { name: 'Add to cart' })).toBeEnabled();
+
+  // Black has no 34: switching colour clears the waist, and 34 can't be chosen.
+  await colour.getByRole('button', { name: 'Black' }).click();
+  await expect(page.locator('.gallery-main img')).toHaveAttribute('src', images[1]);
+  await expect(waist.getByRole('button', { name: '34 (not available)' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Choose a waist' })).toBeDisabled();
+  await waist.getByRole('button', { name: '32' }).click();
+  await expect(waist).toContainText('Waist: 32');
+  await page.getByRole('button', { name: 'Add to cart' }).click();
+
+  await page.goto('/cart');
+  await expect(page.locator('.cart-line').filter({ hasText: 'Slim Fit Jeans' })).toContainText(
+    'Colour: Black, Waist: 32',
+  );
+});
+
+test('an admin builds a colour × size grid with "Add missing combinations"', async ({ page }) => {
+  const title = `Urbane Chinos ${unique()}`;
+  await page.goto('/login?next=/admin/products/new');
+  await page.getByLabel('Email').fill(ADMIN.email);
+  await page.getByLabel('Password').fill(ADMIN.password);
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await page.getByLabel('Title').fill(title);
+  await page.getByLabel('Brand').fill('Urbane');
+  await page.getByLabel('Category').selectOption({ label: 'Fashion' });
+  await page.getByLabel(/Comes in sizes, colours/).check();
+  await page.getByLabel('Option name').fill('Colour');
+  await page.getByRole('button', { name: 'Add a second option' }).click();
+  await page.getByLabel('Second option').fill('Size');
+
+  await page.getByLabel('Colour of variant 1').fill('Khaki');
+  await page.getByLabel('Size of variant 1').fill('30');
+  await page.getByLabel('Price of variant 1').fill('999');
+  await page.getByLabel('MRP of variant 1').fill('1499');
+  await page.getByLabel('Stock of variant 1').fill('3');
+  await page.getByRole('button', { name: 'Add a variant' }).click();
+  await page.getByLabel('Colour of variant 2').fill('Navy');
+  await page.getByLabel('Size of variant 2').fill('32');
+  await page.getByLabel('Price of variant 2').fill('999');
+  await page.getByLabel('MRP of variant 2').fill('1499');
+  await page.getByLabel('Stock of variant 2').fill('2');
+  // Khaki 32 and Navy 30 are added, at the first row's prices and no stock.
+  await page.getByRole('button', { name: 'Add missing combinations' }).click();
+  await expect(page.getByLabel(/^Colour of variant/)).toHaveCount(4);
+  await expect(page.getByLabel('Colour of variant 3')).toHaveValue('Khaki');
+  await expect(page.getByLabel('Size of variant 3')).toHaveValue('32');
+  await expect(page.getByLabel('Price of variant 4')).toHaveValue('999');
+  await page.getByLabel('Stock of variant 3').fill('4');
+  await page.getByRole('button', { name: 'Add product' }).click();
+
+  await expect(page).toHaveURL('/admin/products');
+  await page.getByRole('searchbox').fill(title);
+  await page.getByRole('searchbox').press('Enter');
+  const row = page.getByRole('row', { name: new RegExp(title) });
+  await expect(row).toContainText('9 in 4 combinations');
+  await expect(row).toContainText('Khaki / 30: 3 · Navy / 32: 2 · Khaki / 32: 4 · Navy / 30: 0');
+});

@@ -1,5 +1,5 @@
 import express from 'express';
-import { toVariant } from '../variants.js';
+import { optionsOf, toVariant } from '../variants.js';
 import { z } from 'zod';
 import { HttpError, escapeRegex, parse } from '../http.js';
 
@@ -232,6 +232,8 @@ export function catalogRouter({ db }) {
       description: doc.description,
       highlights: doc.highlights ?? [],
       images: doc.images,
+      // The option names ("Colour", "Size"), one row of choices each; [] without variants.
+      options: doc.variants?.length ? optionsOf(doc) : [],
       variants: (doc.variants ?? []).map(toVariant),
       category: category && toCategory(category),
       wishlisted: Boolean(saved), // always false when logged out

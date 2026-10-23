@@ -161,7 +161,8 @@ export default function AdminProducts() {
                     {/* With variants, stock is per variant: edited on the product's page. */}
                     {p.variants.length > 0 ? (
                       <span className="small">
-                        {p.stock} in {p.variants.length} {p.variantName.toLowerCase()}s
+                        {p.stock} in {p.variants.length}{' '}
+                        {p.options.length > 1 ? 'combinations' : `${p.variantName.toLowerCase()}s`}
                         <span className="muted block">
                           {p.variants.map((v) => `${v.label}: ${v.stock}`).join(' · ')}
                         </span>

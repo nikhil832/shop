@@ -6,7 +6,7 @@ import { HttpError, escapeRegex, parse, parseObjectId } from '../http.js';
 import { ICONS, image, slugify } from '../seed.js';
 import { refundPayment } from '../payments.js';
 import { missingImages } from './images.js';
-import { toVariant, variantTotals } from '../variants.js';
+import { MAX_OPTIONS, optionsOf, optionsPhrase, toVariant, variantLabel, variantTotals } from '../variants.js';
 import { cancelOrder, ORDER_STATUSES, toOrder } from './orders.js';
 import { sendOrderEmail } from '../emails.js';
 import { changeRating, inTransaction, toReview } from './reviews.js';
@@ -34,12 +34,15 @@ const productFields = z.object({
 });
 // Variants (one kind of option, e.g. Size): each with its own price, MRP and stock. `id` keeps an existing variant
 // when editing (so stock and orders stay attached); new ones get one.
+const optionValue = z.string().trim().min(1, 'Enter a value for each option of each variant').max(30);
 const variantFields = z.object({
   id: z
     .string()
     .regex(/^[0-9a-f]{24}$/)
     .optional(),
-  label: z.string().trim().min(1, 'Enter a label for each variant').max(30),
+  // One option: a label ("UK 8"), or `values: ["UK 8"]`. Two: `values: ["Black", "32"]`, in the order of `options`.
+  label: optionValue.optional(),
+  values: z.array(optionValue).min(1).max(MAX_OPTIONS).optional(),
   price: productFields.shape.price,
   mrp: productFields.shape.mrp,
   stock: productFields.shape.stock,
@@ -48,13 +51,10 @@ const variantFields = z.object({
 });
 const variantList = z
   .array(variantFields)
-  .max(20, 'At most 20 variants')
-  .refine(
-    (vs) => new Set(vs.map((v) => v.label.toLowerCase())).size === vs.length,
-    'Each variant needs a different label',
-  )
+  .max(40, 'At most 40 variants')
   .refine((vs) => vs.every((v) => v.mrp >= v.price), "A variant's MRP must be at least its price");
 const variantName = z.string().trim().max(20);
+const optionNames = z.array(z.string().trim().min(1, 'Name each option').max(20)).min(1).max(MAX_OPTIONS);
 
 const createProduct = productFields
   .extend({
@@ -67,19 +67,45 @@ const createProduct = productFields
     mrp: productFields.shape.mrp.optional(),
     stock: productFields.shape.stock.optional(),
     variantName: variantName.default(''),
+    options: optionNames.optional(),
     variants: variantList.default([]),
   })
   .superRefine(checkVariantInput);
 const updateProduct = productFields
   .partial()
-  .extend({ variantName: variantName.optional(), variants: variantList.optional() })
+  .extend({ variantName: variantName.optional(), options: optionNames.optional(), variants: variantList.optional() })
   .superRefine(checkVariantInput);
 
-// A product has variants (and then their name) or its own price, MRP and stock. `variants: []` means none: on create
-// (the default) or when switching them off, the product's own numbers are needed.
+// The option names a request gives: `options`, or the one `variantName` (as before stage 24).
+const namesOf = (body) => (body.options?.length ? body.options : body.variantName ? [body.variantName] : []);
+
+// A product has variants (and then names for their one or two options) or its own price, MRP and stock. Each variant
+// has a value for every option, and no two variants share them. `variants: []` means none: on create (the default) or
+// when switching them off, the product's own numbers are needed.
 function checkVariantInput(body, ctx) {
-  if (body.variants?.length && !body.variantName) {
-    ctx.addIssue({ code: 'custom', path: ['variantName'], message: 'Name the option, e.g. Size or Colour' });
+  if (body.variants?.length) {
+    const names = namesOf(body);
+    if (!names.length) {
+      ctx.addIssue({ code: 'custom', path: ['variantName'], message: 'Name the option, e.g. Size or Colour' });
+      return;
+    }
+    if (new Set(names.map((n) => n.toLowerCase())).size !== names.length) {
+      ctx.addIssue({ code: 'custom', path: ['options'], message: 'Give the two options different names' });
+    }
+    const values = body.variants.map((v) => v.values ?? (v.label === undefined ? [] : [v.label]));
+    if (values.some((vs) => vs.length !== names.length)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['variants'],
+        message: names.length > 1 ? 'Give each variant a value for every option' : 'Enter a label for each variant',
+      });
+    } else if (new Set(values.map((vs) => vs.join('\u0000').toLowerCase())).size !== values.length) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['variants'],
+        message: names.length > 1 ? 'Each combination can be listed once' : 'Each variant needs a different label',
+      });
+    }
   }
   if (body.variants?.length === 0) {
     for (const field of ['price', 'mrp', 'stock']) {
@@ -87,6 +113,9 @@ function checkVariantInput(body, ctx) {
     }
   }
 }
+
+// What a product with variants stores for its options: the names, and the phrase for them ("Colour and size").
+const storedOptions = (body) => ({ options: namesOf(body), variantName: optionsPhrase(namesOf(body)) });
 
 // Variant photos must be among the product's own (`images`, as it will be saved).
 function checkVariantImages(variants, images) {
@@ -101,7 +130,8 @@ function storedVariants(variants, current = []) {
   const known = new Set(current.map((v) => v._id.toString()));
   const list = variants.map((v) => ({
     _id: v.id && known.has(v.id) ? new ObjectId(v.id) : new ObjectId(),
-    label: v.label,
+    values: v.values ?? [v.label],
+    label: variantLabel(v.values ?? [v.label]),
     price: v.price,
     mrp: v.mrp,
     stock: v.stock,
@@ -157,6 +187,7 @@ const toAdminProduct = (doc) => ({
   images: doc.images,
   active: doc.active,
   variantName: doc.variants?.length ? doc.variantName : '',
+  options: doc.variants?.length ? optionsOf(doc) : [],
   variants: (doc.variants ?? []).map(toVariant),
   updatedAt: doc.updatedAt,
 });
@@ -244,7 +275,7 @@ export function adminRouter(ctx) {
   });
 
   router.post('/admin/products', async (req, res) => {
-    const { variants, variantName, ...body } = parse(createProduct, req.body);
+    const { variants, variantName, options, ...body } = parse(createProduct, req.body);
     if (!variants.length && body.mrp < body.price) throw new HttpError(400, 'mrp: MRP must be at least the price');
     checkVariantImages(variants, body.images);
     const category = await findCategory(body.categoryId);
@@ -256,7 +287,7 @@ export function adminRouter(ctx) {
       const slug = n === 1 ? base : `${base}-${n}`;
       const doc = {
         ...body,
-        ...(variants.length && { variantName, ...storedVariants(variants) }),
+        ...(variants.length && { ...storedOptions({ variantName, options }), ...storedVariants(variants) }),
         slug,
         categoryId: category._id,
         images: body.images.length ? body.images : [image(slug, categoryIcon(category), body.brand)],
@@ -279,13 +310,16 @@ export function adminRouter(ctx) {
     const body = parse(updateProduct, req.body);
     const current = await products.findOne({ _id });
     if (!current) throw new HttpError(404, 'Product not found');
-    const { variants, variantName, ...fields } = body;
+    const { variants, variantName, options, ...fields } = body;
     const update = { ...fields, updatedAt: new Date() };
     const unset = {};
     if (variants?.length) {
       checkVariantImages(variants, fields.images ?? current.images);
       // The product's price, MRP and stock follow its variants.
-      Object.assign(update, { variantName, ...storedVariants(variants, current.variants) });
+      Object.assign(update, {
+        ...storedOptions({ variantName, options }),
+        ...storedVariants(variants, current.variants),
+      });
     } else {
       if (variants === undefined && current.variants?.length && ['price', 'mrp', 'stock'].some((f) => f in fields)) {
         throw new HttpError(400, 'This product has variants: change the price and stock of each one');
@@ -293,7 +327,7 @@ export function adminRouter(ctx) {
       if ((fields.mrp ?? current.mrp) < (fields.price ?? current.price)) {
         throw new HttpError(400, 'mrp: MRP must be at least the price');
       }
-      if (variants) Object.assign(unset, { variants: '', variantName: '' });
+      if (variants) Object.assign(unset, { variants: '', variantName: '', options: '' });
       // Photos removed from the product leave its variants too.
       if (fields.images && current.variants?.length && !variants) {
         const own = new Set(fields.images);

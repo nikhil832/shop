@@ -33,11 +33,7 @@ function CartLine({ line, qty }) {
         <Link to={`/p/${product.slug}`} className="cart-title">
           {product.title}
         </Link>
-        {variant && (
-          <span className="muted small">
-            {variant.name}: {variant.label}
-          </span>
-        )}
+        {variant && <span className="muted small">{variant.description}</span>}
         <PriceTag price={line.price || product.price} mrp={line.mrp || product.mrp} />
         {problem && <span className="problem">{problem}</span>}
         <div className="cart-actions">
