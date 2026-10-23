@@ -105,3 +105,28 @@ test('an admin adds a product in two colours; the store offers both', async ({ p
   await expect(colours.getByRole('button', { name: /Blue/ })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Choose a colour' })).toBeDisabled();
 });
+
+test("choosing a colour shows that colour's photos", async ({ page }) => {
+  const { images, variants } = await (await page.request.get('/api/products/ziva-women-handbag')).json();
+  await page.goto('/p/ziva-women-handbag');
+  const main = page.locator('.gallery-main img');
+  const thumbs = page.getByRole('button', { name: /^Show image/ });
+  await expect(thumbs).toHaveCount(images.length);
+
+  await page
+    .getByRole('group', { name: /^Colour/ })
+    .getByRole('button', { name: 'Tan' })
+    .click();
+  const tan = variants.find((v) => v.label === 'Tan');
+  await expect(main).toHaveAttribute('src', tan.images[0]);
+  await expect(main).toHaveAccessibleName('Ziva Women Handbag, Tan');
+  await expect(thumbs).toHaveCount(tan.images.length > 1 ? tan.images.length : 0);
+
+  await page
+    .getByRole('group', { name: /^Colour/ })
+    .getByRole('button', { name: 'Black' })
+    .click();
+  const black = variants.find((v) => v.label === 'Black');
+  await expect(main).toHaveAttribute('src', black.images[0]);
+  await expect(thumbs).toHaveCount(black.images.length);
+});

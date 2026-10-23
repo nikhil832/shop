@@ -20,6 +20,10 @@ async function register(email) {
   return call;
 }
 
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
+);
 const SHOES = 'stride-running-shoes'; // sample sizes UK 7–10 at ₹2,499, stock 15/20/10/5 (50 in all)
 const KURTA = 'urbane-women-kurta-set'; // S, M, L at ₹1,499 and XL at ₹1,599
 const product = (slug) => t.db.collection('products').findOne({ slug });
@@ -245,4 +249,55 @@ test('a sold-out variant can still be ordered in another size, and back-in-stock
   assert.equal(res.body.items[0].problem, 'Out of stock');
   // The product as a whole is in stock, so it can't be watched for a restock.
   assert.equal((await buyer('PUT', `/stock-alerts/${kurta._id}`)).status, 409);
+});
+
+test("a variant's photos are among the product's; cart and order lines use the variant's first photo", async () => {
+  const bag = await product('ziva-women-handbag');
+  const tan = variant(bag, 'Tan');
+  assert.deepEqual(tan.images, [bag.images[1]]);
+  const page = (await t.call('GET', '/products/ziva-women-handbag')).body;
+  assert.deepEqual(page.variants.find((v) => v.label === 'Tan').images, [bag.images[1]]);
+
+  const items = [{ productId: bag._id.toString(), variantId: tan._id.toString(), qty: 1 }];
+  assert.equal((await quote(items)).body.items[0].image, bag.images[1]);
+  const res = await order(items);
+  assert.equal(res.status, 201);
+  assert.equal(res.body.items[0].image, bag.images[1]);
+  assert.equal((await buyer('POST', `/orders/${res.body.id}/cancel`)).status, 200);
+});
+
+test("admins pick each variant's photos from the product's; removing a photo drops it from the variants", async () => {
+  const categoryId = (await t.db.collection('categories').findOne({ slug: 'fashion' }))._id.toString();
+  const upload = async () => (await admin('POST', '/admin/images', PNG, 'image/png')).body.url;
+  const [red, blue, other] = [await upload(), await upload(), await upload()];
+  const body = {
+    title: 'Ziva Tote',
+    brand: 'Ziva',
+    categoryId,
+    images: [red, blue],
+    variantName: 'Colour',
+    variants: [
+      { label: 'Red', price: 99900, mrp: 99900, stock: 2, images: [red] },
+      { label: 'Blue', price: 99900, mrp: 99900, stock: 2, images: [other] },
+    ],
+  };
+  const refused = await admin('POST', '/admin/products', body);
+  assert.equal(refused.status, 400);
+  assert.equal(refused.body.error, "variants: A variant's photos must be among the product's photos");
+
+  body.variants[1].images = [blue];
+  const created = await admin('POST', '/admin/products', body);
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  assert.deepEqual(
+    created.body.variants.map((v) => v.images),
+    [[red], [blue]],
+  );
+
+  // Taking the blue photo off the product takes it off the Blue variant too.
+  const edited = await admin('PATCH', `/admin/products/${created.body.id}`, { images: [red] });
+  assert.equal(edited.status, 200);
+  assert.deepEqual(
+    edited.body.variants.map((v) => v.images),
+    [[red], []],
+  );
 });

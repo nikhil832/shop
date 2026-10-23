@@ -43,6 +43,8 @@ const variantFields = z.object({
   price: productFields.shape.price,
   mrp: productFields.shape.mrp,
   stock: productFields.shape.stock,
+  // Some of the product's photos, shown when this variant is chosen; none means all of them.
+  images: z.array(imageRef).max(5).default([]),
 });
 const variantList = z
   .array(variantFields)
@@ -86,6 +88,14 @@ function checkVariantInput(body, ctx) {
   }
 }
 
+// Variant photos must be among the product's own (`images`, as it will be saved).
+function checkVariantImages(variants, images) {
+  const own = new Set(images);
+  if (variants.some((v) => v.images.some((url) => !own.has(url)))) {
+    throw new HttpError(400, "variants: A variant's photos must be among the product's photos");
+  }
+}
+
 // The variants to store (existing ids kept, new ones made) and the product totals they give.
 function storedVariants(variants, current = []) {
   const known = new Set(current.map((v) => v._id.toString()));
@@ -95,6 +105,7 @@ function storedVariants(variants, current = []) {
     price: v.price,
     mrp: v.mrp,
     stock: v.stock,
+    images: v.images,
   }));
   return { variants: list, ...variantTotals(list) };
 }
@@ -235,6 +246,7 @@ export function adminRouter(ctx) {
   router.post('/admin/products', async (req, res) => {
     const { variants, variantName, ...body } = parse(createProduct, req.body);
     if (!variants.length && body.mrp < body.price) throw new HttpError(400, 'mrp: MRP must be at least the price');
+    checkVariantImages(variants, body.images);
     const category = await findCategory(body.categoryId);
     await checkImages(body.images);
     const now = new Date();
@@ -271,6 +283,7 @@ export function adminRouter(ctx) {
     const update = { ...fields, updatedAt: new Date() };
     const unset = {};
     if (variants?.length) {
+      checkVariantImages(variants, fields.images ?? current.images);
       // The product's price, MRP and stock follow its variants.
       Object.assign(update, { variantName, ...storedVariants(variants, current.variants) });
     } else {
@@ -281,6 +294,11 @@ export function adminRouter(ctx) {
         throw new HttpError(400, 'mrp: MRP must be at least the price');
       }
       if (variants) Object.assign(unset, { variants: '', variantName: '' });
+      // Photos removed from the product leave its variants too.
+      if (fields.images && current.variants?.length && !variants) {
+        const own = new Set(fields.images);
+        update.variants = current.variants.map((v) => ({ ...v, images: (v.images ?? []).filter((u) => own.has(u)) }));
+      }
     }
     if (body.images) await checkImages(body.images);
     if (body.categoryId) update.categoryId = (await findCategory(body.categoryId))._id;

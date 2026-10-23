@@ -32,11 +32,21 @@ async function imagesInUse(db) {
         { $group: { _id: '$url' } },
       ])
       .toArray();
-  const [inProducts, inOrders] = await Promise.all([
+  // Variant photos are always among their product's, but are counted too in case that ever changes.
+  const [inProducts, inVariants, inOrders] = await Promise.all([
     referenced('products', 'images'),
+    db
+      .collection('products')
+      .aggregate([
+        { $unwind: '$variants' },
+        { $unwind: '$variants.images' },
+        { $match: { 'variants.images': { $regex: '^/api/images/' } } },
+        { $group: { _id: '$variants.images' } },
+      ])
+      .toArray(),
     referenced('orders', 'items.image'),
   ]);
-  return new Set([...inProducts, ...inOrders].map((r) => r._id.match(UPLOAD_URL)?.[1]).filter(Boolean));
+  return new Set([...inProducts, ...inVariants, ...inOrders].map((r) => r._id.match(UPLOAD_URL)?.[1]).filter(Boolean));
 }
 
 // The uploads among `urls` that no longer exist (deleted as unused), for the product form's check.

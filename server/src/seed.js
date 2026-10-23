@@ -13,8 +13,9 @@ const CATEGORIES = [
   { slug: 'books', name: 'Books' },
 ];
 
-// Sample products with sizes: [option name, [label, price ₹, mrp ₹, stock]…]. The cheapest price and the total stock
-// match the product's row below, so catalog counts and price filters are the same with or without them.
+// Sample products with variants: [option name, [label, price ₹, mrp ₹, stock, photo views?]…]. The cheapest price and
+// the total stock match the product's row below, so catalog counts and price filters are the same with or without
+// them. Photo views pick from the product's own images (0–2) for that variant.
 const VARIANTS = {
   'Stride Running Shoes': [
     'Size',
@@ -23,6 +24,13 @@ const VARIANTS = {
       ['UK 8', 2499, 4499, 20],
       ['UK 9', 2499, 4499, 10],
       ['UK 10', 2499, 4499, 5],
+    ],
+  ],
+  'Ziva Women Handbag': [
+    'Colour',
+    [
+      ['Black', 1299, 2799, 12, [0, 2]],
+      ['Tan', 1299, 2799, 10, [1]],
     ],
   ],
   'Urbane Women Kurta Set': [
@@ -299,12 +307,13 @@ export async function seedCatalog(db, { force = false } = {}) {
         stock,
         ...(VARIANTS[title] && {
           variantName: VARIANTS[title][0],
-          variants: VARIANTS[title][1].map(([label, vPrice, vMrp, vStock]) => ({
+          variants: VARIANTS[title][1].map(([label, vPrice, vMrp, vStock, views = []]) => ({
             _id: new ObjectId(),
             label,
             price: vPrice * 100,
             mrp: vMrp * 100,
             stock: vStock,
+            images: views.map((view) => image(slug, ICONS[category], brand, view)),
           })),
         }),
         images: [0, 1, 2].map((view) => image(slug, ICONS[category], brand, view)),

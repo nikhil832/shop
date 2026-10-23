@@ -45,6 +45,8 @@ Built in stages. Done so far:
 
 21. **Product variants**: a product can come in one kind of option (sizes, colours…), each with its own price, MRP and stock. Customers pick one on the product page (sold-out ones are crossed out); listings say "from ₹…" when prices differ, and the cart, checkout, orders, invoices and exports name the variant ("Stride Running Shoes (Size: UK 8)"). Admins switch variants on in the product form and edit them in a table. The demo's Stride Running Shoes and Urbane Women Kurta Set have sizes.
 
+22. **Photos per variant**: in the product form, tick which of the product's photos belong to each variant; choosing that variant in the store shows only its photos, and its cart and order lines use its first one. With none ticked, a variant shows all the product's photos. The demo's Ziva Women Handbag has a Black and a Tan.
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database

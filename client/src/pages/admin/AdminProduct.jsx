@@ -84,12 +84,16 @@ const newRow = (v = {}) => ({
   price: v.price ? toRupees(v.price) : '',
   mrp: v.mrp ? toRupees(v.mrp) : '',
   stock: v.stock ?? 0,
+  images: v.images ?? [],
 });
 
 // The variants of a product that has them (sizes, colours…), each with its own price, MRP and stock. Rows keep the
 // id of an existing variant, so editing doesn't detach it from carts and past orders.
-function Variants({ name, rows, onChange }) {
+// `photos` are the product's images: each variant can show some of them (none ticked means all).
+function Variants({ name, rows, photos, onChange }) {
   const set = (key, field, value) => onChange(rows.map((r) => (r.key === key ? { ...r, [field]: value } : r)));
+  const togglePhoto = (r, src) =>
+    set(r.key, 'images', r.images.includes(src) ? r.images.filter((x) => x !== src) : [...r.images, src]);
   return (
     <fieldset className="variant-editor">
       <legend>Variants</legend>
@@ -105,6 +109,7 @@ function Variants({ name, rows, onChange }) {
               <th>Price (₹)</th>
               <th>MRP (₹)</th>
               <th>Stock</th>
+              {photos.length > 0 && <th>Photos</th>}
               <th>
                 <span className="sr-only">Remove</span>
               </th>
@@ -157,6 +162,23 @@ function Variants({ name, rows, onChange }) {
                     aria-label={`Stock of variant ${i + 1}`}
                   />
                 </td>
+                {photos.length > 0 && (
+                  <td>
+                    <div className="variant-photos">
+                      {photos.map((src, n) => (
+                        <label key={src} title={`Photo ${n + 1}`}>
+                          <input
+                            type="checkbox"
+                            checked={r.images.includes(src)}
+                            onChange={() => togglePhoto(r, src)}
+                            aria-label={`Photo ${n + 1} for variant ${i + 1}`}
+                          />
+                          <img src={src} alt="" width="40" height="40" />
+                        </label>
+                      ))}
+                    </div>
+                  </td>
+                )}
                 <td>
                   <button
                     type="button"
@@ -179,7 +201,8 @@ function Variants({ name, rows, onChange }) {
       )}
       <span className="muted small">
         The store shows the lowest price (&ldquo;from ₹…&rdquo;) and the total stock. Customers choose one before adding
-        to the cart.
+        to the cart. Tick a variant&rsquo;s photos to show only those when it&rsquo;s chosen; with none ticked, all are
+        shown.
       </span>
     </fieldset>
   );
@@ -216,6 +239,8 @@ function ProductForm({ product, categories }) {
               price: toPaise(v.price),
               mrp: toPaise(v.mrp),
               stock: Number(v.stock),
+              // Only photos the product still has, in the product's order.
+              images: images.filter((src) => v.images.includes(src)),
             })),
           }
         : {
@@ -321,6 +346,7 @@ function ProductForm({ product, categories }) {
           <textarea name="description" rows="5" maxLength={5000} defaultValue={product?.description} />
         </label>
       </div>
+      <Images images={images} onChange={setImages} />
       <label className="check">
         <input
           type="checkbox"
@@ -329,8 +355,7 @@ function ProductForm({ product, categories }) {
         />
         Comes in sizes, colours or other options, each with its own price and stock
       </label>
-      {variants && <Variants name={product?.variantName} rows={variants} onChange={setVariants} />}
-      <Images images={images} onChange={setImages} />
+      {variants && <Variants name={product?.variantName} rows={variants} photos={images} onChange={setVariants} />}
       {state.error && (
         <p className="error" role="alert">
           {state.error}

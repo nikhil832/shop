@@ -129,8 +129,13 @@ export default function Product() {
       </nav>
 
       <article className="product">
-        {/* Remount per product so the gallery starts at the first image. */}
-        <Gallery key={product.id} images={product.images} title={product.title} />
+        {/* Remount per product and variant so the gallery starts at the first image. A chosen variant with its own
+            photos shows only those. */}
+        <Gallery
+          key={`${product.id}:${variant?.id ?? ''}`}
+          images={variant?.images.length ? variant.images : product.images}
+          title={variant ? `${product.title}, ${variant.label}` : product.title}
+        />
         <div className="product-info">
           <span className="brand">{product.brand}</span>
           <h1>{product.title}</h1>

@@ -26,7 +26,7 @@ function CartLine({ line, qty }) {
   return (
     <li className="cart-line">
       <Link to={`/p/${product.slug}`} className="cart-thumb">
-        {product.image && <img src={product.image} alt="" width="96" height="96" />}
+        {(line.image ?? product.image) && <img src={line.image ?? product.image} alt="" width="96" height="96" />}
       </Link>
       <div className="cart-line-body">
         <span className="brand">{product.brand}</span>
