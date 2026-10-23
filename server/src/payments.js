@@ -1,4 +1,4 @@
-import { sendOrderEmail } from './emails.js';
+import { sendNewOrderAlert, sendOrderEmail } from './emails.js';
 import { HttpError } from './http.js';
 
 // Online payments (Razorpay, test mode). An online order is created as `awaiting_payment` with its stock already
@@ -45,6 +45,7 @@ export async function confirmPayment(ctx, order, payment) {
   if (placed) {
     // Only the call that moved the order to placed gets here, so the confirmation goes out once.
     await sendOrderEmail(ctx, placed, 'placed');
+    await sendNewOrderAlert(ctx, placed);
     return placed;
   }
 

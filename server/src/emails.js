@@ -1,5 +1,6 @@
 // Customer emails: order confirmed (placed), shipped, delivered and cancelled, sent after the change is saved (a failure
-// is logged and never undoes or fails the change itself), the password reset link and back-in-stock alerts.
+// is logged and never undoes or fails the change itself), the password reset link and back-in-stock alerts. And one for
+// the store's admins: a new order to pack.
 
 const DEFAULT_PUBLIC_URL = 'http://localhost:5173';
 
@@ -168,6 +169,72 @@ ${button('View the product', url)}
     "You're getting this email because you asked to be told when this product was back.",
   );
   return { subject, text, html };
+}
+
+const PAYMENT_NAMES = { cod: 'Cash on Delivery', razorpay: 'Paid online' };
+
+// "New order" for the admins: who ordered, what, the total and how it's paid, and a link to it in the admin panel.
+// `customer` is { name, email }, or null if the account is gone.
+export function newOrderEmail(order, customer, publicUrl = DEFAULT_PUBLIC_URL) {
+  const payment = PAYMENT_NAMES[order.payment?.method ?? order.payment] ?? 'Cash on Delivery';
+  const subject = `New order #${orderNumber(order)}: ${rupees(order.total)} (${payment})`;
+  const url = `${publicUrl}/admin/orders/${order._id}`;
+  const a = order.address;
+  const who = customer ? `${customer.name} (${customer.email})` : a.name;
+  const items = order.items.map((i) => [`${i.title} × ${i.qty}`, rupees(i.price * i.qty)]);
+  const totals = [
+    ['Delivery', order.delivery ? rupees(order.delivery) : 'Free'],
+    ...(order.discount ? [[`Coupon ${order.coupon?.code ?? ''}`.trim(), `−${rupees(order.discount)}`]] : []),
+    ['Total', rupees(order.total)],
+  ];
+  const lines = [`${who} placed an order. ${payment}.`, `Deliver to ${a.city}, ${a.state} ${a.pincode}.`];
+
+  const text = [
+    ...lines,
+    [...items, ...totals].map(([label, value]) => `${label}: ${value}`).join('\n'),
+    `Open it in the admin panel: ${url}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+
+  const cell = 'padding:6px 0;border-bottom:1px solid #e5e7eb';
+  const html = layout(
+    subject,
+    `${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+<table style="width:100%;border-collapse:collapse;margin:16px 0">
+${items.map(([label, value]) => `<tr><td style="${cell}">${escapeHtml(label)}</td><td style="${cell};text-align:right">${value}</td></tr>`).join('\n')}
+${totals.map(([label, value]) => `<tr><td style="padding:4px 0">${escapeHtml(label)}</td><td style="padding:4px 0;text-align:right">${value}</td></tr>`).join('\n')}
+</table>
+${button('Open the order', url)}`,
+    "You're getting this email because you're an admin of the store.",
+  );
+  return { subject, text, html };
+}
+
+// Tells the admins about an order that has just been placed (COD at checkout, online once paid). Goes to ADMIN_EMAIL if
+// set, otherwise to every admin account. Never throws, and one failed address doesn't stop the others.
+export async function sendNewOrderAlert(ctx, order) {
+  try {
+    const users = ctx.db.collection('users');
+    const configured = ctx.config.mail?.adminEmails ?? [];
+    const recipients = configured.length
+      ? configured.map((email) => ({ email }))
+      : (await users.find({ role: 'admin' }, { projection: { name: 1, email: 1 } }).toArray()).map((u) => ({
+          email: u.email,
+          name: u.name,
+        }));
+    if (!recipients.length) return;
+    const customer = await users.findOne({ _id: order.userId }, { projection: { name: 1, email: 1 } });
+    const email = newOrderEmail(order, customer, ctx.config.mail?.publicUrl);
+    for (const to of recipients) {
+      try {
+        await ctx.mail.send({ to, ...email });
+      } catch (err) {
+        console.error(`Could not send the new-order alert for order ${order._id}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error(`Could not send the new-order alert for order ${order._id}:`, err.message);
+  }
 }
 
 // Emails the order's customer about `event`. Never throws: the order change it reports is already saved.

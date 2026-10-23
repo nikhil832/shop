@@ -3,7 +3,7 @@ import { ObjectId } from 'mongodb';
 import { z } from 'zod';
 import { requireUser } from '../auth.js';
 import { couponDiscount, redeemCoupon, releaseCoupon } from '../coupons.js';
-import { sendOrderEmail } from '../emails.js';
+import { sendNewOrderAlert, sendOrderEmail } from '../emails.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
 import { checkoutParams, PAYMENT_WINDOW_MS, refundPayment, syncPayment } from '../payments.js';
 import { toProductCard } from './catalog.js';
@@ -309,6 +309,7 @@ export function ordersRouter(ctx) {
     }
     if (!online) {
       await sendOrderEmail(ctx, order, 'placed');
+      await sendNewOrderAlert(ctx, order);
       return res.status(201).json({ ...toOrder(order), checkout: null });
     }
 

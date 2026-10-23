@@ -9,10 +9,9 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 | #   | Idea                          | Why                                                                                                                                                                                                             | To start                           |
 | --- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| 1   | Email the admin on new orders | So nobody has to keep checking the admin panel.                                                                                                                                                                 | "email me new orders"              |
-| 2   | Clean up unused uploads       | Images uploaded in the admin panel but never saved to a product stay in MongoDB forever; Atlas's free tier is 512 MB.                                                                                           | "clean up unused uploads"          |
-| 3   | Limit login tries per network | Login is limited per email (below), but one person could try one common password on many accounts. Needs a check first of which address Render passes on as the visitor's IP, so shared proxies aren't blocked. | "limit login tries per network"    |
-| 4   | Change email                  | The account page can't change the email: the new address must be confirmed by a link sent to it first, and the old address told.                                                                                | "let customers change their email" |
+| 1   | Clean up unused uploads       | Images uploaded in the admin panel but never saved to a product stay in MongoDB forever; Atlas's free tier is 512 MB.                                                                                           | "clean up unused uploads"          |
+| 2   | Limit login tries per network | Login is limited per email (below), but one person could try one common password on many accounts. Needs a check first of which address Render passes on as the visitor's IP, so shared proxies aren't blocked. | "limit login tries per network"    |
+| 3   | Change email                  | The account page can't change the email: the new address must be confirmed by a link sent to it first, and the old address told.                                                                                | "let customers change their email" |
 
 ## Set aside
 
@@ -39,3 +38,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Search suggestions: categories and the top 6 products in a dropdown while typing, with keyboard support               | Stage 12 (`git log --grep "Stage 12"`) |
 | Coupon codes: % off (with a cap), amount off or free delivery; minimum order, last day, total uses; once per customer | Stage 13 (`git log --grep "Stage 13"`) |
 | Sales dashboard: revenue per day, totals against the period before, best sellers, orders to ship, low stock           | Stage 14 (`git log --grep "Stage 14"`) |
+| New-order alerts: admins are emailed each order once it's placed (COD at once, online once paid)                      | Stage 15 (`git log --grep "Stage 15"`) |

@@ -44,6 +44,7 @@ async function placeOrder(call, paymentMethod = 'cod', qty = 1) {
 }
 
 const mailsTo = (call) => t.mail.sent.filter((m) => m.to.email === call.email);
+const alertsTo = (email) => t.mail.sent.filter((m) => m.to.email === email && m.subject.startsWith('New order'));
 
 test('a COD order gets a confirmation with items, total and address, escaped in the HTML', async () => {
   const call = await register();
@@ -189,5 +190,83 @@ test("the Brevo client sends the message in Brevo's format, and reports its erro
     await assert.rejects(mail.send(message), /Brevo returned 401: Key not found/);
   } finally {
     brevo.close();
+  }
+});
+
+test('admins are emailed each new COD order, with the customer, items and a link to the admin page', async () => {
+  const before = alertsTo('admin@example.com').length;
+  const call = await register();
+  const order = (await placeOrder(call, 'cod', 2)).body;
+
+  const alerts = alertsTo('admin@example.com');
+  assert.equal(alerts.length, before + 1);
+  const alert = alerts.at(-1);
+  assert.deepEqual(alert.to, { email: 'admin@example.com', name: 'Asha Rao' });
+  assert.equal(alert.subject, `New order #${order.number}: ₹17,998 (Cash on Delivery)`);
+  assert.match(alert.text, new RegExp(`^Asha Rao \\(${call.email}\\) placed an order\\. Cash on Delivery\\.`));
+  assert.match(alert.text, /Deliver to Bengaluru, Karnataka 560001/);
+  assert.match(alert.text, /Orbit A14 \(4GB RAM, 64GB\) × 2: ₹17,998/);
+  assert.match(alert.text, /Total: ₹17,998/);
+  assert.match(alert.text, new RegExp(`https://bazaar.test/admin/orders/${order.id}`));
+  assert.match(alert.html, /Open the order/);
+  // The customer's own confirmation is separate.
+  assert.equal(mailsTo(call).length, 1);
+});
+
+test('admins hear about an online order once, when it is paid, not while it awaits payment', async () => {
+  const call = await register();
+  const order = (await placeOrder(call, 'razorpay')).body;
+  const forOrder = () => alertsTo('admin@example.com').filter((m) => m.subject.includes(`#${order.number}:`));
+  assert.equal(forOrder().length, 0);
+
+  const { payment, response } = t.fake.pay(order.payment.razorpayOrderId);
+  assert.equal((await call('POST', `/orders/${order.id}/payment`, response)).status, 200);
+  const { body, signature } = t.fake.webhook('payment.captured', payment);
+  assert.equal((await t.webhook(body, signature)).status, 200);
+  assert.equal((await call('POST', `/orders/${order.id}/payment/check`)).status, 200);
+
+  assert.equal(forOrder().length, 1);
+  assert.equal(forOrder()[0].subject, `New order #${order.number}: ₹8,999 (Paid online)`);
+});
+
+test('ADMIN_EMAIL sends the alerts there instead of to the admin accounts', async () => {
+  t.ctx.config.mail.adminEmails = ['owner@example.com', 'helper@example.com'];
+  try {
+    const before = alertsTo('admin@example.com').length;
+    const order = (await placeOrder(await register())).body;
+    for (const email of ['owner@example.com', 'helper@example.com']) {
+      const alert = alertsTo(email).at(-1);
+      assert.deepEqual(alert.to, { email });
+      assert.ok(alert.subject.startsWith(`New order #${order.number}:`));
+    }
+    assert.equal(alertsTo('admin@example.com').length, before);
+  } finally {
+    t.ctx.config.mail.adminEmails = [];
+  }
+});
+
+test('a failed alert never fails the order, and the other admins still get theirs', async () => {
+  t.ctx.config.mail.adminEmails = ['owner@example.com', 'helper@example.com'];
+  try {
+    const call = await register();
+    const original = t.mail.send;
+    // Only the alert to owner@ fails.
+    t.mail.send = async function (message) {
+      if (message.to.email === 'owner@example.com') throw new Error('mail service down');
+      return original.call(this, message);
+    };
+    const ownerBefore = alertsTo('owner@example.com').length;
+    let res;
+    try {
+      res = await placeOrder(call);
+    } finally {
+      t.mail.send = original;
+    }
+    assert.equal(res.status, 201);
+    assert.equal(mailsTo(call).length, 1);
+    assert.equal(alertsTo('owner@example.com').length, ownerBefore);
+    assert.ok(alertsTo('helper@example.com').at(-1).subject.startsWith(`New order #${res.body.number}:`));
+  } finally {
+    t.ctx.config.mail.adminEmails = [];
   }
 });

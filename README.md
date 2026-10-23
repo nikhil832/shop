@@ -31,6 +31,8 @@ Built in stages. Done so far:
 
 14. **Sales dashboard**: the admin panel opens on a dashboard for the last 7, 30 or 90 days: revenue, orders, average order and discounts given (compared with the period before), revenue per day as a chart (also as a table), best sellers, orders waiting to ship, and products running low.
 
+15. **New-order alerts**: admins get an email for every new order (Cash on Delivery straight away, online orders once paid) with the customer, items, total, payment and delivery city, and a link to the order in the admin panel. They go to every admin account, or to `ADMIN_EMAIL` if it's set.
+
 What's next: see [ROADMAP.md](ROADMAP.md).
 
 ## Try it without a database
@@ -65,7 +67,8 @@ Env vars (`server/.env` or the environment): `MONGODB_URI` (required except in d
 
 1. Create a free [Brevo](https://www.brevo.com) account (300 emails a day). Under Senders, domains & IPs → Senders, add and verify the address emails come from (your Gmail works; no domain needed).
 2. SMTP & API → API keys → generate a key. Set `BREVO_API_KEY`, `MAIL_FROM` (the verified sender) and, for links in the emails, `PUBLIC_URL` (your site's address; default `http://localhost:5173`). `MAIL_FROM_NAME` defaults to `Bazaar`.
-3. Restart: the server prints "Order emails: sent through Brevo". Without a key it prints each email's subject and recipient instead.
+3. Optional: `ADMIN_EMAIL` says where new-order alerts go (one address, or several separated by commas). Without it they go to every admin account's email.
+4. Restart: the server prints "Order emails: sent through Brevo". Without a key it prints each email's subject and recipient instead.
 
 Emails sent from a Gmail address through Brevo can land in spam; a domain of your own, verified in Brevo, fixes that.
 
@@ -83,7 +86,7 @@ Emails sent from a Gmail address through Brevo can land in spam; a domain of you
 1. In Atlas, Network Access → add `0.0.0.0/0` (Render's free plan has no fixed IP address; the database password still protects it).
 2. On [Render](https://render.com), New → Blueprint → pick this repository. When asked, set `MONGODB_URI`, and optionally the Razorpay test keys (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`); leave any you don't use empty.
 3. Once it's live, set up the Razorpay webhook (step 4 above) with the Render address, put its secret in `RAZORPAY_WEBHOOK_SECRET` under the service's Environment, and save (it redeploys).
-4. For order emails, set `BREVO_API_KEY`, `MAIL_FROM` and `PUBLIC_URL` (the Render address) the same way.
+4. For order emails, set `BREVO_API_KEY`, `MAIL_FROM` and `PUBLIC_URL` (the Render address) the same way, and optionally `ADMIN_EMAIL` for new-order alerts.
 
 The free plan sleeps after 15 minutes without visitors; the next visit takes about a minute to wake it. Unpaid online orders past their 30 minutes are cancelled once it's awake again.
 

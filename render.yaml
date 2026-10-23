@@ -33,3 +33,6 @@ services:
         sync: false
       - key: PUBLIC_URL
         sync: false
+      # Optional: where new-order alerts go; without it, every admin account is emailed.
+      - key: ADMIN_EMAIL
+        sync: false

@@ -60,6 +60,7 @@ test('emails need a sender address along with the Brevo key, which is never prin
     apiKey: '***',
     from: 'shop@example.com',
     fromName: 'Bazaar',
+    adminEmails: [],
     publicUrl: 'https://bazaar.example',
     apiUrl: 'https://api.brevo.com',
   });
@@ -67,4 +68,9 @@ test('emails need a sender address along with the Brevo key, which is never prin
   const off = run({});
   assert.equal(off.status, 0, off.stderr);
   assert.equal(JSON.parse(off.stdout).apiKey, null);
+
+  // New-order alerts: one address or a comma-separated list.
+  const admins = run({ ADMIN_EMAIL: ' owner@example.com, , helper@example.com ' });
+  assert.equal(admins.status, 0, admins.stderr);
+  assert.deepEqual(JSON.parse(admins.stdout).adminEmails, ['owner@example.com', 'helper@example.com']);
 });

@@ -22,7 +22,8 @@ export function loadConfig() {
 }
 
 // Order emails go out through Brevo when BREVO_API_KEY is set; otherwise they are only printed in the server log.
-// PUBLIC_URL is the site address the emails link to. Messages never include the key.
+// PUBLIC_URL is the site address the emails link to. Messages never include the key. New-order alerts go to ADMIN_EMAIL
+// (one address or several, comma-separated) or, when it's not set, to every admin account.
 function mailConfig() {
   const apiKey = process.env.BREVO_API_KEY?.trim() || null;
   const from = process.env.MAIL_FROM?.trim() || null;
@@ -34,6 +35,10 @@ function mailConfig() {
     apiKey,
     from,
     fromName: process.env.MAIL_FROM_NAME?.trim() || 'Bazaar',
+    adminEmails: (process.env.ADMIN_EMAIL ?? '')
+      .split(',')
+      .map((e) => e.trim())
+      .filter(Boolean),
     publicUrl: (process.env.PUBLIC_URL?.trim() || 'http://localhost:5173').replace(/\/+$/, ''),
     // Overridden only by the tests, which point it at a stand-in server.
     apiUrl: process.env.BREVO_API_URL || 'https://api.brevo.com',
