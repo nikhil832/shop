@@ -8,6 +8,7 @@ import { HttpError, parse, parseObjectId } from '../http.js';
 import { checkoutParams, PAYMENT_WINDOW_MS, refundPayment, syncPayment } from '../payments.js';
 import { findVariant, imageFor, variantDescription, variantTitle } from '../variants.js';
 import { toProductCard } from './catalog.js';
+import { deliveryFor } from './delivery.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
 export const FREE_DELIVERY_MIN = 49900;
@@ -271,6 +272,10 @@ export function ordersRouter(ctx) {
     const body = parse(orderBody, req.body);
     const online = body.paymentMethod === 'razorpay';
     if (online && !razorpay) throw new HttpError(400, 'Online payment is not available. Choose Cash on Delivery.');
+    // An address the store doesn't deliver to (Admin → Delivery) is refused before anything is reserved.
+    if (!(await deliveryFor(db, body.address.pincode)).deliverable) {
+      throw new HttpError(409, `Sorry, we don't deliver to ${body.address.pincode} yet.`);
+    }
     const session = client.startSession();
     let order;
     try {

@@ -1563,6 +1563,50 @@ textarea {
   object-fit: cover;
 }
 
+/* ---- Delivery (product page check, admin areas) ---- */
+.delivery-check {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+}
+.delivery-check > label {
+  font-weight: 600;
+}
+.delivery-input {
+  display: flex;
+  gap: 8px;
+}
+.delivery-input input {
+  width: 9em;
+}
+.delivery-check p {
+  margin: 0;
+  min-height: 1.4em;
+}
+.delivery-rule h2 {
+  margin-bottom: 10px;
+}
+.delivery-rule p.small {
+  margin: 0 0 10px;
+}
+.delivery-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+.delivery-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.delivery-fields input[type='number'] {
+  width: 6em;
+}
+
 /* ---- Returns ---- */
 .return-page {
   max-width: 640px;

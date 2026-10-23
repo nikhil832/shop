@@ -29,6 +29,7 @@ export default function AdminLayout() {
         <NavLink to="/admin/reviews">Reviews</NavLink>
         <NavLink to="/admin/returns">Returns</NavLink>
         <NavLink to="/admin/coupons">Coupons</NavLink>
+        <NavLink to="/admin/delivery">Delivery</NavLink>
       </nav>
       <Outlet />
     </div>

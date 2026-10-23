@@ -15,6 +15,7 @@ import ConfirmEmail from './pages/ConfirmEmail.jsx';
 import Invoice from './pages/Invoice.jsx';
 import ReturnRequest from './pages/ReturnRequest.jsx';
 import AdminReturns from './pages/admin/AdminReturns.jsx';
+import AdminDelivery from './pages/admin/AdminDelivery.jsx';
 import Order from './pages/Order.jsx';
 import Orders from './pages/Orders.jsx';
 import Wishlist from './pages/Wishlist.jsx';
@@ -65,6 +66,7 @@ createRoot(document.getElementById('root')).render(
               <Route path="reviews" element={<AdminReviews />} />
               <Route path="coupons" element={<AdminCoupons />} />
               <Route path="returns" element={<AdminReturns />} />
+              <Route path="delivery" element={<AdminDelivery />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Route>

@@ -6,6 +6,7 @@ import Rating from '../components/Rating.jsx';
 import Reviews from '../components/Reviews.jsx';
 import StockAlertButton from '../components/StockAlertButton.jsx';
 import WishlistButton from '../components/WishlistButton.jsx';
+import DeliveryCheck from '../components/DeliveryCheck.jsx';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
 
@@ -196,6 +197,7 @@ export default function Product() {
             <AddToCart key={product.id} product={product} variant={variant} missing={missing} />
           )}
           <WishlistButton key={`wish-${product.id}`} product={product} />
+          <DeliveryCheck />
 
           {product.highlights.length > 0 && (
             <section>

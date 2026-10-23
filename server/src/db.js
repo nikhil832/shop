@@ -72,5 +72,7 @@ export async function ensureIndexes(db) {
     // Returns: an order's (checked when asking for one) and the admin list by status.
     db.collection('returns').createIndex({ orderId: 1, createdAt: -1 }),
     db.collection('returns').createIndex({ status: 1, createdAt: -1 }),
+    // Delivery areas by PIN code prefix, one per prefix.
+    db.collection('deliveryZones').createIndex({ prefix: 1 }, { unique: true }),
   ]);
 }

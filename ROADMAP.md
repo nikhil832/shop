@@ -7,11 +7,10 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                         | Why                                                                                                                                                                                          | To start                 |
-| --- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| 1   | Delivery PIN check           | "Check delivery" on the product page: enter a PIN code, see whether it's delivered there and roughly when, from a list the admin keeps by PIN prefix. Avoids orders that can't be delivered. | "add a PIN code check"   |
-| 2   | Two-step login for admins    | An admin account can refund money, hide products and see every customer's address; a code from an authenticator app at login (free, no SMS) protects it even if the password leaks.          | "add two-step login"     |
-| 3   | Returns in the sales figures | The dashboard and export count an order's full total even after part of it was returned and refunded; they should show refunds and net revenue.                                              | "count returns in sales" |
+| #   | Idea                         | Why                                                                                                                                                                                 | To start                 |
+| --- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| 1   | Two-step login for admins    | An admin account can refund money, hide products and see every customer's address; a code from an authenticator app at login (free, no SMS) protects it even if the password leaks. | "add two-step login"     |
+| 2   | Returns in the sales figures | The dashboard and export count an order's full total even after part of it was returned and refunded; they should show refunds and net revenue.                                     | "count returns in sales" |
 
 ## Set aside
 
@@ -52,3 +51,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Tracking numbers: courier, number and tracking link on the order page, shipped email and export                             | Stage 26 (`git log --grep "Stage 26"`) |
 | Link previews: product name, price, brand and photo in shared links (Open Graph), store image otherwise                     | Stage 27 (`git log --grep "Stage 27"`) |
 | Returns: chosen items within 7 days of delivery, admin approve (stock back, refund) or decline                              | Stage 28 (`git log --grep "Stage 28"`) |
+| Delivery PIN check on product pages, areas by PIN prefix in the admin panel, refused at checkout                            | Stage 29 (`git log --grep "Stage 29"`) |
