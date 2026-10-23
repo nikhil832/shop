@@ -18,6 +18,10 @@ const RULES = [
     /\bnpm\s+run\s+restore\b|\bbackups\.js\s+restore\b/,
     'replaces the data in the database from server/.env (Atlas) with a backup',
   ],
+  [
+    /\bnpm\s+run\s+reset-two-step\b|\breset-two-step\.js\b/,
+    "switches off an account's two-step login in the database from server/.env (Atlas)",
+  ],
 ];
 
 const hit = RULES.find(([pattern]) => pattern.test(command));

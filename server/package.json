@@ -7,6 +7,7 @@
     "demo": "node src/demo.js",
     "seed": "node src/seed.js",
     "make-admin": "node src/make-admin.js",
+    "reset-two-step": "node src/reset-two-step.js",
     "backup": "node src/backups.js backup",
     "restore": "node src/backups.js restore",
     "start": "node src/index.js",

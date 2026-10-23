@@ -1563,6 +1563,44 @@ textarea {
   object-fit: cover;
 }
 
+/* ---- Two-step login (account page) ---- */
+.account-subform {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.account-subform p {
+  margin: 0;
+}
+.account-subform label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 600;
+}
+.two-step-qr {
+  background: #ffffff;
+  padding: 8px;
+  border-radius: 8px;
+  align-self: flex-start;
+}
+.setup-key,
+.recovery-codes code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.05em;
+  overflow-wrap: anywhere;
+}
+.recovery-codes ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 16px;
+  padding: 12px 16px;
+  margin: 10px 0;
+  list-style: none;
+  background: var(--bg);
+  border-radius: 8px;
+}
+
 /* ---- Delivery (product page check, admin areas) ---- */
 .delivery-check {
   display: flex;

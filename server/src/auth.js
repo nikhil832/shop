@@ -176,4 +176,5 @@ export const toUser = (doc) => ({
   email: doc.email,
   role: doc.role,
   address: doc.address ?? null,
+  twoStep: Boolean(doc.totp?.enabledAt),
 });

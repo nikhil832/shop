@@ -10,6 +10,7 @@
     "demo": "concurrently -n api,web -c blue,green \"npm run demo -w server\" \"npm run dev -w client\"",
     "seed": "npm run seed -w server",
     "make-admin": "npm run make-admin -w server",
+    "reset-two-step": "npm run reset-two-step -w server --",
     "backup": "npm run backup -w server",
     "restore": "npm run restore -w server --",
     "build": "npm run build -w client",

@@ -18,6 +18,7 @@ import {
   verifyPassword,
 } from '../auth.js';
 import { passwordResetEmail, RESET_LINK_MINUTES } from '../emails.js';
+import { MAX_WRONG_CODES, checkSecondStep, createLoginTicket, hasTwoStep } from '../twoStep.js';
 import { HttpError, parse } from '../http.js';
 
 export const email = z.string().trim().toLowerCase().max(254).pipe(z.email('Enter a valid email'));
@@ -36,6 +37,11 @@ const loginBody = z.object({
 });
 
 const forgotBody = z.object({ email });
+const codeBody = z.object({
+  ticket: z.string().max(100),
+  code: z.string().trim().min(1, 'Enter the code').max(20),
+});
+const LOGIN_EXPIRED = 'This login has expired. Log in again.';
 
 const resetBody = z.object({
   // A malformed token matches no stored link, so it gets the same answer as an expired one.
@@ -108,8 +114,34 @@ export function authRouter(ctx) {
     if (!(await checkPassword(db, body.email, body.password, user?.passwordHash, network))) {
       throw new HttpError(401, 'Wrong email or password');
     }
+    // With two-step login, the password only earns a ticket for the code (POST /auth/login/code).
+    if (hasTwoStep(user)) return res.json({ user: null, twoStep: true, ticket: await createLoginTicket(db, user._id) });
     await startSession(req, res, user);
     res.json({ user: toUser(user) });
+  });
+
+  // The second step: the ticket from /auth/login and a code from the authenticator app (or a recovery code).
+  router.post('/auth/login/code', async (req, res) => {
+    const body = parse(codeBody, req.body);
+    const tickets = db.collection('loginChallenges');
+    const live = { tokenHash: hashToken(body.ticket), expiresAt: { $gt: new Date() } };
+    const ticket = await tickets.findOne(live);
+    const user = ticket && (await users.findOne({ _id: ticket.userId }));
+    if (!user || !hasTwoStep(user)) throw new HttpError(400, LOGIN_EXPIRED);
+    const used = await checkSecondStep(db, user, body.code);
+    if (!used) {
+      const after = await tickets.findOneAndUpdate(live, { $inc: { wrongCodes: 1 } }, { returnDocument: 'after' });
+      if (!after || after.wrongCodes >= MAX_WRONG_CODES) {
+        await tickets.deleteOne({ _id: ticket._id });
+        throw new HttpError(429, 'Too many wrong codes. Log in again.');
+      }
+      throw new HttpError(401, 'That code is wrong or was already used');
+    }
+    // A ticket is used once, even if two right codes arrive together.
+    if (!(await tickets.findOneAndDelete({ _id: ticket._id }))) throw new HttpError(400, LOGIN_EXPIRED);
+    await startSession(req, res, user);
+    const fresh = await users.findOne({ _id: user._id });
+    res.json({ user: toUser(fresh), recoveryCodesLeft: used === 'recovery' ? fresh.totp.recoveryHashes.length : null });
   });
 
   router.post('/auth/forgot-password', async (req, res) => {
@@ -146,6 +178,8 @@ export function authRouter(ctx) {
       db.collection('sessions').deleteMany({ userId: user._id }),
       clearPasswordAttempts(db, user.email),
     ]);
+    // Proving access to the email is not enough with two-step login: the code is still needed to log in.
+    if (hasTwoStep(user)) return res.json({ user: null, twoStep: true });
     await startSession(req, res, user);
     res.json({ user: toUser(user) });
   });

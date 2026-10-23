@@ -1,4 +1,4 @@
-import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
+import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../../auth.jsx';
 
 // Wraps every /admin page. The server checks the role on each request too; this only decides what to show.
@@ -31,6 +31,12 @@ export default function AdminLayout() {
         <NavLink to="/admin/coupons">Coupons</NavLink>
         <NavLink to="/admin/delivery">Delivery</NavLink>
       </nav>
+      {!user.twoStep && (
+        <p className="notice" role="note">
+          This account can refund money and see every customer&rsquo;s address. Protect it with{' '}
+          <Link to="/account#two-step">two-step login</Link>.
+        </p>
+      )}
       <Outlet />
     </div>
   );

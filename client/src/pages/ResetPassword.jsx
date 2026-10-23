@@ -17,6 +17,13 @@ export default function ResetPassword() {
     setState({ busy: true, error: null });
     try {
       const res = await request('/auth/reset-password', { method: 'POST', body: { token, password } });
+      // With two-step login the link doesn't log in: the code is still needed.
+      if (res.twoStep) {
+        return navigate('/login', {
+          replace: true,
+          state: { notice: 'Password changed. Log in with it and a code from your authenticator app.' },
+        });
+      }
       setUser(res.user);
       // Replaces this entry, so the used link isn't left in the browser history.
       navigate('/', { replace: true });

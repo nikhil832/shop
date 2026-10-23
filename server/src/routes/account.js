@@ -15,6 +15,8 @@ import { randomBytes } from 'node:crypto';
 import { confirmEmailChangeEmail, EMAIL_CHANGE_HOURS, emailChangedEmail } from '../emails.js';
 import { HttpError, parse } from '../http.js';
 import { email, newPassword, SAME_PASSWORD } from './auth.js';
+import { newRecoveryCodes, newSecret, otpauthUri, verifyCode } from '../totp.js';
+import { checkSecondStep, hasTwoStep, recoveryHashes } from '../twoStep.js';
 import { address } from './orders.js';
 
 // The logged-in customer's own details. A new email only takes effect once confirmed by a link sent to it.
@@ -30,6 +32,11 @@ const emailChangeBody = z.object({
   password: z.string().min(1, 'Enter your password').max(128),
 });
 const confirmEmailBody = z.object({ token: z.string().max(100) });
+const passwordOnly = z.object({ password: z.string().min(1, 'Enter your password').max(128) });
+const codeOnly = z.object({ code: z.string().trim().min(1, 'Enter the code').max(20) });
+const passwordAndCode = passwordOnly.extend(codeOnly.shape);
+// How long a two-step setup (the secret shown, not yet confirmed with a code) stays usable.
+const SETUP_MINUTES = 15;
 
 // Confirmation emails per account per hour, so the form can't be used to flood someone else's inbox.
 const MAX_EMAIL_CHANGES_PER_HOUR = 3;
@@ -79,6 +86,83 @@ export function accountRouter(ctx) {
       clearPasswordAttempts(db, email),
     ]);
     res.status(204).end();
+  });
+
+  // ---- Two-step login ----
+
+  // Step 1, with the password: a new secret for the authenticator app (shown as a QR code and a setup key). It only
+  // takes effect once a code from the app confirms it (step 2), so a mistyped setup can't lock anyone out.
+  router.post('/account/two-step/setup', async (req, res) => {
+    const { password } = parse(passwordOnly, req.body);
+    const { _id, email: current, passwordHash } = req.user;
+    if (hasTwoStep(req.user)) throw new HttpError(409, 'Two-step login is already on');
+    if (!(await checkPassword(db, current, password, passwordHash, networkOf(clientIp(req, config))))) {
+      throw new HttpError(400, 'Your password is wrong');
+    }
+    const secret = newSecret();
+    await users.updateOne({ _id }, { $set: { totpSetup: { secret, createdAt: new Date() } } });
+    res.json({ secret, uri: otpauthUri(secret, current) });
+  });
+
+  // Step 2: a code from the app turns it on, and the one-time recovery codes are shown (only now, only once). Other
+  // devices are logged out; this one stays.
+  router.post('/account/two-step/enable', async (req, res) => {
+    const { code } = parse(codeOnly, req.body);
+    const { _id, totpSetup } = req.user;
+    if (hasTwoStep(req.user)) throw new HttpError(409, 'Two-step login is already on');
+    if (!totpSetup || totpSetup.createdAt < new Date(Date.now() - SETUP_MINUTES * 60_000)) {
+      throw new HttpError(409, 'Start the setup again: it expires after 15 minutes');
+    }
+    const step = verifyCode(totpSetup.secret, code);
+    if (step === null) throw new HttpError(400, "That code doesn't match. Check the app and try the newest code.");
+    const recoveryCodes = newRecoveryCodes();
+    const { modifiedCount } = await users.updateOne(
+      { _id, 'totpSetup.secret': totpSetup.secret, 'totp.enabledAt': { $exists: false } },
+      {
+        $set: {
+          totp: {
+            secret: totpSetup.secret,
+            enabledAt: new Date(),
+            lastStep: step,
+            recoveryHashes: recoveryHashes(recoveryCodes),
+          },
+        },
+        $unset: { totpSetup: '' },
+      },
+    );
+    if (!modifiedCount) throw new HttpError(409, 'Two-step login is already on');
+    await db.collection('sessions').deleteMany({ userId: _id, tokenHash: { $ne: hashToken(readSessionCookie(req)) } });
+    res.json({ user: toUser(await users.findOne({ _id })), recoveryCodes });
+  });
+
+  // New recovery codes (the old ones stop working), with a code from the app.
+  router.post('/account/two-step/recovery-codes', async (req, res) => {
+    const { code } = parse(codeOnly, req.body);
+    if (!hasTwoStep(req.user)) throw new HttpError(409, 'Two-step login is off');
+    if ((await checkSecondStep(db, req.user, code)) !== 'app') {
+      throw new HttpError(400, 'Enter a code from your authenticator app');
+    }
+    const recoveryCodes = newRecoveryCodes();
+    await users.updateOne({ _id: req.user._id }, { $set: { 'totp.recoveryHashes': recoveryHashes(recoveryCodes) } });
+    res.json({ recoveryCodes });
+  });
+
+  // Turning it off needs the password and a code (app or recovery), so a stolen session alone can't.
+  router.post('/account/two-step/disable', async (req, res) => {
+    const { password, code } = parse(passwordAndCode, req.body);
+    const { _id, email: current, passwordHash } = req.user;
+    if (!hasTwoStep(req.user)) throw new HttpError(409, 'Two-step login is off');
+    if (!(await checkPassword(db, current, password, passwordHash, networkOf(clientIp(req, config))))) {
+      throw new HttpError(400, 'Your password is wrong');
+    }
+    if (!(await checkSecondStep(db, req.user, code)))
+      throw new HttpError(400, 'That code is wrong or was already used');
+    const user = await users.findOneAndUpdate(
+      { _id },
+      { $unset: { totp: '', totpSetup: '' } },
+      { returnDocument: 'after' },
+    );
+    res.json({ user: toUser(user) });
   });
 
   // ---- Changing the email ----

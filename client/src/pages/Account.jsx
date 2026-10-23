@@ -4,6 +4,7 @@ import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import AccountNav from '../components/AccountNav.jsx';
 import AddressFields from '../components/AddressFields.jsx';
+import TwoStepSection from '../components/TwoStepSection.jsx';
 import { useFetch } from '../useFetch.js';
 
 // Each section saves on its own: { busy, error, done } where `done` is the confirmation to show.
@@ -194,6 +195,8 @@ export default function Account() {
         </button>
         <p className="muted small">This logs you out on your other devices.</p>
       </form>
+
+      <TwoStepSection />
     </div>
   );
 }

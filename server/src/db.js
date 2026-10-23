@@ -74,5 +74,8 @@ export async function ensureIndexes(db) {
     db.collection('returns').createIndex({ status: 1, createdAt: -1 }),
     // Delivery areas by PIN code prefix, one per prefix.
     db.collection('deliveryZones').createIndex({ prefix: 1 }, { unique: true }),
+    // Two-step login tickets, between the password and the code.
+    db.collection('loginChallenges').createIndex({ tokenHash: 1 }, { unique: true }),
+    db.collection('loginChallenges').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
   ]);
 }

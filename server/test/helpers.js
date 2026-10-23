@@ -78,5 +78,6 @@ export async function startTestServer({ razorpay = false } = {}) {
     await mongo.stop();
   }
 
-  return { db, ctx, fake, mail, base, call, browser, webhook, stop };
+  // `uri` is the in-memory database's, for tests that run a command-line script against it (never Atlas).
+  return { db, ctx, fake, mail, base, call, browser, webhook, stop, uri: mongo.getUri() };
 }
