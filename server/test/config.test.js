@@ -95,3 +95,25 @@ test('emails need a sender address along with the Brevo key, which is never prin
   assert.equal(admins.status, 0, admins.stderr);
   assert.deepEqual(JSON.parse(admins.stdout).adminEmails, ['owner@example.com', 'helper@example.com']);
 });
+
+test("Google's verification code is kept only when it looks like one", () => {
+  const code = (value) =>
+    JSON.parse(
+      spawnSync(
+        process.execPath,
+        [
+          '--input-type=module',
+          '-e',
+          "const { loadConfig } = await import('./src/config.js'); console.log(JSON.stringify(loadConfig().googleSiteVerification));",
+        ],
+        {
+          cwd: new URL('..', import.meta.url),
+          env: { PATH: process.env.PATH, MONGODB_URI: 'mongodb://unused', GOOGLE_SITE_VERIFICATION: value },
+          encoding: 'utf8',
+        },
+      ).stdout,
+    );
+  assert.equal(code(' aB3_-xYz0123456789 '), 'aB3_-xYz0123456789');
+  assert.equal(code('"><script>alert(1)</script>'), null);
+  assert.equal(code(''), null);
+});

@@ -64,6 +64,7 @@ Built in stages. Done so far:
 30. **Two-step login**: on the account page, anyone can turn on login codes from an authenticator app (Google Authenticator, Microsoft Authenticator, Authy…): confirm the password, scan the QR code or type the key, enter a code, and save the 8 one-time recovery codes. Logging in then asks for a code after the password (5 wrong codes per try; each code works once), a password reset link no longer logs in by itself, and turning it off needs the password and a code. The admin panel reminds admins without it. Lost the phone and the recovery codes: `npm run reset-two-step -- <email>` (database credentials needed).
 
 31. **Returns in the sales figures**: the dashboard's revenue is net of refunds from approved returns ("₹… in sales − ₹… refunded"), compared with the period before the same way; a refund counts on the day of the order it came from. The chart's tooltip and table show each day's refunds, best sellers count items kept (sold less returned), and the order export has Refunded (₹) and Net total (₹) columns.
+32. **Show up on Google**: `/robots.txt` keeps the admin panel, account, cart, checkout and order pages out of search engines and points to `/sitemap.xml`, which lists the home page, each category and every shown product (with when it last changed). Product pages carry schema.org data (name, brand, price in rupees or a price range for variants, in stock or not, rating) so Google can show price and stars in results, and a canonical address.
 
 What's next: see [ROADMAP.md](ROADMAP.md).
 
@@ -137,6 +138,7 @@ Emails sent from a Gmail address through Brevo can land in spam; a domain of you
 2. On [Render](https://render.com), New → Blueprint → pick this repository. When asked, set `MONGODB_URI`, and optionally the Razorpay test keys (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`); leave any you don't use empty.
 3. Once it's live, set up the Razorpay webhook (step 4 above) with the Render address, put its secret in `RAZORPAY_WEBHOOK_SECRET` under the service's Environment, and save (it redeploys).
 4. For order emails, set `BREVO_API_KEY`, `MAIL_FROM` and `PUBLIC_URL` (the Render address) the same way, and optionally `ADMIN_EMAIL` for new-order alerts.
+5. To be found on Google (free): in [Google Search Console](https://search.google.com/search-console) add the Render address as a **URL prefix** property and choose the **HTML tag** check. Copy only the `content="…"` code into `GOOGLE_SITE_VERIFICATION` on Render, save (it redeploys), then press Verify. Under Sitemaps, submit `sitemap.xml`. Google's [Rich Results Test](https://search.google.com/test/rich-results) shows what it reads from a product page.
 
 The free plan sleeps after 15 minutes without visitors; the next visit takes about a minute to wake it. Unpaid online orders past their 30 minutes are cancelled once it's awake again.
 

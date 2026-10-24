@@ -27,3 +27,17 @@ test('the app still runs on those pages, and names the product in the tab', asyn
   await page.goto('/');
   await expect(page.getByText('Top rated')).toBeVisible();
 });
+
+test('search engines get robots.txt, a sitemap and product data from the built site', async ({ request }) => {
+  const robots = await (await request.get('/robots.txt')).text();
+  expect(robots).toContain('Disallow: /admin');
+  expect(robots).toMatch(/^Sitemap: http:\/\/localhost:\d+\/sitemap\.xml$/m);
+
+  const sitemap = await request.get('/sitemap.xml');
+  expect(sitemap.headers()['content-type']).toContain('application/xml');
+  expect(await sitemap.text()).toMatch(/<loc>http:\/\/localhost:\d+\/p\/the-quiet-engineer-paperback<\/loc>/);
+
+  const html = await (await request.get('/p/the-quiet-engineer-paperback')).text();
+  const data = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/)[1]);
+  expect(data.offers.price).toBe('349.00');
+});

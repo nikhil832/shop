@@ -18,6 +18,11 @@ export function loadConfig() {
       process.env.CLIENT_IP_HEADER?.trim().toLowerCase() || (process.env.RENDER ? 'cf-connecting-ip' : null),
     razorpay: razorpayConfig(),
     mail: mailConfig(),
+    // Google Search Console's HTML-tag check: the content of its <meta name="google-site-verification">. Only letters,
+    // digits, - and _ (what Google's codes use), so it can go into the page as is.
+    googleSiteVerification: /^[\w-]{10,100}$/.test(process.env.GOOGLE_SITE_VERIFICATION?.trim() ?? '')
+      ? process.env.GOOGLE_SITE_VERIFICATION.trim()
+      : null,
   };
   if (!config.mongodbUri) {
     console.error('MONGODB_URI is not set. Add it to server/.env (see server/.env.example), or run `npm run demo`.');

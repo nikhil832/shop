@@ -37,6 +37,9 @@ services:
         sync: false
       - key: PUBLIC_URL
         sync: false
+      # Optional: Google Search Console's HTML-tag code (only the content="…" part), to prove the site is yours.
+      - key: GOOGLE_SITE_VERIFICATION
+        sync: false
       # Optional: where new-order alerts go; without it, every admin account is emailed.
       - key: ADMIN_EMAIL
         sync: false
