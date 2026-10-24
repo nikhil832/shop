@@ -27,6 +27,7 @@ import AdminLayout from './pages/admin/AdminLayout.jsx';
 import AdminOrder from './pages/admin/AdminOrder.jsx';
 import AdminOrders from './pages/admin/AdminOrders.jsx';
 import AdminProduct from './pages/admin/AdminProduct.jsx';
+import AdminImport from './pages/admin/AdminImport.jsx';
 import AdminProducts from './pages/admin/AdminProducts.jsx';
 import AdminReviews from './pages/admin/AdminReviews.jsx';
 import AdminCoupons from './pages/admin/AdminCoupons.jsx';
@@ -61,6 +62,7 @@ createRoot(document.getElementById('root')).render(
               <Route path="orders/:id/invoice" element={<Invoice admin />} />
               <Route path="products" element={<AdminProducts />} />
               <Route path="products/new" element={<AdminProduct />} />
+              <Route path="products/import" element={<AdminImport />} />
               <Route path="products/:id" element={<AdminProduct />} />
               <Route path="categories" element={<AdminCategories />} />
               <Route path="reviews" element={<AdminReviews />} />

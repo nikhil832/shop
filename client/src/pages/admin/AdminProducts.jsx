@@ -76,9 +76,14 @@ export default function AdminProducts() {
     <section className="panel">
       <div className="admin-head">
         <h1>Products</h1>
-        <Link to="/admin/products/new" className="btn primary small">
-          Add product
-        </Link>
+        <div className="admin-head-actions">
+          <Link to="/admin/products/import" className="btn small">
+            Import / export CSV
+          </Link>
+          <Link to="/admin/products/new" className="btn primary small">
+            Add product
+          </Link>
+        </div>
       </div>
       {location.state?.saved && (
         <p className="notice" role="status">

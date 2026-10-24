@@ -35,7 +35,7 @@ const rupees = (paise) => (paise / 100).toFixed(2);
 
 // One CSV cell. Text a customer typed could start with a formula character (= + - @), which a spreadsheet would run:
 // a leading ' keeps it text. Cells with commas, quotes or line breaks are quoted.
-function cell(value, { text = false } = {}) {
+export function cell(value, { text = false } = {}) {
   let s = value == null ? '' : String(value);
   if (text && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   return /[",\r\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;

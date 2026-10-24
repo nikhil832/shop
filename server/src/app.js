@@ -7,6 +7,7 @@ import { catalogRouter } from './routes/catalog.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { deliveryRouter } from './routes/delivery.js';
 import { orderExportRouter } from './routes/orderExport.js';
+import { productImportRouter } from './routes/productImport.js';
 import { ordersRouter } from './routes/orders.js';
 import { paymentsRouter } from './routes/payments.js';
 import { adminRouter } from './routes/admin.js';
@@ -47,8 +48,9 @@ export function createApp(ctx) {
   api.use(couponsRouter(ctx));
   api.use(dashboardRouter(ctx));
   api.use(deliveryRouter(ctx));
-  // Before adminRouter, whose /admin/orders/:id would take "export" for an order id.
+  // Before adminRouter, whose /admin/orders/:id and /admin/products/:id would take "export" or "import" for an id.
   api.use(orderExportRouter(ctx));
+  api.use(productImportRouter(ctx));
   api.use(adminRouter(ctx));
   api.use((req, res) => res.status(404).json({ error: 'Not found' }));
   app.use('/api', api);

@@ -217,7 +217,7 @@ const toAdminProduct = (doc) => ({
   updatedAt: doc.updatedAt,
 });
 
-const categoryIcon = (category) => category.icon ?? ICONS[category.slug] ?? DEFAULT_ICON;
+export const categoryIcon = (category) => category.icon ?? ICONS[category.slug] ?? DEFAULT_ICON;
 
 export function adminRouter(ctx) {
   const { db } = ctx;

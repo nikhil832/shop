@@ -2182,3 +2182,37 @@ textarea {
     font-size: 0.9rem;
   }
 }
+
+/* Admin: import products from CSV */
+.admin-head-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.import-page h2 {
+  font-size: 1.05rem;
+  margin: 24px 0 8px;
+}
+.import-help {
+  padding-left: 18px;
+  margin: 0 0 12px;
+}
+.import-file {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+.import-file input {
+  max-width: 100%;
+  font-weight: normal;
+}
+@media (min-width: 800px) {
+  .import-table td:last-child {
+    min-width: 220px;
+  }
+}
+.import-page .buy-buttons {
+  margin-top: 14px;
+}
