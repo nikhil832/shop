@@ -10,6 +10,7 @@ const AREAS = {
   orders: 'Orders',
   returns: 'Returns',
   reviews: 'Reviews',
+  questions: 'Questions',
   coupons: 'Coupons',
   delivery: 'Delivery',
   settings: 'Settings',

@@ -188,6 +188,47 @@ ${button('View the product', url)}
   return { subject, text, html };
 }
 
+// The asker's question has its first answer. `question` is the stored document, `product` { title, slug }.
+export function questionAnsweredEmail(user, question, product, publicUrl = DEFAULT_PUBLIC_URL) {
+  const subject = `Your question about ${product.title} was answered`;
+  const firstName = user.name.split(/\s+/)[0];
+  const url = `${publicUrl}/p/${product.slug}#questions`;
+  const text = [
+    `Hi ${firstName},`,
+    `You asked: ${question.text}`,
+    `Our answer: ${question.answer.text}`,
+    `See it on the product page: ${url}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const quote = 'margin:0 0 12px;padding:10px 14px;background:#f3f4f6;border-radius:6px;white-space:pre-wrap';
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p style="margin-bottom:4px">You asked:</p>
+<p style="${quote}">${escapeHtml(question.text)}</p>
+<p style="margin-bottom:4px">Our answer:</p>
+<p style="${quote}">${escapeHtml(question.answer.text)}</p>
+${button('See it on the product page', url)}`,
+    "You're getting this email because you asked a question about this product.",
+  );
+  return { subject, text, html };
+}
+
+// Emails the asker the first answer to their question. Never throws: the answer is already saved.
+export async function sendQuestionAnswered(ctx, question, product) {
+  try {
+    if (!product) return;
+    const user = await ctx.db
+      .collection('users')
+      .findOne({ _id: question.userId }, { projection: { name: 1, email: 1 } });
+    if (!user) return;
+    const email = questionAnsweredEmail(user, question, product, ctx.config.mail?.publicUrl);
+    await ctx.mail.send({ to: { email: user.email, name: user.name }, ...email });
+  } catch (err) {
+    console.error(`Could not send the answer to question ${question._id}:`, err.message);
+  }
+}
+
 export const EMAIL_CHANGE_HOURS = 24;
 
 // Sent to the new address: the one-time link that confirms it. `url` carries the token.

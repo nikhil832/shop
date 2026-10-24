@@ -17,6 +17,7 @@ export const ACTIVITY_AREAS = [
   'orders',
   'returns',
   'reviews',
+  'questions',
   'coupons',
   'delivery',
   'settings',

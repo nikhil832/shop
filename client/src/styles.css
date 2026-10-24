@@ -2237,3 +2237,21 @@ textarea {
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+
+/* Product questions: the admin list */
+.question-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.question-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.question-card p {
+  margin: 0;
+}

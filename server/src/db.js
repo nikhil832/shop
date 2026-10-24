@@ -20,6 +20,10 @@ export async function ensureIndexes(db) {
       if (![26, 27].includes(err.code)) throw err; // NamespaceNotFound, IndexNotFound
     });
   await Promise.all([
+    // Product questions: the answered ones of a product, an asker's own, and the admin's lists.
+    db.collection('questions').createIndex({ productId: 1, hidden: 1, 'answer.at': -1 }),
+    db.collection('questions').createIndex({ userId: 1, productId: 1 }),
+    db.collection('questions').createIndex({ hidden: 1, answer: 1, createdAt: 1 }),
     // The admin activity log: newest first, by area or person; entries go after ACTIVITY_DAYS (a year).
     db.collection('activity').createIndex({ at: 1 }, { expireAfterSeconds: ACTIVITY_DAYS * 86_400 }),
     db.collection('activity').createIndex({ area: 1, at: -1 }),

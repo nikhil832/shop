@@ -4,6 +4,7 @@ import { MAX_QTY, addToCart, qtyInCart, useCart } from '../cart.js';
 import PriceTag from '../components/PriceTag.jsx';
 import Rating from '../components/Rating.jsx';
 import Reviews from '../components/Reviews.jsx';
+import Questions from '../components/Questions.jsx';
 import StockAlertButton from '../components/StockAlertButton.jsx';
 import WishlistButton from '../components/WishlistButton.jsx';
 import DeliveryCheck from '../components/DeliveryCheck.jsx';
@@ -233,6 +234,7 @@ export default function Product() {
       {/* Remounted per product, so the row doesn't show the previous product's while the next loads. */}
       <SimilarProducts key={`similar-${product.slug}`} slug={product.slug} />
       <Reviews key={product.id} product={product} onChange={() => setVersion((v) => v + 1)} />
+      <Questions key={`questions-${product.id}`} product={product} />
       <RecentlyViewed exclude={product.slug} />
     </>
   );

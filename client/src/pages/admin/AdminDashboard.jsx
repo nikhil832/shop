@@ -321,6 +321,13 @@ export default function AdminDashboard() {
                   </Link>
                 )}
               </p>
+              {data.questionsToAnswer > 0 && (
+                <p>
+                  <Link to="/admin/questions">
+                    {data.questionsToAnswer} {data.questionsToAnswer === 1 ? 'question' : 'questions'} to answer
+                  </Link>
+                </p>
+              )}
               <h3>Low stock</h3>
               {data.lowStock.length === 0 ? (
                 <p className="muted">Every product in the store has more than 5 left.</p>

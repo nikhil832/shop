@@ -14,6 +14,7 @@ import { adminRouter } from './routes/admin.js';
 import { activityRouter } from './activity.js';
 import { imagesRouter } from './routes/images.js';
 import { reviewsRouter } from './routes/reviews.js';
+import { questionsRouter } from './routes/questions.js';
 import { returnsRouter } from './routes/returns.js';
 import { stockAlertsRouter } from './routes/stockAlerts.js';
 import { wishlistRouter } from './routes/wishlist.js';
@@ -43,6 +44,7 @@ export function createApp(ctx) {
   api.use(paymentsRouter(ctx));
   api.use(imagesRouter(ctx));
   api.use(reviewsRouter(ctx));
+  api.use(questionsRouter(ctx));
   api.use(returnsRouter(ctx));
   api.use(wishlistRouter(ctx));
   api.use(stockAlertsRouter(ctx));
