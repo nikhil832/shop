@@ -232,3 +232,19 @@ test("approved returns count against their order's days: net revenue, refunds pe
   assert.equal(seller.sales, (sellerBefore?.sales ?? 0) + book.price);
   await t.db.collection('returns').deleteMany({ orderId: order._id });
 });
+
+test('admins switch the morning low-stock email off and on; customers and visitors cannot', async () => {
+  assert.equal((await admin('GET', '/admin/dashboard')).body.lowStockEmail, true);
+
+  assert.equal((await t.call('PUT', '/admin/dashboard/low-stock-email', { enabled: false })).status, 401);
+  assert.equal((await customer('PUT', '/admin/dashboard/low-stock-email', { enabled: false })).status, 403);
+  const bad = await admin('PUT', '/admin/dashboard/low-stock-email', { enabled: 'no' });
+  assert.equal(bad.status, 400);
+  assert.match(bad.body.error, /true or false/);
+
+  const off = await admin('PUT', '/admin/dashboard/low-stock-email', { enabled: false });
+  assert.deepEqual([off.status, off.body], [200, { enabled: false }]);
+  assert.equal((await admin('GET', '/admin/dashboard')).body.lowStockEmail, false);
+  await admin('PUT', '/admin/dashboard/low-stock-email', { enabled: true });
+  assert.equal((await admin('GET', '/admin/dashboard')).body.lowStockEmail, true);
+});

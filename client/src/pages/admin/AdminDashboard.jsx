@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { ORDER_STATUS, formatPrice } from '../../format.js';
+import { request } from '../../api.js';
 import { useFetch } from '../../useFetch.js';
 
 const PERIODS = [7, 30, 90];
@@ -180,6 +181,29 @@ function RevenueChart({ daily }) {
   );
 }
 
+// The morning low-stock email, on or off for every admin. Saved as soon as it's ticked; back as it was if that fails.
+function LowStockEmailSwitch({ enabled }) {
+  const [state, setState] = useState({ on: enabled, busy: false, error: null });
+  const change = async (on) => {
+    setState({ on, busy: true, error: null });
+    try {
+      await request('/admin/dashboard/low-stock-email', { method: 'PUT', body: { enabled: on } });
+      setState({ on, busy: false, error: null });
+    } catch (err) {
+      setState({ on: !on, busy: false, error: err.message });
+    }
+  };
+  return (
+    <>
+      <label className="check">
+        <input type="checkbox" checked={state.on} disabled={state.busy} onChange={(e) => change(e.target.checked)} />
+        Email this list to admins each morning
+      </label>
+      {state.error && <p className="error small">{state.error}</p>}
+    </>
+  );
+}
+
 export default function AdminDashboard() {
   const [params, setParams] = useSearchParams();
   const days = PERIODS.includes(Number(params.get('days'))) ? Number(params.get('days')) : 30;
@@ -341,6 +365,7 @@ export default function AdminDashboard() {
                   </>
                 )}
               </p>
+              <LowStockEmailSwitch enabled={data.lowStockEmail} />
             </section>
           </div>
 

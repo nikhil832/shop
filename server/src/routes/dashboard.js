@@ -4,6 +4,10 @@ import { requireAdmin } from '../auth.js';
 import { parse } from '../http.js';
 import { LOW_STOCK } from './admin.js';
 
+// The `settings` document of the morning low-stock email (lowStockEmail.js): { day, at, enabled }.
+export const LOW_STOCK_EMAIL = 'lowStockEmail';
+const lowStockEmailBody = z.object({ enabled: z.boolean('Say whether to send it: true or false') });
+
 const dashboardQuery = z.object({
   days: z.enum(['7', '30', '90'], 'Choose 7, 30 or 90 days').default('30').transform(Number),
 });
@@ -20,14 +24,37 @@ const DAY = 86_400_000;
 const BEST_SELLERS = 5;
 const LOW_STOCK_LIST = 10;
 // Low: the product, or one of its variants, has LOW_STOCK or fewer left.
-const LOW = { $or: [{ stock: { $lte: LOW_STOCK } }, { 'variants.stock': { $lte: LOW_STOCK } }] };
+export const LOW = { $or: [{ stock: { $lte: LOW_STOCK } }, { 'variants.stock': { $lte: LOW_STOCK } }] };
+
+// Products in the store running out, lowest first (a product with variants is as low as its lowest variant), at most
+// `limit`, each with the variants that are low themselves, e.g. [{ label: 'UK 10', stock: 2 }]. Also used by the daily
+// low-stock email.
+export async function lowStockProducts(db, limit) {
+  const docs = await db
+    .collection('products')
+    .aggregate([
+      { $match: { active: true, ...LOW } },
+      { $addFields: { lowest: { $min: ['$stock', { $min: '$variants.stock' }] } } },
+      { $sort: { lowest: 1, title: 1 } },
+      { $limit: limit },
+      { $project: { slug: 1, title: 1, stock: 1, variants: 1 } },
+    ])
+    .toArray();
+  return docs.map((p) => ({
+    id: p._id.toString(),
+    slug: p.slug,
+    title: p.title,
+    stock: p.stock,
+    variants: (p.variants ?? []).filter((v) => v.stock <= LOW_STOCK).map((v) => ({ label: v.label, stock: v.stock })),
+  }));
+}
 
 // The first moment of the period: midnight India time, `days - 1` days before today.
 function periodStart(now, days) {
   const today = Math.floor((now.getTime() + IST_OFFSET) / DAY) * DAY - IST_OFFSET;
   return new Date(today - (days - 1) * DAY);
 }
-const isoDay = (time) => new Date(time + IST_OFFSET).toISOString().slice(0, 10);
+export const isoDay = (time) => new Date(time + IST_OFFSET).toISOString().slice(0, 10);
 
 const totalsGroup = {
   _id: null,
@@ -53,7 +80,7 @@ export function dashboardRouter({ db }) {
     const previousFrom = new Date(from.getTime() - days * DAY);
     const current = { createdAt: { $gte: from }, status: { $in: SOLD } };
 
-    const [[stats], [refundStats], toShip, lowStock, lowStockCount] = await Promise.all([
+    const [[stats], [refundStats], toShip, lowStock, lowStockCount, emailSettings] = await Promise.all([
       orders
         .aggregate([
           { $match: { createdAt: { $gte: previousFrom } } },
@@ -141,17 +168,9 @@ export function dashboardRouter({ db }) {
         ])
         .toArray(),
       orders.countDocuments({ status: 'placed' }),
-      products
-        .aggregate([
-          { $match: { active: true, ...LOW } },
-          // A product with variants is as low as its lowest variant.
-          { $addFields: { lowest: { $min: ['$stock', { $min: '$variants.stock' }] } } },
-          { $sort: { lowest: 1, title: 1 } },
-          { $limit: LOW_STOCK_LIST },
-          { $project: { slug: 1, title: 1, stock: 1, variants: 1 } },
-        ])
-        .toArray(),
+      lowStockProducts(db, LOW_STOCK_LIST),
       products.countDocuments({ active: true, ...LOW }),
+      db.collection('settings').findOne({ _id: LOW_STOCK_EMAIL }),
     ]);
 
     const totals = stats.current[0] ?? { revenue: 0, orders: 0, discount: 0, itemsSold: 0 };
@@ -221,18 +240,18 @@ export function dashboardRouter({ db }) {
         sales: b.sales,
       })),
       toShip,
-      lowStock: lowStock.map((p) => ({
-        id: p._id.toString(),
-        slug: p.slug,
-        title: p.title,
-        stock: p.stock,
-        // The variants that are low themselves, e.g. [{ label: 'UK 10', stock: 2 }].
-        variants: (p.variants ?? [])
-          .filter((v) => v.stock <= LOW_STOCK)
-          .map((v) => ({ label: v.label, stock: v.stock })),
-      })),
+      lowStock,
       lowStockCount,
+      // Whether the admins get the low-stock list by email each morning (on unless switched off).
+      lowStockEmail: emailSettings?.enabled !== false,
     });
+  });
+
+  // Switches the morning low-stock email on or off for every admin.
+  router.put('/admin/dashboard/low-stock-email', async (req, res) => {
+    const { enabled } = parse(lowStockEmailBody, req.body);
+    await db.collection('settings').updateOne({ _id: LOW_STOCK_EMAIL }, { $set: { enabled } }, { upsert: true });
+    res.json({ enabled });
   });
 
   return router;

@@ -228,3 +228,19 @@ test('admin pages fit a phone screen without sideways scrolling', async ({ page 
   await expect(page.getByLabel('Label of variant 1')).toBeVisible();
   expect(await page.locator('html').evaluate((html) => html.scrollWidth)).toBeLessThanOrEqual(390);
 });
+
+test('the morning low-stock email can be switched off and on from the dashboard', async ({ page }) => {
+  await logIn(page, ADMIN);
+  const toggle = page.getByRole('checkbox', { name: 'Email this list to admins each morning' });
+  await expect(toggle).toBeChecked();
+  await toggle.click();
+  await expect(toggle).not.toBeChecked();
+  await expect(toggle).toBeEnabled();
+  await page.reload();
+  await expect(toggle).not.toBeChecked();
+  // Back on, for the other tests sharing this demo server.
+  await toggle.click();
+  await expect(toggle).toBeEnabled();
+  await page.reload();
+  await expect(toggle).toBeChecked();
+});

@@ -9,6 +9,7 @@ import { mailClient } from './mail.js';
 import { expireUnpaidOrders } from './routes/orders.js';
 import { sendBackInStockAlerts } from './routes/stockAlerts.js';
 import { deleteUnusedImages } from './routes/images.js';
+import { sendLowStockEmail } from './lowStockEmail.js';
 import { loadConfig } from './config.js';
 import { previewRouter } from './preview.js';
 
@@ -20,10 +21,12 @@ const ctx = { db, client, config, razorpay: razorpayClient(config.razorpay), mai
 const app = createApp(ctx);
 
 // Every minute: release the stock of online orders whose 30-minute payment window has passed, then email customers
-// waiting for products that are back in stock (which that release can cause).
+// waiting for products that are back in stock (which that release can cause), and once a morning the admins' list of
+// products running out.
 const sweeper = setInterval(async () => {
   await expireUnpaidOrders(ctx).catch((err) => console.error(err));
   await sendBackInStockAlerts(ctx).catch((err) => console.error(err));
+  await sendLowStockEmail(ctx).catch((err) => console.error(err));
 }, 60_000);
 
 // At startup (the free plan sleeps, so hourly runs may not come) and then every hour: delete uploaded photos that no

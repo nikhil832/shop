@@ -267,6 +267,48 @@ ${button('Open the order', url)}`,
   return { subject, text, html };
 }
 
+// The morning list of products running out, for the admins. `products` are from lowStockProducts() (lowest first, at
+// most a page of them) and `total` is how many there are in all.
+export function lowStockEmail(products, total, publicUrl = DEFAULT_PUBLIC_URL) {
+  const soldOut = products.filter((p) => p.stock === 0).length;
+  const subject = `Low stock: ${total} product${total === 1 ? '' : 's'} to restock${soldOut ? ` (${soldOut} sold out)` : ''}`;
+  const url = `${publicUrl}/admin/products?status=low`;
+  const left = (stock) => (stock === 0 ? 'sold out' : `${stock} left`);
+  const rows = products.map((p) => ({
+    title: p.title,
+    detail: p.variants.map((v) => `${v.label}: ${left(v.stock)}`).join(' · '),
+    left: left(p.stock),
+  }));
+  const more = total > products.length ? `And ${total - products.length} more.` : '';
+  const intro = 'These products in the store have 5 or fewer left.';
+
+  const text = [
+    intro,
+    rows.map((r) => `${r.title}: ${r.left}${r.detail ? ` (${r.detail})` : ''}`).join('\n'),
+    ...(more ? [more] : []),
+    `See them in the admin panel: ${url}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+
+  const cell = 'padding:6px 0;border-bottom:1px solid #e5e7eb;vertical-align:top';
+  const html = layout(
+    subject,
+    `<p>${escapeHtml(intro)}</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0">
+${rows
+  .map(
+    (r) =>
+      `<tr><td style="${cell}">${escapeHtml(r.title)}${r.detail ? `<br><span style="font-size:13px;color:#6b7280">${escapeHtml(r.detail)}</span>` : ''}</td><td style="${cell};text-align:right;white-space:nowrap${r.left === 'sold out' ? ';color:#b91c1c' : ''}">${r.left}</td></tr>`,
+  )
+  .join('\n')}
+</table>
+${more ? `<p>${escapeHtml(more)}</p>` : ''}
+${button('Open low stock', url)}`,
+    "You're getting this email each morning because you're an admin of the store and some products are running low.",
+  );
+  return { subject, text, html };
+}
+
 // Who hears about store events (new orders, return requests): ADMIN_EMAIL if set, otherwise every admin account.
 export async function adminRecipients(ctx) {
   const configured = ctx.config.mail?.adminEmails ?? [];
@@ -279,7 +321,7 @@ export async function adminRecipients(ctx) {
 }
 
 // Sends `email` to each admin separately, so one failed address doesn't stop the rest. Never throws.
-async function sendToAdmins(ctx, email, what) {
+export async function sendToAdmins(ctx, email, what) {
   try {
     for (const to of await adminRecipients(ctx)) {
       try {
