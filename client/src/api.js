@@ -6,7 +6,12 @@ export async function request(path, { method = 'GET', body, signal } = {}) {
     signal,
   });
   if (res.status === 204) return null;
-  const data = await res.json().catch(() => ({}));
+  // A body that isn't JSON reads as {} (the status says what happened), but a request cancelled while its body was
+  // arriving stays an AbortError: as {} it would pass for an empty answer (useFetch showed it in place of the data).
+  const data = await res.json().catch((err) => {
+    if (signal?.aborted) throw err;
+    return {};
+  });
   if (!res.ok) {
     const err = new Error(data.error || `Request failed (${res.status})`);
     err.status = res.status;

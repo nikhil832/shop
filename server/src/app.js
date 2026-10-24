@@ -11,6 +11,7 @@ import { productImportRouter } from './routes/productImport.js';
 import { ordersRouter } from './routes/orders.js';
 import { paymentsRouter } from './routes/payments.js';
 import { adminRouter } from './routes/admin.js';
+import { activityRouter } from './activity.js';
 import { imagesRouter } from './routes/images.js';
 import { reviewsRouter } from './routes/reviews.js';
 import { returnsRouter } from './routes/returns.js';
@@ -48,6 +49,7 @@ export function createApp(ctx) {
   api.use(couponsRouter(ctx));
   api.use(dashboardRouter(ctx));
   api.use(deliveryRouter(ctx));
+  api.use(activityRouter(ctx));
   // Before adminRouter, whose /admin/orders/:id and /admin/products/:id would take "export" or "import" for an id.
   api.use(orderExportRouter(ctx));
   api.use(productImportRouter(ctx));

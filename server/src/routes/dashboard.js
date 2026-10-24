@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
 import { parse } from '../http.js';
 import { LOW_STOCK } from './admin.js';
+import { logActivity } from '../activity.js';
 
 // The `settings` document of the morning low-stock email (lowStockEmail.js): { day, at, enabled }.
 export const LOW_STOCK_EMAIL = 'lowStockEmail';
@@ -250,7 +251,15 @@ export function dashboardRouter({ db }) {
   // Switches the morning low-stock email on or off for every admin.
   router.put('/admin/dashboard/low-stock-email', async (req, res) => {
     const { enabled } = parse(lowStockEmailBody, req.body);
-    await db.collection('settings').updateOne({ _id: LOW_STOCK_EMAIL }, { $set: { enabled } }, { upsert: true });
+    const before = await db
+      .collection('settings')
+      .findOneAndUpdate({ _id: LOW_STOCK_EMAIL }, { $set: { enabled } }, { upsert: true, returnDocument: 'before' });
+    if ((before?.enabled !== false) !== enabled) {
+      await logActivity(db, req.user, {
+        area: 'settings',
+        action: enabled ? 'Switched on the low-stock email' : 'Switched off the low-stock email',
+      });
+    }
     res.json({ enabled });
   });
 

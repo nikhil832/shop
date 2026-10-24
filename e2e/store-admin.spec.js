@@ -244,3 +244,28 @@ test('the morning low-stock email can be switched off and on from the dashboard'
   await page.reload();
   await expect(toggle).toBeChecked();
 });
+
+test('the activity log shows what admins changed, filtered by area', async ({ page }) => {
+  await logIn(page, ADMIN);
+  // Two changes that leave things as they were: the morning email off, then on again.
+  const toggle = page.getByRole('checkbox', { name: 'Email this list to admins each morning' });
+  await toggle.click();
+  await expect(toggle).toBeEnabled();
+  await expect(toggle).not.toBeChecked();
+  await toggle.click();
+  await expect(toggle).toBeEnabled();
+  await expect(toggle).toBeChecked();
+
+  await page.getByRole('link', { name: 'Activity' }).click();
+  await expect(page.getByRole('heading', { name: 'Activity' })).toBeVisible();
+  await page.getByLabel('Area').selectOption('settings');
+  await expect(page).toHaveURL(/\/admin\/activity\?area=settings$/);
+  const entries = page.locator('.activity-entry');
+  await expect(entries.first()).toContainText('Switched on the low-stock email');
+  await expect(entries.nth(1)).toContainText('Switched off the low-stock email');
+  await expect(entries.first()).toContainText('Settings');
+
+  // Products changed by earlier tests in this file are there too, with a link to each.
+  await page.getByLabel('Area').selectOption('products');
+  await expect(entries.first().getByRole('link')).toHaveAttribute('href', /^\/admin\/products\/[0-9a-f]{24}$/);
+});

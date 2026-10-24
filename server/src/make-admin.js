@@ -2,6 +2,7 @@
 // The API never grants admin, so this script (run by whoever has the database credentials) is the only way.
 import { connectDb } from './db.js';
 import { loadConfig } from './config.js';
+import { logActivity } from './activity.js';
 
 const email = process.argv[2]?.trim().toLowerCase();
 if (!email) {
@@ -17,6 +18,11 @@ try {
     console.error(`No account with email ${email} in "${config.mongodbDb}". Register it in the store first.`);
     process.exitCode = 1;
   } else {
+    await logActivity(db, null, {
+      area: 'accounts',
+      action: 'Made an admin',
+      target: { label: email, path: null },
+    });
     console.log(`${email} is now an admin in "${config.mongodbDb}".`);
   }
 } finally {

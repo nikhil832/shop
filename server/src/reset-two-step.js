@@ -4,6 +4,7 @@
 // is with the password alone; the owner should turn two-step login on again.
 import { connectDb } from './db.js';
 import { loadConfig } from './config.js';
+import { logActivity } from './activity.js';
 
 const email = process.argv[2]?.trim().toLowerCase();
 if (!email) {
@@ -24,6 +25,11 @@ try {
     console.log(`${email} doesn't have two-step login on; nothing changed.`);
   } else {
     await db.collection('sessions').deleteMany({ userId: user._id });
+    await logActivity(db, null, {
+      area: 'accounts',
+      action: 'Switched off two-step login',
+      target: { label: email, path: null },
+    });
     console.log(`Two-step login is off for ${email} in "${config.mongodbDb}", and it is logged out everywhere.`);
   }
 } finally {

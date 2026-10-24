@@ -5,6 +5,7 @@ import { RETURN_REASONS, sendReturnDecision, sendReturnRequestAlert } from '../e
 import { HttpError, parse, parseObjectId } from '../http.js';
 import { refundErrorText } from '../payments.js';
 import { inTransaction } from './reviews.js';
+import { logActivity, rupees } from '../activity.js';
 
 // Returns: a customer asks to send back some items of a delivered order, within RETURN_DAYS of delivery; an admin
 // approves it once the items are back (stock is put back and the money refunded: through Razorpay for online payments,
@@ -228,6 +229,16 @@ export function returnsRouter(ctx) {
   }
 
   const adminView = (doc) => ({ ...toReturn(doc), refundError: doc.refundError ?? null });
+  const logReturn = (req, ret, action, changes = []) =>
+    logActivity(db, req.user, {
+      area: 'returns',
+      action,
+      target: {
+        label: `Order #${ret.orderNumber ?? ret.orderId.toString().slice(-8).toUpperCase()}`,
+        path: `/admin/orders/${ret.orderId}`,
+      },
+      changes: [{ field: 'Refund', to: `${rupees(ret.refund)} (${ret.status.replace('_', ' ')})` }, ...changes],
+    });
 
   // Approve once the items are back: in one transaction the return is approved and its stock put back (to the variant
   // bought and the product's total, like a cancellation). Then the refund: online at once; COD by the admin.
@@ -259,6 +270,7 @@ export function returnsRouter(ctx) {
       return doc;
     });
     if (ret.refundMethod === 'razorpay') ret = await refundOnline(ret);
+    await logReturn(req, ret, 'Approved return');
     await sendReturnDecision(ctx, ret, await orders.findOne({ _id: ret.orderId }));
     res.json(adminView(ret));
   });
@@ -277,6 +289,7 @@ export function returnsRouter(ctx) {
       if (!existing) throw new HttpError(404, 'Return not found');
       throw new HttpError(409, `This return is already ${existing.status}`);
     }
+    await logReturn(req, ret, 'Declined return', [{ field: 'Reason', to: reason }]);
     await sendReturnDecision(ctx, ret, await orders.findOne({ _id: ret.orderId }));
     res.json(adminView(ret));
   });
@@ -290,6 +303,7 @@ export function returnsRouter(ctx) {
       { returnDocument: 'after' },
     );
     if (!ret) throw new HttpError(409, 'Only an approved Cash on Delivery return can be marked refunded');
+    await logReturn(req, ret, 'Marked return refunded');
     res.json(adminView(ret));
   });
 
@@ -299,7 +313,9 @@ export function returnsRouter(ctx) {
     const ret = await returns.findOne({ _id });
     if (!ret) throw new HttpError(404, 'Return not found');
     if (ret.status !== 'refund_failed') throw new HttpError(409, 'Only a return whose refund failed can be retried');
-    res.json(adminView(await refundOnline(ret)));
+    const after = await refundOnline(ret);
+    await logReturn(req, after, 'Retried return refund');
+    res.json(adminView(after));
   });
 
   // The returns of one order, for the admin's order page.

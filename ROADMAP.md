@@ -7,11 +7,10 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                                         | Why                                                                                       | To start                  |
-| --- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------- |
-| 1   | **GST on invoices**: your GSTIN, a tax rate per category, and the tax shown in each invoice line (prices stay tax-inclusive) | Needed for proper invoices once the store is GST-registered; needs your GSTIN and rates   | "start GST invoices"      |
-| 2   | **Admin activity log**: who changed which product, order, coupon or setting, and when                                        | Useful once more than one person runs the store; helps find what changed a price or stock | "start activity log"      |
-| 3   | **Questions on products**: customers ask, admins answer, answers shown on the product page                                   | Answers buyers' doubts before they order, and fewer returns                               | "start product questions" |
+| #   | Idea                                                                                                                         | Why                                                                                     | To start                  |
+| --- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------- |
+| 1   | **GST on invoices**: your GSTIN, a tax rate per category, and the tax shown in each invoice line (prices stay tax-inclusive) | Needed for proper invoices once the store is GST-registered; needs your GSTIN and rates | "start GST invoices"      |
+| 2   | **Questions on products**: customers ask, admins answer, answers shown on the product page                                   | Answers buyers' doubts before they order, and fewer returns                             | "start product questions" |
 
 ## Set aside
 
@@ -59,3 +58,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Similar products and recently viewed on product pages (and recently viewed on the home page)                                        | Stage 33 (`git log --grep "Stage 33"`) |
 | Daily low-stock email to admins (from 9:00 India time, nothing on days when nothing is low), with an on/off switch on the dashboard | Stage 34 (`git log --grep "Stage 34"`) |
 | Products from a spreadsheet: CSV export, upload with a preview of every change, saved all at once                                   | Stage 35 (`git log --grep "Stage 35"`) |
+| Activity log: every admin change (and the admin command-line scripts) with who, when and what changed, kept a year                  | Stage 36 (`git log --grep "Stage 36"`) |

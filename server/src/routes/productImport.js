@@ -8,6 +8,7 @@ import { variantTotals } from '../variants.js';
 import { categoryIcon } from './admin.js';
 import { cell } from './orderExport.js';
 import { inTransaction } from './reviews.js';
+import { logActivity, productChanges } from '../activity.js';
 
 // Products from a spreadsheet: download them all as CSV, edit, upload. An upload is checked first (a preview of what
 // each row adds or changes, and the rows with problems), then saved with the same file and the preview's `plan` id:
@@ -379,7 +380,10 @@ export function productImportRouter(ctx) {
   router.post('/admin/products/import/save', csvBody, async (req, res) => {
     const { plan } = parse(planQuery, req.query);
     const csv = csvOf(req);
+    // What was saved, for the activity log: each product added, and each change by product.
+    const logged = [];
     const result = await inTransaction(ctx.client, async (session) => {
+      logged.length = 0; // a retried transaction starts again
       const { id, summary, writes } = await makePlan(db, csv, session);
       if (id !== plan) {
         throw new HttpError(409, 'The products changed since you checked the file. Check it again before saving.');
@@ -388,8 +392,13 @@ export function productImportRouter(ctx) {
       if (!writes.inserts.length && !writes.updates.length) throw new HttpError(400, 'Nothing in the file changes');
       const now = new Date();
       const taken = new Set();
+      const categoryNames = new Map(
+        (await db.collection('categories').find({}, { session }).toArray()).map((c) => [c._id.toString(), c.name]),
+      );
+      const categoryName = (id) => categoryNames.get(id.toString()) ?? '';
       for (const { doc, category } of writes.inserts) {
         const slug = await freeSlug(products, doc.title, taken, session);
+        logged.push({ field: doc.title, to: `added in ${category.name}` });
         await products.insertOne(
           {
             ...doc,
@@ -406,8 +415,16 @@ export function productImportRouter(ctx) {
         // Variant stock and the product's totals change together (the variants invariant).
         const $set = { ...set, ...(variants && { variants, ...variantTotals(variants) }), updatedAt: now };
         await products.updateOne({ _id: product._id }, { $set }, { session });
+        for (const c of productChanges(product, { ...product, ...$set }, categoryName)) {
+          logged.push({ ...c, field: `${product.title}: ${c.field}` });
+        }
       }
       return { added: writes.inserts.length, updated: writes.updates.length };
+    });
+    await logActivity(db, req.user, {
+      area: 'products',
+      action: `Imported products from a CSV file: ${result.added} added, ${result.updated} updated`,
+      changes: logged,
     });
     res.json(result);
   });

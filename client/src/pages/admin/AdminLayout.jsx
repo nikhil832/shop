@@ -30,6 +30,7 @@ export default function AdminLayout() {
         <NavLink to="/admin/returns">Returns</NavLink>
         <NavLink to="/admin/coupons">Coupons</NavLink>
         <NavLink to="/admin/delivery">Delivery</NavLink>
+        <NavLink to="/admin/activity">Activity</NavLink>
       </nav>
       {!user.twoStep && (
         <p className="notice" role="note">

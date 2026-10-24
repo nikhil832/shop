@@ -2,6 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 import { requireAdmin } from './auth.js';
 import { HttpError, parse, parseObjectId } from './http.js';
+import { logActivity } from './activity.js';
 
 // Coupon codes. A coupon is { code (upper case, unique), type, value, maxDiscount, minSubtotal, expiresAt,
 // usageLimit, usedCount, active }: `percent` takes `value`% off the items (at most `maxDiscount` paise, if set),
@@ -125,6 +126,24 @@ const toCoupon = (doc) => ({
   createdAt: doc.createdAt,
 });
 
+// "10% off (up to ₹200) · min ₹999 · until 2026-12-31 · 100 uses", for the activity log.
+function couponSummary(c) {
+  const what =
+    c.type === 'percent'
+      ? `${c.value}% off${c.maxDiscount ? ` (up to ${rupees(c.maxDiscount)})` : ''}`
+      : c.type === 'flat'
+        ? `${rupees(c.value)} off`
+        : 'Free delivery';
+  return [
+    what,
+    c.minSubtotal && `min ${rupees(c.minSubtotal)}`,
+    c.expiresAt && `until ${new Date(c.expiresAt).toISOString().slice(0, 10)}`,
+    c.usageLimit && `${c.usageLimit} uses`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
 // Admins create coupons and switch them on or off. Never deleted: orders refer to them.
 export function couponsRouter({ db }) {
   const coupons = db.collection('coupons');
@@ -141,6 +160,12 @@ export function couponsRouter({ db }) {
     const doc = { ...body, usedCount: 0, active: true, createdAt: new Date() };
     try {
       const { insertedId } = await coupons.insertOne(doc);
+      await logActivity(db, req.user, {
+        area: 'coupons',
+        action: 'Added coupon',
+        target: { label: doc.code, path: '/admin/coupons' },
+        changes: [{ field: 'Offer', to: couponSummary(doc) }],
+      });
       res.status(201).json(toCoupon({ ...doc, _id: insertedId }));
     } catch (err) {
       if (err.code === 11000) throw new HttpError(409, 'A coupon with this code already exists');
@@ -153,10 +178,17 @@ export function couponsRouter({ db }) {
     const doc = await coupons.findOneAndUpdate(
       { _id: parseObjectId(req.params.id, 'coupon id') },
       { $set: { active } },
-      { returnDocument: 'after' },
+      { returnDocument: 'before' },
     );
     if (!doc) throw new HttpError(404, 'Coupon not found');
-    res.json(toCoupon(doc));
+    if (doc.active !== active) {
+      await logActivity(db, req.user, {
+        area: 'coupons',
+        action: active ? 'Switched on coupon' : 'Switched off coupon',
+        target: { label: doc.code, path: '/admin/coupons' },
+      });
+    }
+    res.json(toCoupon({ ...doc, active }));
   });
 
   return router;

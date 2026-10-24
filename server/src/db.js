@@ -1,4 +1,5 @@
 import { MongoClient } from 'mongodb';
+import { ACTIVITY_DAYS } from './activity.js';
 
 // Connects and makes sure indexes exist. Returns the client (for sessions/transactions and closing) and the db.
 export async function connectDb(uri, dbName) {
@@ -19,6 +20,10 @@ export async function ensureIndexes(db) {
       if (![26, 27].includes(err.code)) throw err; // NamespaceNotFound, IndexNotFound
     });
   await Promise.all([
+    // The admin activity log: newest first, by area or person; entries go after ACTIVITY_DAYS (a year).
+    db.collection('activity').createIndex({ at: 1 }, { expireAfterSeconds: ACTIVITY_DAYS * 86_400 }),
+    db.collection('activity').createIndex({ area: 1, at: -1 }),
+    db.collection('activity').createIndex({ 'by.id': 1, at: -1 }),
     db.collection('categories').createIndex({ slug: 1 }, { unique: true }),
     db.collection('products').createIndex({ slug: 1 }, { unique: true }),
     db.collection('products').createIndex({ categoryId: 1, price: 1 }),

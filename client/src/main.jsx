@@ -28,6 +28,7 @@ import AdminOrder from './pages/admin/AdminOrder.jsx';
 import AdminOrders from './pages/admin/AdminOrders.jsx';
 import AdminProduct from './pages/admin/AdminProduct.jsx';
 import AdminImport from './pages/admin/AdminImport.jsx';
+import AdminActivity from './pages/admin/AdminActivity.jsx';
 import AdminProducts from './pages/admin/AdminProducts.jsx';
 import AdminReviews from './pages/admin/AdminReviews.jsx';
 import AdminCoupons from './pages/admin/AdminCoupons.jsx';
@@ -69,6 +70,7 @@ createRoot(document.getElementById('root')).render(
               <Route path="coupons" element={<AdminCoupons />} />
               <Route path="returns" element={<AdminReturns />} />
               <Route path="delivery" element={<AdminDelivery />} />
+              <Route path="activity" element={<AdminActivity />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Route>

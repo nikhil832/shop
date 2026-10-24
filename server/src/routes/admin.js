@@ -10,6 +10,7 @@ import { MAX_OPTIONS, optionsOf, optionsPhrase, toVariant, variantLabel, variant
 import { cancelOrder, ORDER_STATUSES, toOrder } from './orders.js';
 import { sendOrderEmail } from '../emails.js';
 import { changeRating, inTransaction, toReview } from './reviews.js';
+import { logActivity, orderTarget, productChanges, productTarget, rupees, yesNo } from '../activity.js';
 
 const hexId = (what) => z.string().regex(/^[0-9a-f]{24}$/, `Choose a ${what}`);
 
@@ -322,6 +323,21 @@ export function adminRouter(ctx) {
       };
       try {
         const { insertedId } = await products.insertOne(doc);
+        await logActivity(db, req.user, {
+          area: 'products',
+          action: 'Added product',
+          target: productTarget({ ...doc, _id: insertedId }),
+          changes: [
+            { field: 'Category', to: category.name },
+            ...(doc.variants?.length
+              ? [{ field: 'Variants', to: doc.variants.map((v) => v.label).join(', ') }]
+              : [
+                  { field: 'Price', to: rupees(doc.price) },
+                  { field: 'Stock', to: String(doc.stock) },
+                ]),
+            { field: 'Shown', to: yesNo(doc.active) },
+          ],
+        });
         return res.status(201).json(toAdminProduct({ ...doc, _id: insertedId }));
       } catch (err) {
         if (err.code !== 11000) throw err;
@@ -372,6 +388,21 @@ export function adminRouter(ctx) {
       { $set: update, ...(Object.keys(unset).length && { $unset: unset }) },
       { returnDocument: 'after' },
     );
+    const names = new Map(
+      (await categories.find({ _id: { $in: [current.categoryId, doc.categoryId] } }).toArray()).map((c) => [
+        c._id.toString(),
+        c.name,
+      ]),
+    );
+    const changes = productChanges(current, doc, (id) => names.get(id.toString()) ?? '');
+    if (changes.length) {
+      await logActivity(db, req.user, {
+        area: 'products',
+        action: 'Changed product',
+        target: productTarget(doc),
+        changes,
+      });
+    }
     res.json(toAdminProduct(doc));
   });
 
@@ -416,6 +447,11 @@ export function adminRouter(ctx) {
       if (err.code === 11000) throw new HttpError(409, 'A category with this name already exists');
       throw err;
     }
+    await logActivity(db, req.user, {
+      area: 'categories',
+      action: 'Added category',
+      target: { label: doc.name, path: '/admin/categories' },
+    });
     res.status(201).json({ id: doc._id.toString(), slug, name: doc.name, icon, image: doc.image, productCount: 0 });
   });
 
@@ -428,6 +464,20 @@ export function adminRouter(ctx) {
     const update = { ...body };
     if (body.icon) update.image = image(current.slug, body.icon);
     const doc = await categories.findOneAndUpdate({ _id }, { $set: update }, { returnDocument: 'after' });
+    const changes = [
+      ...(current.name !== doc.name ? [{ field: 'Name', from: current.name, to: doc.name }] : []),
+      ...(categoryIcon(current) !== categoryIcon(doc)
+        ? [{ field: 'Icon', from: categoryIcon(current), to: categoryIcon(doc) }]
+        : []),
+    ];
+    if (changes.length) {
+      await logActivity(db, req.user, {
+        area: 'categories',
+        action: 'Changed category',
+        target: { label: doc.name, path: '/admin/categories' },
+        changes,
+      });
+    }
     res.json({ id: doc._id.toString(), slug: doc.slug, name: doc.name, icon: categoryIcon(doc), image: doc.image });
   });
 
@@ -442,6 +492,7 @@ export function adminRouter(ctx) {
     await categories.bulkWrite(
       ids.map((id, i) => ({ updateOne: { filter: { _id: new ObjectId(id) }, update: { $set: { sortOrder: i } } } })),
     );
+    await logActivity(db, req.user, { area: 'categories', action: 'Reordered categories' });
     res.status(204).end();
   });
 
@@ -452,8 +503,13 @@ export function adminRouter(ctx) {
     if (count) {
       throw new HttpError(409, `Move or hide its ${count} ${count === 1 ? 'product' : 'products'} first`);
     }
-    const { deletedCount } = await categories.deleteOne({ _id });
-    if (!deletedCount) throw new HttpError(404, 'Category not found');
+    const deleted = await categories.findOneAndDelete({ _id });
+    if (!deleted) throw new HttpError(404, 'Category not found');
+    await logActivity(db, req.user, {
+      area: 'categories',
+      action: 'Deleted category',
+      target: { label: deleted.name, path: null },
+    });
     res.status(204).end();
   });
 
@@ -541,6 +597,18 @@ export function adminRouter(ctx) {
       }
       await sendOrderEmail(ctx, doc, status);
     }
+    const s = doc.shipment;
+    await logActivity(db, req.user, {
+      area: 'orders',
+      action: status === 'cancelled' ? 'Cancelled' : `Marked ${status}`,
+      target: orderTarget(doc),
+      changes: [
+        ...(status === 'shipped' && s
+          ? [{ field: 'Tracking', to: [s.courier, s.trackingNumber].filter(Boolean).join(' ') || s.trackingUrl }]
+          : []),
+        ...(status === 'cancelled' && doc.payment?.status ? [{ field: 'Payment', to: doc.payment.status }] : []),
+      ],
+    });
     res.json((await withCustomers([doc]))[0]);
   });
 
@@ -561,6 +629,19 @@ export function adminRouter(ctx) {
       if (!existing) throw new HttpError(404, 'Order not found');
       throw new HttpError(409, `A ${existing.status} order has no shipment to edit`);
     }
+    await logActivity(db, req.user, {
+      area: 'orders',
+      action: 'Changed tracking',
+      target: orderTarget(doc),
+      changes: [
+        {
+          field: 'Tracking',
+          to: shipment
+            ? [shipment.courier, shipment.trackingNumber, shipment.trackingUrl].filter(Boolean).join(' · ')
+            : 'removed',
+        },
+      ],
+    });
     res.json((await withCustomers([doc]))[0]);
   });
 
@@ -571,7 +652,14 @@ export function adminRouter(ctx) {
     if (doc.status !== 'cancelled' || doc.payment?.status !== 'refund_failed') {
       throw new HttpError(409, 'Only a cancelled order whose refund failed can be retried');
     }
-    res.json((await withCustomers([await refundPayment(ctx, doc)]))[0]);
+    const after = await refundPayment(ctx, doc);
+    await logActivity(db, req.user, {
+      area: 'orders',
+      action: 'Retried refund',
+      target: orderTarget(after),
+      changes: [{ field: 'Refund', to: after.payment?.status ?? '' }],
+    });
+    res.json((await withCustomers([after]))[0]);
   });
 
   // ---- Reviews ----
@@ -636,12 +724,23 @@ export function adminRouter(ctx) {
       if (changed) {
         const sign = hidden ? -1 : 1;
         await changeRating(db, changed.productId, { sum: sign * changed.rating, count: sign }, session);
-        return changed;
+        return { ...changed, stateChanged: true };
       }
       return reviews.findOne({ _id }, { session });
     });
     if (!doc) throw new HttpError(404, 'Review not found');
-    res.json((await reviewDetails([doc]))[0]);
+    const [details] = await reviewDetails([doc]);
+    if (doc.stateChanged) {
+      await logActivity(db, req.user, {
+        area: 'reviews',
+        action: hidden ? 'Hid review' : 'Showed review',
+        target: {
+          label: `${details.rating}★ by ${details.author} of ${details.product?.title ?? 'a product'}`,
+          path: '/admin/reviews',
+        },
+      });
+    }
+    res.json(details);
   });
 
   return router;

@@ -2,6 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
+import { logActivity } from '../activity.js';
 
 // Where the store delivers, and how fast: areas by PIN code prefix ("560" = Bengaluru, 1–2 days; "79" = not
 // delivered), the longest matching prefix winning, and a rule for everywhere else. Customers check a PIN on the product
@@ -58,6 +59,10 @@ export async function deliveryFor(db, pin) {
 }
 
 // "2026-10-27": the India-time date `n` days after `now`.
+// "2–4 days", or "no delivery", for the activity log.
+const ruleText = (r) => (r.deliverable ? `${r.minDays}–${r.maxDays} days` : 'no delivery');
+const zoneText = (z) => `${z.prefix}${z.name ? ` (${z.name})` : ''}, ${ruleText(z)}`;
+
 const istDate = (now, n) => new Date(now.getTime() + IST_OFFSET + n * DAY).toISOString().slice(0, 10);
 
 export function deliveryRouter({ db }) {
@@ -90,11 +95,20 @@ export function deliveryRouter({ db }) {
 
   router.put('/admin/delivery/everywhere-else', async (req, res) => {
     const r = parse(rule, req.body);
-    await settings.updateOne(
+    const before = await settings.findOneAndUpdate(
       { _id: SETTINGS_ID },
       { $set: { everywhereElse: r, updatedAt: new Date() } },
-      { upsert: true },
+      { upsert: true, returnDocument: 'before' },
     );
+    const from = ruleText(before?.everywhereElse ?? DEFAULT_RULE);
+    if (from !== ruleText(r)) {
+      await logActivity(db, req.user, {
+        area: 'delivery',
+        action: 'Changed delivery everywhere else',
+        target: { label: 'Other PIN codes', path: '/admin/delivery' },
+        changes: [{ field: 'Delivery', from, to: ruleText(r) }],
+      });
+    }
     res.json({ everywhereElse: r });
   });
 
@@ -103,6 +117,11 @@ export function deliveryRouter({ db }) {
     const doc = { ...body, createdAt: new Date() };
     try {
       const { insertedId } = await zones.insertOne(doc);
+      await logActivity(db, req.user, {
+        area: 'delivery',
+        action: 'Added delivery area',
+        target: { label: zoneText(doc), path: '/admin/delivery' },
+      });
       res.status(201).json(toZone({ ...doc, _id: insertedId }));
     } catch (err) {
       if (err.code === 11000)
@@ -114,25 +133,39 @@ export function deliveryRouter({ db }) {
   router.put('/admin/delivery/zones/:id', async (req, res) => {
     const _id = parseObjectId(req.params.id, 'area id');
     const body = parse(zoneBody, req.body);
-    let doc;
+    let before;
     try {
-      doc = await zones.findOneAndUpdate(
+      before = await zones.findOneAndUpdate(
         { _id },
         { $set: { ...body, updatedAt: new Date() } },
-        { returnDocument: 'after' },
+        { returnDocument: 'before' },
       );
     } catch (err) {
       if (err.code === 11000)
         throw new HttpError(409, `There is already an area for PIN codes starting ${body.prefix}`);
       throw err;
     }
-    if (!doc) throw new HttpError(404, 'Area not found');
+    if (!before) throw new HttpError(404, 'Area not found');
+    const doc = { ...before, ...body };
+    if (zoneText(before) !== zoneText(doc)) {
+      await logActivity(db, req.user, {
+        area: 'delivery',
+        action: 'Changed delivery area',
+        target: { label: zoneText(doc), path: '/admin/delivery' },
+        changes: [{ field: 'Area', from: zoneText(before), to: zoneText(doc) }],
+      });
+    }
     res.json(toZone(doc));
   });
 
   router.delete('/admin/delivery/zones/:id', async (req, res) => {
-    const { deletedCount } = await zones.deleteOne({ _id: parseObjectId(req.params.id, 'area id') });
-    if (!deletedCount) throw new HttpError(404, 'Area not found');
+    const deleted = await zones.findOneAndDelete({ _id: parseObjectId(req.params.id, 'area id') });
+    if (!deleted) throw new HttpError(404, 'Area not found');
+    await logActivity(db, req.user, {
+      area: 'delivery',
+      action: 'Deleted delivery area',
+      target: { label: zoneText(deleted), path: null },
+    });
     res.status(204).end();
   });
 

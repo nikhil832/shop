@@ -2216,3 +2216,24 @@ textarea {
 .import-page .buy-buttons {
   margin-top: 14px;
 }
+
+/* Admin: activity log */
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.activity-entry {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.activity-entry p {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+.activity-changes {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
