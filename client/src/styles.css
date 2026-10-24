@@ -343,6 +343,11 @@ a:focus-visible {
 .row-section {
   margin-bottom: 28px;
 }
+/* On the product page, under the product and under the reviews. */
+.product + .row-section,
+.reviews + .row-section {
+  margin-top: 28px;
+}
 .row-header {
   display: flex;
   justify-content: space-between;
@@ -352,7 +357,8 @@ a:focus-visible {
 .product-row {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(180px, 1fr);
+  /* One card size for every row, also when a row has only a few (e.g. two recently viewed products). */
+  grid-auto-columns: 180px;
   gap: 12px;
   overflow-x: auto;
   padding-bottom: 6px;

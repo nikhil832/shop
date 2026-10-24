@@ -15,6 +15,16 @@ export const PRODUCT_SORTS = {
 };
 
 const SUGGESTIONS = 6;
+export const RELATED = 8;
+// Recently viewed products are remembered in the browser (slugs, newest first); the page asks for their cards.
+export const RECENTLY_VIEWED = 10;
+const recentQuery = z.object({
+  slugs: z
+    .string()
+    .max(RECENTLY_VIEWED * 161)
+    .transform((s) => [...new Set(s.split(',').filter(Boolean))])
+    .pipe(z.array(z.string().regex(/^[a-z0-9-]{1,160}$/, 'Invalid product address')).max(RECENTLY_VIEWED)),
+});
 const suggestQuery = z.object({ q: z.string().trim().min(1, 'Type something to search for').max(100) });
 
 const listQuery = z.object({
@@ -212,6 +222,42 @@ export function catalogRouter({ db }) {
       products: items.map((p) => ({ slug: p.slug, title: p.title, brand: p.brand, price: p.price })),
       total,
     });
+  });
+
+  // Similar products for a product page: same category and brand first, then same category, then same brand; in
+  // stock before sold out, then by popularity.
+  router.get('/products/:slug/related', async (req, res) => {
+    const doc = await products.findOne(
+      { slug: req.params.slug, active: true },
+      { projection: { categoryId: 1, brand: 1 } },
+    );
+    if (!doc) throw new HttpError(404, 'Product not found');
+    const items = await products
+      .aggregate([
+        {
+          $match: { active: true, _id: { $ne: doc._id }, $or: [{ categoryId: doc.categoryId }, { brand: doc.brand }] },
+        },
+        {
+          $addFields: {
+            relatedScore: {
+              $add: [points({ $eq: ['$categoryId', doc.categoryId] }, 2), points({ $eq: ['$brand', doc.brand] }, 1)],
+            },
+            inStock: points({ $gt: ['$stock', 0] }, 1),
+          },
+        },
+        { $sort: { relatedScore: -1, inStock: -1, 'rating.count': -1, _id: 1 } },
+        { $limit: RELATED },
+      ])
+      .toArray();
+    res.json({ items: items.map(toProductCard) });
+  });
+
+  // Cards for the products this browser viewed lately, in the order asked; hidden or unknown ones are left out.
+  router.get('/recently-viewed', async (req, res) => {
+    const { slugs } = parse(recentQuery, req.query);
+    const docs = slugs.length ? await products.find({ slug: { $in: slugs }, active: true }).toArray() : [];
+    const bySlug = new Map(docs.map((d) => [d.slug, d]));
+    res.json({ items: slugs.filter((s) => bySlug.has(s)).map((s) => toProductCard(bySlug.get(s))) });
   });
 
   router.get('/products/:slug', async (req, res) => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { MAX_QTY, addToCart, qtyInCart, useCart } from '../cart.js';
 import PriceTag from '../components/PriceTag.jsx';
@@ -7,6 +7,9 @@ import Reviews from '../components/Reviews.jsx';
 import StockAlertButton from '../components/StockAlertButton.jsx';
 import WishlistButton from '../components/WishlistButton.jsx';
 import DeliveryCheck from '../components/DeliveryCheck.jsx';
+import ProductRow from '../components/ProductRow.jsx';
+import RecentlyViewed from '../components/RecentlyViewed.jsx';
+import { rememberViewed } from '../recent.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
 
@@ -111,6 +114,13 @@ function VariantPicker({ product, chosen, onChoose }) {
   });
 }
 
+// Up to 8 products like this one; nothing while loading or when there are none.
+function SimilarProducts({ slug }) {
+  const { data } = useFetch(`/products/${encodeURIComponent(slug)}/related`);
+  if (!data?.items.length) return null;
+  return <ProductRow title="Similar products" items={data.items} />;
+}
+
 const stockText = (stock) => (stock === 0 ? 'Out of stock' : stock <= 5 ? `Only ${stock} left` : 'In stock');
 const stockClass = (stock) => (stock === 0 ? 'out' : stock <= 5 ? 'low' : 'in');
 
@@ -121,6 +131,11 @@ export default function Product() {
   const { data: product, error, loading } = useFetch(`/products/${encodeURIComponent(slug)}`, version);
   // The value chosen for each option, for this product; kept while it reloads (e.g. after a review).
   const [choice, setChoice] = useState({ productId: null, values: [] });
+  // Remembered in this browser once the product has loaded (not for missing or hidden ones).
+  const viewed = product?.slug === slug ? slug : null;
+  useEffect(() => {
+    if (viewed) rememberViewed(viewed);
+  }, [viewed]);
 
   if (error?.status === 404) return <NotFound message="This product doesn't exist or is no longer sold." />;
   if (error) return <p className="error">{error.message}</p>;
@@ -215,7 +230,10 @@ export default function Product() {
           </section>
         </div>
       </article>
+      {/* Remounted per product, so the row doesn't show the previous product's while the next loads. */}
+      <SimilarProducts key={`similar-${product.slug}`} slug={product.slug} />
       <Reviews key={product.id} product={product} onChange={() => setVersion((v) => v + 1)} />
+      <RecentlyViewed exclude={product.slug} />
     </>
   );
 }

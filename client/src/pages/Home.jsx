@@ -1,23 +1,11 @@
 import { Link } from 'react-router';
-import ProductCard from '../components/ProductCard.jsx';
+import ProductRow from '../components/ProductRow.jsx';
+import RecentlyViewed from '../components/RecentlyViewed.jsx';
 import { useFetch } from '../useFetch.js';
 
-function ProductRow({ title, path, moreLink }) {
+function ListRow({ title, path, moreLink }) {
   const { data, error } = useFetch(path);
-  return (
-    <section className="row-section">
-      <div className="row-header">
-        <h2>{title}</h2>
-        <Link to={moreLink}>View all</Link>
-      </div>
-      {error && <p className="error">{error.message}</p>}
-      <div className="product-row">
-        {data?.items.map((p) => (
-          <ProductCard key={p.id} product={p} />
-        ))}
-      </div>
-    </section>
-  );
+  return <ProductRow title={title} items={data?.items} error={error} moreLink={moreLink} />;
 }
 
 export default function Home() {
@@ -43,8 +31,9 @@ export default function Home() {
         ))}
       </nav>
 
-      <ProductRow title="Top rated" path="/products?sort=rating&inStock=1&pageSize=8" moreLink="/search?sort=rating" />
-      <ProductRow title="New arrivals" path="/products?sort=newest&pageSize=8" moreLink="/search?sort=newest" />
+      <RecentlyViewed />
+      <ListRow title="Top rated" path="/products?sort=rating&inStock=1&pageSize=8" moreLink="/search?sort=rating" />
+      <ListRow title="New arrivals" path="/products?sort=newest&pageSize=8" moreLink="/search?sort=newest" />
     </>
   );
 }

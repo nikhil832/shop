@@ -7,14 +7,13 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                                                   | Why                                                                                                   | To start                  |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------- |
-| 1   | **Related products and recently viewed** on the product page: same category or brand, and the last products this browser looked at     | Keeps visitors browsing instead of leaving; no new data needed (recently viewed lives in the browser) | "start related products"  |
-| 2   | **GST on invoices**: your GSTIN, a tax rate per category, and the tax shown in each invoice line (prices stay tax-inclusive)           | Needed for proper invoices once the store is GST-registered; needs your GSTIN and rates               | "start GST invoices"      |
-| 3   | **Daily low-stock email** to admins: one email a morning listing products and sizes with 5 or fewer left                               | You hear about stock running out without opening the dashboard                                        | "start low-stock email"   |
-| 4   | **Add products from a spreadsheet**: upload a CSV to add or update many products (prices, stock) at once, with a preview before saving | Much faster than the form for big catalog changes or price updates                                    | "start CSV import"        |
-| 5   | **Admin activity log**: who changed which product, order, coupon or setting, and when                                                  | Useful once more than one person runs the store; helps find what changed a price or stock             | "start activity log"      |
-| 6   | **Questions on products**: customers ask, admins answer, answers shown on the product page                                             | Answers buyers' doubts before they order, and fewer returns                                           | "start product questions" |
+| #   | Idea                                                                                                                                   | Why                                                                                       | To start                  |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------- |
+| 1   | **GST on invoices**: your GSTIN, a tax rate per category, and the tax shown in each invoice line (prices stay tax-inclusive)           | Needed for proper invoices once the store is GST-registered; needs your GSTIN and rates   | "start GST invoices"      |
+| 2   | **Daily low-stock email** to admins: one email a morning listing products and sizes with 5 or fewer left                               | You hear about stock running out without opening the dashboard                            | "start low-stock email"   |
+| 3   | **Add products from a spreadsheet**: upload a CSV to add or update many products (prices, stock) at once, with a preview before saving | Much faster than the form for big catalog changes or price updates                        | "start CSV import"        |
+| 4   | **Admin activity log**: who changed which product, order, coupon or setting, and when                                                  | Useful once more than one person runs the store; helps find what changed a price or stock | "start activity log"      |
+| 5   | **Questions on products**: customers ask, admins answer, answers shown on the product page                                             | Answers buyers' doubts before they order, and fewer returns                               | "start product questions" |
 
 ## Set aside
 
@@ -59,3 +58,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Two-step login with an authenticator app, recovery codes, admin reminder                                                    | Stage 30 (`git log --grep "Stage 30"`) |
 | Returns in the sales figures: net revenue, refunds per day, best sellers and export net of returns                          | Stage 31 (`git log --grep "Stage 31"`) |
 | Show up on Google: robots.txt, a sitemap, product data for results (price, stock, rating), Search Console verification tag  | Stage 32 (`git log --grep "Stage 32"`) |
+| Similar products and recently viewed on product pages (and recently viewed on the home page)                                | Stage 33 (`git log --grep "Stage 33"`) |
