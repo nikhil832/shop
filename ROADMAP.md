@@ -7,8 +7,15 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea | Why | To start |
-| --- | ---- | --- | -------- |
+| #   | Idea                                                                                                                                   | Why                                                                                                   | To start                  |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------- |
+| 1   | **Show up on Google**: `sitemap.xml`, `robots.txt` and product details (price, stock, rating) in the page for search results           | Free visitors from Google; results can show price and stars. Builds on the link previews              | "start Google listing"    |
+| 2   | **Related products and recently viewed** on the product page: same category or brand, and the last products this browser looked at     | Keeps visitors browsing instead of leaving; no new data needed (recently viewed lives in the browser) | "start related products"  |
+| 3   | **GST on invoices**: your GSTIN, a tax rate per category, and the tax shown in each invoice line (prices stay tax-inclusive)           | Needed for proper invoices once the store is GST-registered; needs your GSTIN and rates               | "start GST invoices"      |
+| 4   | **Daily low-stock email** to admins: one email a morning listing products and sizes with 5 or fewer left                               | You hear about stock running out without opening the dashboard                                        | "start low-stock email"   |
+| 5   | **Add products from a spreadsheet**: upload a CSV to add or update many products (prices, stock) at once, with a preview before saving | Much faster than the form for big catalog changes or price updates                                    | "start CSV import"        |
+| 6   | **Admin activity log**: who changed which product, order, coupon or setting, and when                                                  | Useful once more than one person runs the store; helps find what changed a price or stock             | "start activity log"      |
+| 7   | **Questions on products**: customers ask, admins answer, answers shown on the product page                                             | Answers buyers' doubts before they order, and fewer returns                                           | "start product questions" |
 
 ## Set aside
 
