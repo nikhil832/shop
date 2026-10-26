@@ -43,6 +43,19 @@ const tidy = (draft) => ({
     .slice(0, MAX_HIGHLIGHTS),
 });
 
+// What the admin sees when a request fails: the cases they can fix themselves, else Anthropic's reason or "try again".
+function failureMessage(err, reason, model) {
+  if (err.status === 401) return 'The Anthropic API key was refused. Check ANTHROPIC_API_KEY on the server.';
+  if (/credit balance/i.test(reason)) {
+    return 'The Anthropic account has no credit left. Add some under Billing at console.anthropic.com.';
+  }
+  if (err.status === 403 || err.status === 404) {
+    return `The Anthropic API key can't use ${model}. Check AI_MODEL on the server.`;
+  }
+  if (err.status === 400) return `Claude refused the request: ${reason}`;
+  return "The writing assistant isn't reachable right now. Try again in a minute.";
+}
+
 // `config`: { apiKey, model, apiUrl? } or null (then there's no writer). The key never appears in errors or logs.
 export function aiClient(config) {
   if (!config) return null;
@@ -81,10 +94,13 @@ export function aiClient(config) {
           ...(fallbacks && { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }),
         });
       } catch (err) {
-        console.error(`Claude API request failed: ${err.status ?? ''} ${err.name}`);
-        throw new HttpError(502, "The writing assistant isn't reachable right now. Try again in a minute.", {
-          expose: true,
-        });
+        // Anthropic's own reason (its error bodies never contain the key), for the server log and the admin.
+        const reason = err.error?.error?.message ?? err.message;
+        console.error(
+          `Claude API request failed: ${err.status ?? ''} ${err.error?.error?.type ?? err.name}: ${reason}` +
+            (err.requestID ? ` (request ${err.requestID})` : ''),
+        );
+        throw new HttpError(502, failureMessage(err, reason, config.model), { expose: true });
       }
       if (message.stop_reason === 'refusal' || !message.parsed_output) {
         throw new HttpError(502, "The writing assistant couldn't write this one. Please write it yourself.", {

@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 export const FAKE_ANTHROPIC_KEY = 'sk-ant-fake-key-for-tests';
 
 export async function startFakeAnthropic(port = 0) {
-  const state = { calls: [], next: null, failures: 0 };
+  const state = { calls: [], next: null, failures: 0, error: null };
 
   function answer(body) {
     const prompt = body.messages[0].content.find((c) => c.type === 'text').text;
@@ -48,7 +48,8 @@ export async function startFakeAnthropic(port = 0) {
       state.calls.push({ body, headers: req.headers });
       if (state.failures > 0) {
         state.failures -= 1;
-        return send(500, { type: 'error', error: { type: 'api_error', message: 'Internal server error' } });
+        const [status, type, message] = state.error ?? [500, 'api_error', 'Internal server error'];
+        return send(status, { type: 'error', error: { type, message } });
       }
       const result = answer(body);
       state.next = null;
@@ -60,7 +61,11 @@ export async function startFakeAnthropic(port = 0) {
     url: `http://localhost:${server.address().port}`,
     calls: state.calls,
     // The SDK retries once, so failNext(2) makes a whole request fail.
-    failNext: (times = 1) => (state.failures = times),
+    // `error`: [status, type, message] of Anthropic's error answer (default a 500).
+    failNext: (times = 1, error = null) => {
+      state.failures = times;
+      state.error = error;
+    },
     refuseNext: () => (state.next = 'refusal'),
     stop: () => new Promise((resolve) => server.close(resolve)),
   };

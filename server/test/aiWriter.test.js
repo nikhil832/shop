@@ -99,6 +99,20 @@ test('a failed or declined request says so, and nothing is saved', async () => {
   assert.equal(failed.status, 502);
   assert.match(failed.body.error, /isn't reachable right now/);
 
+  // Errors the admin can fix say what to do; others pass on Anthropic's reason. (4xx answers aren't retried.)
+  t.claude.failNext(1, [
+    400,
+    'invalid_request_error',
+    'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.',
+  ]);
+  assert.match((await draft({})).body.error, /no credit left. Add some under Billing/);
+  t.claude.failNext(1, [401, 'authentication_error', 'invalid x-api-key']);
+  assert.match((await draft({})).body.error, /API key was refused/);
+  t.claude.failNext(1, [404, 'not_found_error', 'model: claude-opus-5-5']);
+  assert.match((await draft({})).body.error, /can't use claude-opus-5-5. Check AI_MODEL/);
+  t.claude.failNext(1, [400, 'invalid_request_error', 'max_tokens: too large']);
+  assert.equal((await draft({})).body.error, 'Claude refused the request: max_tokens: too large');
+
   t.claude.refuseNext();
   const declined = await draft({});
   assert.equal(declined.status, 502);
