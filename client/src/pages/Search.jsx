@@ -4,6 +4,14 @@ import { query } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import { useFetch } from '../useFetch.js';
 
+// The same search page with `q` corrected, its filters kept, from the first page.
+function suggestionParams(params, q) {
+  const next = new URLSearchParams(params);
+  next.set('q', q);
+  next.delete('page');
+  return next.toString();
+}
+
 export const SORTS = [
   { id: 'relevance', label: 'Popularity' },
   { id: 'price_asc', label: 'Price: low to high' },
@@ -204,7 +212,18 @@ export default function Search() {
         {data && data.total === 0 && (
           <div className="empty-state">
             <h2>No products found</h2>
-            <p className="muted">Try a different search or remove some filters.</p>
+            {data.suggestion ? (
+              // A typo, most likely: the corrected search, with the same filters.
+              <p className="did-you-mean">
+                Did you mean{' '}
+                <Link to={`/search?${suggestionParams(params, data.suggestion.q)}`}>{data.suggestion.q}</Link>?{' '}
+                <span className="muted">
+                  ({data.suggestion.total} {data.suggestion.total === 1 ? 'product' : 'products'})
+                </span>
+              </p>
+            ) : (
+              <p className="muted">Try a different search or remove some filters.</p>
+            )}
           </div>
         )}
         <div className={`product-grid ${loading ? 'stale' : ''}`}>

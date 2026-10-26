@@ -50,7 +50,13 @@ async function setUp(browser, colorScheme) {
   return { customer, admin, order, product };
 }
 
-const SHOP = ['/', '/search?q=phone', '/p/the-quiet-engineer-paperback', '/p/urbane-men-slim-fit-jeans'];
+const SHOP = [
+  '/',
+  '/search?q=phone',
+  '/search?q=kettel',
+  '/p/the-quiet-engineer-paperback',
+  '/p/urbane-men-slim-fit-jeans',
+];
 const SIGNED_OUT = ['/login', '/register', '/forgot-password', '/no-such-page'];
 const CUSTOMER = (o) => [
   '/cart',

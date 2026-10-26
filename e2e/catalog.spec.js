@@ -163,3 +163,17 @@ test('unknown products and pages show not found', async ({ page }) => {
   await page.getByRole('link', { name: 'Back to home' }).click();
   await expect(page.getByRole('heading', { name: 'Top rated' })).toBeVisible();
 });
+
+test('a search with a typo finds nothing, and offers the corrected search', async ({ page }) => {
+  await page.goto('/');
+  const box = page.getByRole('combobox', { name: 'Search products' });
+  await box.fill('electirc kettel');
+  await box.press('Enter');
+  await expect(page.getByRole('heading', { name: 'No products found' })).toBeVisible();
+  const suggestion = page.getByRole('link', { name: 'electric kettle' });
+  await expect(page.getByText('Did you mean')).toContainText('(1 product)');
+  await suggestion.click();
+  await expect(page).toHaveURL(/q=electric(\+|%20)kettle/);
+  await expect(page.getByRole('link', { name: /Aura Electric Kettle/ })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Search products' })).toHaveValue('electric kettle');
+});

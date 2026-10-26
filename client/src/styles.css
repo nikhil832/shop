@@ -2526,3 +2526,11 @@ textarea {
 .meter-full span {
   background: var(--danger);
 }
+
+/* Search: "Did you mean …?" when nothing was found. */
+.did-you-mean {
+  font-size: 1.05rem;
+}
+.did-you-mean a {
+  font-weight: 700;
+}

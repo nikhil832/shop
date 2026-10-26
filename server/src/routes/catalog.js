@@ -76,6 +76,83 @@ const points = (condition, n) => ({ $cond: [condition, n, 0] });
 // Each term must match the title, brand, a highlight or the category name. With the relevance sort, a score ranks
 // the results: per term, title or brand 4, category 3, a highlight 1; the whole search in the title adds 5.
 // Popularity breaks ties.
+// ---- "Did you mean…?" ----
+
+// The words the store knows (in shown products' titles, brands and highlights, and category names), each with how
+// often it appears, rebuilt at most once a minute per database.
+const WORDS_TTL_MS = 60_000;
+const wordCache = new WeakMap();
+async function storeWords(db) {
+  const cached = wordCache.get(db);
+  if (cached && Date.now() - cached.at < WORDS_TTL_MS) return cached.words;
+  const [docs, cats] = await Promise.all([
+    db
+      .collection('products')
+      .find({ active: true }, { projection: { title: 1, brand: 1, highlights: 1 } })
+      .toArray(),
+    db
+      .collection('categories')
+      .find({}, { projection: { name: 1 } })
+      .toArray(),
+  ]);
+  const words = new Map();
+  const texts = [...docs.flatMap((p) => [p.title, p.brand, ...(p.highlights ?? [])]), ...cats.map((c) => c.name)];
+  for (const text of texts) {
+    for (const w of text.toLowerCase().split(/[^a-z0-9]+/)) {
+      if (w.length >= 3 && !/^\d+$/.test(w)) words.set(w, (words.get(w) ?? 0) + 1);
+    }
+  }
+  wordCache.set(db, { at: Date.now(), words });
+  return words;
+}
+
+// Edits (insert, delete, change, or swapping two neighbours) to turn `a` into `b`.
+export function editDistance(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1])
+        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+    }
+  }
+  return d[a.length][b.length];
+}
+
+// The search with each word that matches nothing the store knows replaced by the closest known word (one typo in a
+// word of 3–5 letters, the first letter right in a 3-letter one; two from 6), or null when there's nothing to correct or a word has no close match. A word
+// matches when a known word starts with it (as the search does), with plurals and synonyms counted.
+export function correctSearch(q, words) {
+  const known = [...words.keys()];
+  const parts = q.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 8);
+  let changed = false;
+  const fixed = parts.map((word) => {
+    const base = singular(word);
+    if (SYNONYMS[base] || known.some((k) => k.startsWith(base))) return word;
+    const allowed = word.length < 3 ? 0 : word.length <= 5 ? 1 : 2;
+    let best = null;
+    for (const k of known) {
+      if (k.length < word.length - allowed) continue; // longer ones are compared by their start too
+      // A typo in the whole word, or in the start of a longer one ("samsn" → "samsung").
+      const whole = editDistance(word, k);
+      const distance = Math.min(whole, editDistance(word, k.slice(0, word.length)));
+      if (distance > allowed) continue;
+      if (word.length === 3 && k[0] !== word[0]) continue; // three letters: only with the right first letter ("ari" → "air")
+      // Fewest edits, then a whole word over the start of one ("ari" → "air", not "arcbook"), then the same first
+      // letter, then the most common word.
+      const rank = [distance, whole === distance ? 0 : 1, k[0] === word[0] ? 0 : 1, -words.get(k)];
+      if (!best || compareRanks(rank, best.rank) < 0) best = { k, rank };
+    }
+    if (!best) return null;
+    changed = true;
+    return best.k;
+  });
+  return changed && fixed.every(Boolean) ? fixed.join(' ') : null;
+}
+const compareRanks = (a, b) => a.reduce((r, x, i) => r || x - b[i], 0);
+
 async function searchStages(categories, q) {
   const terms = searchTerms(q);
   const allCategories = await categories.find({}, { projection: { name: 1, slug: 1, sortOrder: 1 } }).toArray();
@@ -190,9 +267,22 @@ export function catalogRouter({ db }) {
         .toArray(),
     ]);
 
+    const total = result.total[0]?.n ?? 0;
+    // Nothing found: a corrected search ("samsng" → "samsung"), offered only if it finds something with the same filters.
+    let suggestion = null;
+    if (!total && query.q) {
+      const corrected = correctSearch(query.q, await storeWords(db));
+      if (corrected) {
+        const fixed = { ...match, $and: (await searchStages(categories, corrected)).filter };
+        const found = await products.countDocuments(fixed);
+        if (found) suggestion = { q: corrected, total: found };
+      }
+    }
+
     res.json({
       items: result.items.map(toProductCard),
-      total: result.total[0]?.n ?? 0,
+      total,
+      suggestion,
       page: query.page,
       pageSize: query.pageSize,
       brands: brands.map((b) => ({ name: b._id, count: b.count })),
