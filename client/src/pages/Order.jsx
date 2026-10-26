@@ -4,10 +4,17 @@ import { Link, Navigate, useLocation, useParams } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import OrderSummary from '../components/OrderSummary.jsx';
-import { formatDate, formatPrice, formatTime, orderNumber, paymentLabel, returnStatusLabel } from '../format.js';
+import {
+  formatDate,
+  formatPrice,
+  formatTime,
+  hasInvoice,
+  orderNumber,
+  paymentLabel,
+  returnStatusLabel,
+} from '../format.js';
 import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
-import { hasInvoice } from './Invoice.jsx';
 import NotFound from './NotFound.jsx';
 import { StatusBadge } from './Orders.jsx';
 

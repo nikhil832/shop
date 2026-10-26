@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import QRCode from 'qrcode';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 
@@ -61,6 +60,8 @@ export default function TwoStepSection() {
     const { password } = fields(e);
     run(async () => {
       const res = await request('/account/two-step/setup', { method: 'POST', body: { password } });
+      // The QR code library loads only here, when someone sets up two-step login.
+      const { default: QRCode } = await import('qrcode');
       const qr = await QRCode.toDataURL(res.uri, { margin: 1, width: 220 });
       setSetup({ secret: res.secret, qr });
     });

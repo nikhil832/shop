@@ -41,3 +41,14 @@ test('search engines get robots.txt, a sitemap and product data from the built s
   const data = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/)[1]);
   expect(data.offers.price).toBe('349.00');
 });
+
+test('built files are cached for good; pages and unknown files are not', async ({ request }) => {
+  const html = await (await request.get('/')).text();
+  const script = html.match(/src="(\/assets\/[^"]+\.js)"/)[1];
+  const res = await request.get(script);
+  expect(res.status()).toBe(200);
+  expect(res.headers()['cache-control']).toBe('public, max-age=31536000, immutable');
+  expect((await request.get('/')).headers()['cache-control']).toBe('no-cache');
+  // A file from an older build: a plain 404, so the page knows to reload instead of running HTML as code.
+  expect((await request.get('/assets/index-old.js')).status()).toBe(404);
+});

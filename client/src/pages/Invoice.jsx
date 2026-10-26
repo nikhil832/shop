@@ -1,12 +1,9 @@
 import { Link, Navigate, useLocation, useParams } from 'react-router';
 import { lineKey } from '../cart.js';
 import { useAuth } from '../auth.jsx';
-import { formatAmount, formatDate, formatPrice, orderNumber } from '../format.js';
+import { formatAmount, formatDate, formatPrice, hasInvoice, orderNumber } from '../format.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
-
-// Orders that have an invoice: placed and not cancelled. Unpaid online orders aren't sales yet.
-export const hasInvoice = (order) => ['placed', 'shipped', 'delivered'].includes(order.status);
 
 // How the order is paid, as of now.
 function paymentLine(order) {

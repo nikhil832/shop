@@ -14,6 +14,9 @@ export const formatDate = (iso) => dateFormat.format(new Date(iso));
 // The order's sequential number; orders from before numbering show the end of their id instead.
 export const orderNumber = (order) => String(order.number ?? order.id.slice(-8).toUpperCase());
 
+// Orders that have an invoice: placed and not cancelled. Unpaid online orders aren't sales yet.
+export const hasInvoice = (order) => ['placed', 'shipped', 'delivered'].includes(order.status);
+
 export const ORDER_STATUS = {
   awaiting_payment: 'Awaiting payment',
   placed: 'Placed',

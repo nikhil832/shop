@@ -41,6 +41,10 @@ const imageSweeper = setInterval(() => cleanUpImages().catch((err) => console.er
 // In production, serve the built React app from the same server. Pages get link-preview tags (preview.js); the
 // static files' own index.html is not served as-is (index: false), so the home page gets them too.
 if (existsSync(CLIENT_DIST)) {
+  // Built code and styles have a hash of their content in the name, so browsers may keep them for good. A name the
+  // build no longer has (a tab open since the last deploy) is a 404, not the app's page; the client then reloads.
+  app.use('/assets', express.static(join(CLIENT_DIST, 'assets'), { index: false, immutable: true, maxAge: '1y' }));
+  app.use('/assets', (req, res) => res.status(404).type('text/plain').send('Not found'));
   app.use(express.static(CLIENT_DIST, { index: false }));
   app.use(previewRouter(ctx, readFileSync(join(CLIENT_DIST, 'index.html'), 'utf8')));
 }
