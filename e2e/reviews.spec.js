@@ -149,3 +149,35 @@ test('saving products to the wishlist', async ({ page }) => {
   await page.getByRole('link', { name: 'My orders' }).click();
   await expect(page).toHaveURL('/orders');
 });
+
+test('a buyer adds photos to a review: shrunk, shown as thumbnails, removable', async ({ page, request }) => {
+  page.on('dialog', (dialog) => dialog.accept());
+  await customerWhoReceivedIt(page, request);
+  await page.goto(`/p/${SLUG}`);
+  await pickStars(page, '5 stars');
+  await page.getByLabel('Title (optional)').fill('With pictures');
+
+  // A real 1200×630 PNG: shrunk and uploaded as a JPEG.
+  const uploads = [];
+  page.on('response', (r) => r.url().endsWith('/api/reviews/photos') && uploads.push(r));
+  const picture = 'client/public/og-image.png';
+  await page.locator('.photo-add input[type=file]').setInputFiles([picture, picture]);
+  const form = page.locator('.review-form').filter({ hasText: 'Your rating' });
+  await expect(form.getByRole('img', { name: 'Photo 2' })).toBeVisible();
+  expect(uploads.map((r) => r.status())).toEqual([201, 201]);
+  expect(uploads[0].request().headers()['content-type']).toBe('image/jpeg');
+  await form.getByRole('button', { name: 'Remove photo 2' }).click();
+  await expect(form.getByRole('img')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Post review' }).click();
+
+  const shown = reviews(page).getByRole('listitem').filter({ hasText: 'With pictures' });
+  const thumb = shown.getByRole('img', { name: "Photo 1 from Kavya M.'s review" });
+  await expect(thumb).toBeVisible();
+  const src = await thumb.getAttribute('src');
+  const served = await page.request.get(src);
+  expect(served.headers()['content-type']).toBe('image/jpeg');
+
+  // Delete it again, so the book's rating is as other tests expect.
+  await page.locator('.my-review').getByRole('button', { name: 'Delete' }).click();
+  await expect(page.getByRole('button', { name: 'Post review' })).toBeVisible();
+});

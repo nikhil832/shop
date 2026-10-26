@@ -1,6 +1,8 @@
 import express from 'express';
 import { Binary, ObjectId } from 'mongodb';
-import { requireAdmin } from '../auth.js';
+import { requireAdmin, requireUser } from '../auth.js';
+import { stripMetadata } from '../imageMetadata.js';
+import { takeHourlySlot } from '../rateLimit.js';
 import { HttpError, parseObjectId } from '../http.js';
 
 export const MAX_IMAGE_BYTES = 1024 * 1024;
@@ -14,13 +16,16 @@ const SIGNATURES = {
 };
 
 export const imageUrl = (id) => `/api/images/${id}`;
+// Review photos customers may upload in an hour.
+export const REVIEW_PHOTOS_PER_HOUR = 20;
+const REVIEW_PHOTO_TYPES = ['image/jpeg', 'image/png'];
 
 // How long an upload is kept before it can count as unused: the admin may still be filling in the product form.
 export const UNUSED_IMAGE_GRACE_MS = 24 * 60 * 60 * 1000;
-const UPLOAD_URL = /^\/api\/images\/([0-9a-f]{24})$/;
+export const UPLOAD_URL = /^\/api\/images\/([0-9a-f]{24})$/;
 
-// Ids of uploads still in use: by a product (shown or hidden), or by an order item, which keeps the photo it was
-// bought with even after the product's photos change.
+// Ids of uploads still in use: by a product (shown or hidden), by an order item, which keeps the photo it was bought
+// with even after the product's photos change, or by a review (shown or hidden).
 async function imagesInUse(db) {
   const referenced = (collection, field) =>
     db
@@ -33,7 +38,7 @@ async function imagesInUse(db) {
       ])
       .toArray();
   // Variant photos are always among their product's, but are counted too in case that ever changes.
-  const [inProducts, inVariants, inOrders] = await Promise.all([
+  const [inProducts, inVariants, inOrders, inReviews] = await Promise.all([
     referenced('products', 'images'),
     db
       .collection('products')
@@ -45,8 +50,11 @@ async function imagesInUse(db) {
       ])
       .toArray(),
     referenced('orders', 'items.image'),
+    referenced('reviews', 'photos'),
   ]);
-  return new Set([...inProducts, ...inVariants, ...inOrders].map((r) => r._id.match(UPLOAD_URL)?.[1]).filter(Boolean));
+  return new Set(
+    [...inProducts, ...inVariants, ...inOrders, ...inReviews].map((r) => r._id.match(UPLOAD_URL)?.[1]).filter(Boolean),
+  );
 }
 
 // The uploads among `urls` that no longer exist (deleted as unused), for the product form's check.
@@ -78,7 +86,8 @@ export async function deleteUnusedImages({ db }, { now = new Date() } = {}) {
   return { deleted: deletedCount, bytes };
 }
 
-// Product photos uploaded by admins, stored in the `images` collection so nothing depends on an outside service.
+// Product photos uploaded by admins, and customers' review photos, stored in the `images` collection so nothing depends
+// on an outside service.
 export function imagesRouter({ db }) {
   const images = db.collection('images');
   const router = express.Router();
@@ -111,6 +120,39 @@ export function imagesRouter({ db }) {
         contentType: type,
         size: req.body.length,
         uploadedBy: req.user._id,
+        createdAt: new Date(),
+      });
+      res.status(201).json({ id: insertedId.toString(), url: imageUrl(insertedId) });
+    },
+  );
+
+  // A customer's photo for their review: JPEG or PNG, with where and when it was taken removed (imageMetadata.js). It
+  // only appears once a review uses it (routes/reviews.js); unused ones go after a day like admin uploads.
+  router.post(
+    '/reviews/photos',
+    requireUser,
+    express.raw({ type: REVIEW_PHOTO_TYPES, limit: MAX_IMAGE_BYTES }),
+    async (req, res) => {
+      const type = req.get('Content-Type')?.split(';')[0].trim().toLowerCase();
+      if (!Buffer.isBuffer(req.body) || !REVIEW_PHOTO_TYPES.includes(type)) {
+        throw new HttpError(400, 'Upload a JPEG or PNG photo');
+      }
+      let data;
+      try {
+        if (!SIGNATURES[type](req.body)) throw new Error('signature');
+        data = stripMetadata(type, req.body);
+      } catch {
+        throw new HttpError(400, `This file is not a valid ${type.slice(6).toUpperCase()}`);
+      }
+      if (!(await takeHourlySlot(db, `reviewPhoto:${req.user._id}`, REVIEW_PHOTOS_PER_HOUR))) {
+        throw new HttpError(429, 'Too many photos this hour. Please try again later.');
+      }
+      const { insertedId } = await images.insertOne({
+        data: new Binary(data),
+        contentType: type,
+        size: data.length,
+        uploadedBy: req.user._id,
+        kind: 'review',
         createdAt: new Date(),
       });
       res.status(201).json({ id: insertedId.toString(), url: imageUrl(insertedId) });

@@ -1,14 +1,23 @@
 import express from 'express';
 import { z } from 'zod';
 import { requireUser } from '../auth.js';
+import { ObjectId } from 'mongodb';
 import { HttpError, parse } from '../http.js';
+import { UPLOAD_URL } from './images.js';
 
 const REVIEW_PAGE = 10;
 
+export const MAX_REVIEW_PHOTOS = 3;
 const reviewBody = z.object({
   rating: z.number().int().min(1, 'Choose 1 to 5 stars').max(5, 'Choose 1 to 5 stars'),
   title: z.string().trim().max(100).default(''),
   body: z.string().trim().max(2000).default(''),
+  // Photos the reviewer uploaded (POST /reviews/photos), as their /api/images/… addresses.
+  photos: z
+    .array(z.string().regex(UPLOAD_URL, 'Invalid photo'))
+    .max(MAX_REVIEW_PHOTOS, `At most ${MAX_REVIEW_PHOTOS} photos`)
+    .default([])
+    .refine((urls) => new Set(urls).size === urls.length, 'The same photo twice'),
 });
 const listQuery = z.object({ page: z.coerce.number().int().min(1).max(1000).default(1) });
 
@@ -24,6 +33,7 @@ export const toReview = (doc) => ({
   title: doc.title,
   body: doc.body,
   author: doc.author,
+  photos: doc.photos ?? [],
   hidden: doc.hidden,
   createdAt: doc.createdAt,
   updatedAt: doc.updatedAt,
@@ -137,6 +147,14 @@ export function reviewsRouter({ db, client }) {
     const input = parse(reviewBody, req.body);
     const { _id: productId } = await findProduct(req.params.slug);
     const userId = req.user._id;
+    // Only the reviewer's own review uploads (not another customer's, nor an admin's product photos).
+    if (input.photos.length) {
+      const ids = input.photos.map((u) => new ObjectId(u.match(UPLOAD_URL)[1]));
+      const mine = await db
+        .collection('images')
+        .countDocuments({ _id: { $in: ids }, uploadedBy: userId, kind: 'review' });
+      if (mine !== ids.length) throw new HttpError(400, 'photos: Upload the photos again');
+    }
     if (!(await hasReceived(userId, productId))) {
       throw new HttpError(403, 'You can review this once an order with it has been delivered to you');
     }

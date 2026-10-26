@@ -2,13 +2,69 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { request } from '../api.js';
 import { formatDate } from '../format.js';
+import { uploadReviewPhoto } from '../photos.js';
 import { useFetch } from '../useFetch.js';
 import Pager from './Pager.jsx';
 import Rating from './Rating.jsx';
 import Stars from './Stars.jsx';
 
+const MAX_PHOTOS = 3;
+
+// The review's photos: thumbnails with Remove, and a picker that shrinks and uploads new ones straight away.
+function PhotoPicker({ photos, onChange }) {
+  const [state, setState] = useState({ uploading: 0, error: null });
+  async function add(e) {
+    const files = [...e.target.files].slice(0, MAX_PHOTOS - photos.length);
+    e.target.value = ''; // the same file can be chosen again
+    if (!files.length) return;
+    setState({ uploading: files.length, error: null });
+    const added = [];
+    try {
+      for (const file of files) added.push(await uploadReviewPhoto(file));
+      setState({ uploading: 0, error: null });
+    } catch (err) {
+      setState({ uploading: 0, error: err.message });
+    }
+    if (added.length) onChange([...photos, ...added]);
+  }
+  return (
+    <div className="photo-picker">
+      <span className="photo-picker-label">
+        Photos <span className="muted">(optional, up to {MAX_PHOTOS})</span>
+      </span>
+      {photos.length > 0 && (
+        <ul className="review-photos">
+          {photos.map((url, i) => (
+            <li key={url}>
+              <img src={url} alt={`Photo ${i + 1}`} width="72" height="72" />
+              <button type="button" className="link" onClick={() => onChange(photos.filter((p) => p !== url))}>
+                Remove<span className="sr-only"> photo {i + 1}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {photos.length < MAX_PHOTOS && (
+        <label className="btn small photo-add">
+          {state.uploading ? `Uploading ${state.uploading}…` : 'Add photos'}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="sr-only"
+            onChange={add}
+            disabled={state.uploading > 0}
+          />
+        </label>
+      )}
+      {state.error && <p className="error small">{state.error}</p>}
+    </div>
+  );
+}
+
 function ReviewForm({ slug, review, onSaved, onCancel }) {
   const [stars, setStars] = useState(review?.rating ?? 0);
+  const [photos, setPhotos] = useState(review?.photos ?? []);
   const [state, setState] = useState({ busy: false, error: null });
 
   async function submit(e) {
@@ -19,7 +75,7 @@ function ReviewForm({ slug, review, onSaved, onCancel }) {
     try {
       await request(`/products/${slug}/review`, {
         method: 'PUT',
-        body: { rating: stars, title: form.get('title'), body: form.get('body') },
+        body: { rating: stars, title: form.get('title'), body: form.get('body'), photos },
       });
       onSaved();
     } catch (err) {
@@ -60,6 +116,7 @@ function ReviewForm({ slug, review, onSaved, onCancel }) {
         </span>
         <textarea name="body" rows={4} maxLength={2000} defaultValue={review?.body} />
       </label>
+      <PhotoPicker photos={photos} onChange={setPhotos} />
       {state.error && (
         <p className="error" role="alert">
           {state.error}
@@ -79,6 +136,28 @@ function ReviewForm({ slug, review, onSaved, onCancel }) {
   );
 }
 
+// Thumbnails that open the full photo.
+export function ReviewPhotos({ review }) {
+  if (!review.photos?.length) return null;
+  return (
+    <ul className="review-photos">
+      {review.photos.map((url, i) => (
+        <li key={url}>
+          <a href={url} target="_blank" rel="noreferrer">
+            <img
+              src={url}
+              alt={`Photo ${i + 1} from ${review.author ? `${review.author}'s` : 'the'} review`}
+              width="72"
+              height="72"
+              loading="lazy"
+            />
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function ReviewText({ review }) {
   return (
     <>
@@ -87,6 +166,7 @@ function ReviewText({ review }) {
         {review.title && <strong>{review.title}</strong>}
       </div>
       {review.body && <p className="review-body">{review.body}</p>}
+      <ReviewPhotos review={review} />
     </>
   );
 }

@@ -9,9 +9,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 | #   | Idea                                                                                           | Why                                                                                           | To start                    |
 | --- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------- |
-| 1   | **Photos in reviews**: buyers add up to 3 photos to their review                               | Real photos make reviews more convincing than the generated product pictures                  | "start review photos"       |
-| 2   | **GST in the order export**: taxable value, CGST, SGST and IGST columns in the CSV             | What an accountant needs for GST returns, now that invoices have it                           | "start GST export"          |
-| 3   | **Accessibility check in the tests**: an automatic check (axe) of the main pages on every push | Catches problems for people using screen readers or keyboards before they reach the live site | "start accessibility check" |
+| 1   | **GST in the order export**: taxable value, CGST, SGST and IGST columns in the CSV             | What an accountant needs for GST returns, now that invoices have it                           | "start GST export"          |
+| 2   | **Accessibility check in the tests**: an automatic check (axe) of the main pages on every push | Catches problems for people using screen readers or keyboards before they reach the live site | "start accessibility check" |
 
 ## Set aside
 
@@ -67,3 +66,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Cart saved to the account, across devices, with one reminder email for a cart left a day                                            | Stage 41 (`git log --grep "Stage 41"`) |
 | Packing slips for chosen orders, and marking several orders shipped at once                                                         | Stage 42 (`git log --grep "Stage 42"`) |
 | Private notes on orders, optionally printed on the packing slip                                                                     | Stage 43 (`git log --grep "Stage 43"`) |
+| Photos in reviews (up to 3, shrunk in the browser, location data removed)                                                           | Stage 44 (`git log --grep "Stage 44"`) |

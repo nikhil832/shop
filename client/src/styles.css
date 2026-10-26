@@ -2443,3 +2443,47 @@ textarea {
   align-items: center;
   font-weight: 400;
 }
+
+/* Photos in reviews: square thumbnails, and the review form's picker. */
+.review-photos {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.review-photos li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.review-photos img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  display: block;
+}
+.photo-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.photo-picker-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.review-form label.photo-add {
+  display: inline-flex;
+  flex-direction: row;
+  position: relative;
+  cursor: pointer;
+}
+.photo-add:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

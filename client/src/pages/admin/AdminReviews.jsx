@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router';
 import { query, request } from '../../api.js';
 import Pager from '../../components/Pager.jsx';
 import Stars from '../../components/Stars.jsx';
+import { ReviewPhotos } from '../../components/Reviews.jsx';
 import { formatDate } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 
@@ -86,6 +87,7 @@ export default function AdminReviews() {
                     <Stars rating={r.rating} />
                     {r.title && <strong className="block">{r.title}</strong>}
                     {r.body && <span className="review-excerpt">{r.body}</span>}
+                    <ReviewPhotos review={r} />
                   </td>
                   <td>
                     {r.product ? <Link to={`/p/${r.product.slug}`}>{r.product.title}</Link> : 'Deleted product'}
