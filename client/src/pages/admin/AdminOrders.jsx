@@ -157,6 +157,11 @@ export default function AdminOrders() {
                   </td>
                   <td>
                     <Link to={`/admin/orders/${o.id}`}>#{orderNumber(o)}</Link>
+                    {o.notes.length > 0 && (
+                      <span className="muted small block">
+                        {o.notes.length} {o.notes.length === 1 ? 'note' : 'notes'}
+                      </span>
+                    )}
                   </td>
                   <td>{formatDate(o.createdAt)}</td>
                   <td>

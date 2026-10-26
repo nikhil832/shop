@@ -173,6 +173,12 @@ const orderQuery = z.object({
     .optional(),
 });
 const bulkShipBody = z.object({ ids: orderIds });
+// Admins' private notes on an order ("customer called, deliver after 6 pm"); `onSlip` also prints it on the packing slip.
+const MAX_NOTES = 100;
+const noteBody = z.object({
+  text: z.string().trim().min(1, 'Write the note').max(1000, 'At most 1000 characters'),
+  onSlip: z.boolean().default(false),
+});
 
 const reviewQuery = z.object({
   status: z.enum(['visible', 'hidden']).optional(),
@@ -637,6 +643,47 @@ export function adminRouter(ctx) {
     const _id = parseObjectId(req.params.id, 'order id');
     const { status, shipment } = parse(statusBody, req.body);
     res.json((await withCustomers([await advanceOrder(req, _id, status, shipment)]))[0]);
+  });
+
+  router.post('/admin/orders/:id/notes', async (req, res) => {
+    const _id = parseObjectId(req.params.id, 'order id');
+    const { text, onSlip } = parse(noteBody, req.body);
+    const note = { _id: new ObjectId(), text, onSlip, by: { id: req.user._id, name: req.user.name }, at: new Date() };
+    const doc = await orders.findOneAndUpdate(
+      { _id, [`notes.${MAX_NOTES - 1}`]: { $exists: false } },
+      { $push: { notes: note } },
+      { returnDocument: 'after' },
+    );
+    if (!doc) {
+      if (!(await orders.findOne({ _id }, { projection: { _id: 1 } }))) throw new HttpError(404, 'Order not found');
+      throw new HttpError(409, `An order can have at most ${MAX_NOTES} notes`);
+    }
+    await logActivity(db, req.user, {
+      area: 'orders',
+      action: 'Added a note to',
+      target: orderTarget(doc),
+      changes: [{ field: onSlip ? 'Note (on the packing slip)' : 'Note', to: text }],
+    });
+    res.status(201).json((await withCustomers([doc]))[0]);
+  });
+
+  router.delete('/admin/orders/:id/notes/:noteId', async (req, res) => {
+    const _id = parseObjectId(req.params.id, 'order id');
+    const noteId = parseObjectId(req.params.noteId, 'note id');
+    const before = await orders.findOneAndUpdate(
+      { _id, 'notes._id': noteId },
+      { $pull: { notes: { _id: noteId } } },
+      { returnDocument: 'before' },
+    );
+    if (!before) throw new HttpError(404, 'Note not found');
+    const note = before.notes.find((n) => n._id.equals(noteId));
+    await logActivity(db, req.user, {
+      area: 'orders',
+      action: 'Deleted a note from',
+      target: orderTarget(before),
+      changes: [{ field: 'Note', from: note.text, to: 'deleted' }],
+    });
+    res.json((await withCustomers([await orders.findOne({ _id })]))[0]);
   });
 
   // Marks several placed orders shipped at once (each emailed and logged as if done one by one). Orders that can't be

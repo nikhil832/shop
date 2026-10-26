@@ -3,7 +3,15 @@ import { lineKey } from '../../cart.js';
 import { Link, useParams } from 'react-router';
 import { request } from '../../api.js';
 import OrderSummary from '../../components/OrderSummary.jsx';
-import { formatDate, formatPrice, hasInvoice, orderNumber, paymentLabel, returnStatusLabel } from '../../format.js';
+import {
+  formatDate,
+  formatPrice,
+  formatTime,
+  hasInvoice,
+  orderNumber,
+  paymentLabel,
+  returnStatusLabel,
+} from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 import NotFound from '../NotFound.jsx';
 import { ShipmentDetails } from '../Order.jsx';
@@ -74,6 +82,63 @@ function ShipmentForm({ shipment, submitLabel, busy, onSubmit, onCancel }) {
   );
 }
 
+// Admins' private notes: customers never see them. A note can also go on the packing slip ("deliver after 6 pm").
+function OrderNotes({ order, onChange, busy }) {
+  function add(e) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    onChange(() =>
+      request(`/admin/orders/${order.id}/notes`, {
+        method: 'POST',
+        body: { text: data.get('text'), onSlip: data.get('onSlip') === 'on' },
+      }),
+    ).then((ok) => ok && form.reset());
+  }
+  function remove(note) {
+    if (!window.confirm('Delete this note?')) return;
+    onChange(() => request(`/admin/orders/${order.id}/notes/${note.id}`, { method: 'DELETE' }));
+  }
+  return (
+    <section className="panel order-notes" aria-labelledby="order-notes">
+      <h2 id="order-notes">Private notes</h2>
+      <p className="muted small">Only admins see these.</p>
+      {order.notes.length > 0 && (
+        <ul className="note-list">
+          {order.notes.map((n) => (
+            <li key={n.id}>
+              <p className="review-body">{n.text}</p>
+              <span className="muted small">
+                {n.by?.name ?? 'An admin'} · {formatDate(n.at)}, {formatTime(n.at)}
+                {n.onSlip && ' · on the packing slip'}
+                {' · '}
+                <button type="button" className="link" onClick={() => remove(n)} disabled={busy}>
+                  Delete
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form className="review-form" onSubmit={add}>
+        <label>
+          Add a note
+          <textarea name="text" rows={2} maxLength={1000} required />
+        </label>
+        <label className="check">
+          <input type="checkbox" name="onSlip" />
+          Also print on the packing slip
+        </label>
+        <div className="form-actions">
+          <button type="submit" className="btn small" disabled={busy}>
+            Add note
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
 export default function AdminOrder() {
   const { id } = useParams();
   const { data, error } = useFetch(`/admin/orders/${encodeURIComponent(id)}`);
@@ -89,13 +154,16 @@ export default function AdminOrder() {
   const order = updated?.id === data.id ? updated : data;
   const { address, customer } = order;
 
+  // Returns whether it worked (the notes form clears itself then).
   async function run(change) {
     setAction({ busy: true, error: null });
     try {
       setUpdated(await change());
       setAction({ busy: false, error: null });
+      return true;
     } catch (err) {
       setAction({ busy: false, error: err.message });
+      return false;
     }
   }
 
@@ -193,6 +261,8 @@ export default function AdminOrder() {
               </Link>
             </section>
           )}
+
+          <OrderNotes order={order} onChange={run} busy={action.busy} />
 
           <section className="panel admin-columns">
             <div>

@@ -94,6 +94,13 @@ export default function AdminPackingSlips() {
                 ))}
               </tbody>
             </table>
+            {order.notes
+              .filter((n) => n.onSlip)
+              .map((n) => (
+                <p key={n.id} className="slip-note">
+                  <strong>Note:</strong> {n.text}
+                </p>
+              ))}
             <p className="slip-payment">{paymentNote(order)}</p>
           </article>
         );

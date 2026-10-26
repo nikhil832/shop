@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 // Named to run after catalog.spec.js, since it places orders. It only ships the two orders it places.
 const ADMIN = { email: 'admin@bazaar.demo', password: 'demo-admin-123' }; // created by server/src/demo.js
 
-// A Cash on Delivery order of one book, by a new customer, through the API (its own cookies).
+// A Cash on Delivery order of two books, by a new customer, through the API (its own cookies).
 async function placeOrder(browser, name) {
   const context = await browser.newContext();
   const request = context.request;
@@ -26,9 +26,8 @@ async function placeOrder(browser, name) {
     },
   });
   expect(res.status()).toBe(201);
-  const order = await res.json();
-  await context.close();
-  return order;
+  // The customer's own API client comes along, for checking what they see; closed when the test ends.
+  return { ...(await res.json()), customer: request };
 }
 
 test('an admin prints packing slips for chosen orders, then ships them together', async ({ page, browser }) => {
@@ -70,4 +69,36 @@ test('an admin prints packing slips for chosen orders, then ships them together'
 
   await page.goto(`/admin/orders/${first.id}`);
   await expect(page.getByText('Shipped').first()).toBeVisible();
+});
+
+test('private notes stay with admins; a note marked for the slip prints on it', async ({ page, browser }) => {
+  const order = await placeOrder(browser, 'Ira Ghosh');
+  await page.goto(`/login?next=${encodeURIComponent(`/admin/orders/${order.id}`)}`);
+  await page.getByLabel('Email').fill(ADMIN.email);
+  await page.getByLabel('Password').fill(ADMIN.password);
+  await page.getByRole('button', { name: 'Log in' }).click();
+
+  const notes = page.getByRole('region', { name: 'Private notes' });
+  await notes.getByLabel('Add a note').fill('Customer asked for a refund on the gift wrap: done by UPI');
+  await notes.getByRole('button', { name: 'Add note' }).click();
+  await expect(notes.getByRole('listitem')).toHaveCount(1);
+  await expect(notes.getByLabel('Add a note')).toHaveValue('');
+  await notes.getByLabel('Add a note').fill('Deliver after 6 pm');
+  await notes.getByLabel('Also print on the packing slip').check();
+  await notes.getByRole('button', { name: 'Add note' }).click();
+  await expect(notes.getByRole('listitem')).toHaveCount(2);
+  await expect(notes.getByRole('listitem').nth(1)).toContainText('on the packing slip');
+
+  await page.goto(`/admin/orders?q=${order.number}`);
+  await expect(page.getByRole('row', { name: new RegExp(`#${order.number}`) })).toContainText('2 notes');
+
+  await page.goto(`/admin/orders/slips?ids=${order.id}`);
+  const slip = page.getByRole('article', { name: `Packing slip for order #${order.number}` });
+  await expect(slip).toContainText('Note: Deliver after 6 pm');
+  await expect(slip).not.toContainText('gift wrap');
+
+  // The customer's own view of the order has neither.
+  const html = await (await order.customer.get(`/api/orders/${order.id}`)).text();
+  expect(html).not.toContain('gift wrap');
+  expect(html).not.toContain('Deliver after 6 pm');
 });

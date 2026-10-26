@@ -139,6 +139,16 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   cancelledBy: doc.cancelledBy ?? null,
   // The GST lines of its tax invoice, for orders placed with GST on (gst.js); null otherwise.
   gstInvoice: gstInvoice(doc),
+  // Admins' private notes (admin.js); never in what a customer gets.
+  ...(admin && {
+    notes: (doc.notes ?? []).map((n) => ({
+      id: n._id.toString(),
+      text: n.text,
+      onSlip: n.onSlip,
+      by: n.by,
+      at: n.at,
+    })),
+  }),
 });
 
 // Cancels the order matching `filter` if its status is one of `from`, and puts its stock back, in one transaction.
