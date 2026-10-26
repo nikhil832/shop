@@ -7,8 +7,16 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea | Why | To start |
-| --- | ---- | --- | -------- |
+| #   | Idea                                                                                                                                                    | Why                                                                                                                            | To start                |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------- |
+| 1   | **"Did you mean…?" for searches with no results**: suggest the closest product, brand or category name when a search finds nothing ("samsng" → Samsung) | A typo today ends in an empty page; this keeps the visitor shopping, without the weak results that partial matches would bring | "start did you mean"    |
+| 2   | **Buy again**: one button on a past order puts its items (still sold, at today's prices) back in the cart                                               | Quick reorders for books, kitchen items and the like                                                                           | "start buy again"       |
+| 3   | **Storage meter**: the dashboard shows how much of Atlas's free 512 MB is used, and warns admins by email at 80%                                        | Photos (products and now reviews) fill it; today it would only show when saves start failing                                   | "start storage meter"   |
+| 4   | **Credit notes for returns**: a GST credit note for each approved return, printable like the invoice, and taken off the GST summary                     | The GST summary can't subtract returns today; this completes the GST paperwork                                                 | "start credit notes"    |
+| 5   | **Error reports from the browser**: when a page fails to load or crashes for a visitor, the store records it, and admins see them in a list             | Problems customers hit (like the ones fixed this week) show up before anyone complains                                         | "start error reports"   |
+| 6   | **New-device login alerts for admins**: an email when an admin account logs in from a new browser or network                                            | Admin accounts can refund money and see addresses; an unexpected login is worth knowing about at once                          | "start login alerts"    |
+| 7   | **Address book**: customers keep several addresses (home, office, parents) and pick one at checkout                                                     | Today one address is saved, and each order to a different place replaces it                                                    | "start address book"    |
+| 8   | **Frequently bought together**: on a product page, what other customers bought in the same orders                                                       | Uses real orders instead of category alone, which suggests better add-ons                                                      | "start bought together" |
 
 ## Set aside
 
