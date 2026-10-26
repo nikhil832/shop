@@ -286,3 +286,11 @@ test('the dashboard downloads a GST summary by place of supply and rate', async 
     'Place of supply,State code,GST rate (%),Orders,Taxable value (₹),CGST (₹),SGST (₹),IGST (₹),Total tax (₹)',
   );
 });
+
+test('the dashboard shows how full the database is', async ({ page }) => {
+  await logIn(page, ADMIN);
+  const storage = page.getByRole('region', { name: 'Storage' });
+  await expect(storage).toContainText(/[\d.]+ (KB|MB) of 512\.0 MB used \([\d.]+%\)/);
+  await expect(storage.getByRole('meter', { name: 'Database storage used' })).toBeVisible();
+  await expect(storage).toContainText('Biggest:');
+});

@@ -14,6 +14,7 @@ import { deleteUnusedImages } from './routes/images.js';
 import { sendLowStockEmail } from './lowStockEmail.js';
 import { loadConfig } from './config.js';
 import { previewRouter } from './preview.js';
+import { checkStorage } from './storage.js';
 
 const config = loadConfig();
 const CLIENT_DIST = fileURLToPath(new URL('../../client/dist', import.meta.url));
@@ -40,7 +41,14 @@ async function cleanUpImages() {
   if (deleted) console.log(`Deleted ${deleted} unused uploaded photo(s), ${(bytes / 1024 / 1024).toFixed(1)} MB.`);
 }
 cleanUpImages().catch((err) => console.error(err));
-const imageSweeper = setInterval(() => cleanUpImages().catch((err) => console.error(err)), 60 * 60_000);
+// After each clean-up, how full the database is (an email to the admins at 80% and 95%).
+const imageSweeper = setInterval(
+  () =>
+    cleanUpImages()
+      .then(() => checkStorage(ctx))
+      .catch((err) => console.error(err)),
+  60 * 60_000,
+);
 
 // In production, serve the built React app from the same server. Pages get link-preview tags (preview.js); the
 // static files' own index.html is not served as-is (index: false), so the home page gets them too.

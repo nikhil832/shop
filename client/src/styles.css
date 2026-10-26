@@ -2503,3 +2503,26 @@ textarea {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* Admin dashboard: the storage meter. */
+.storage-meter p {
+  margin: 0 0 8px;
+}
+.meter {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.meter span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.meter-high span {
+  background: var(--warning);
+}
+.meter-full span {
+  background: var(--danger);
+}

@@ -5,6 +5,7 @@ import { parse } from '../http.js';
 import { LOW_STOCK } from './admin.js';
 import { logActivity } from '../activity.js';
 import { UNANSWERED } from './questions.js';
+import { storageUse } from '../storage.js';
 
 // The `settings` document of the morning low-stock email (lowStockEmail.js): { day, at, enabled }.
 export const LOW_STOCK_EMAIL = 'lowStockEmail';
@@ -66,7 +67,7 @@ const totalsGroup = {
   itemsSold: { $sum: { $sum: '$items.qty' } },
 };
 
-export function dashboardRouter({ db }) {
+export function dashboardRouter({ db, config }) {
   const orders = db.collection('orders');
   const returns = db.collection('returns');
   const products = db.collection('products');
@@ -82,7 +83,7 @@ export function dashboardRouter({ db }) {
     const previousFrom = new Date(from.getTime() - days * DAY);
     const current = { createdAt: { $gte: from }, status: { $in: SOLD } };
 
-    const [[stats], [refundStats], toShip, lowStock, lowStockCount, emailSettings, questionsToAnswer] =
+    const [[stats], [refundStats], toShip, lowStock, lowStockCount, emailSettings, questionsToAnswer, storage] =
       await Promise.all([
         orders
           .aggregate([
@@ -175,6 +176,7 @@ export function dashboardRouter({ db }) {
         products.countDocuments({ active: true, ...LOW }),
         db.collection('settings').findOne({ _id: LOW_STOCK_EMAIL }),
         db.collection('questions').countDocuments(UNANSWERED),
+        storageUse(db, config),
       ]);
 
     const totals = stats.current[0] ?? { revenue: 0, orders: 0, discount: 0, itemsSold: 0 };
@@ -250,6 +252,8 @@ export function dashboardRouter({ db }) {
       lowStockEmail: emailSettings?.enabled !== false,
       // Customers' questions on products waiting for an answer.
       questionsToAnswer,
+      // How full the database is (storage.js).
+      storage,
     });
   });
 

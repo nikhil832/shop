@@ -89,6 +89,53 @@ function ExportOrders({ from, to }) {
   );
 }
 
+// "12.3 MB", or "640 KB" below a megabyte.
+const mb = (bytes) =>
+  bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
+// How full the database is (Atlas's free tier: 512 MB) and what fills it; orange from 80%, red from 95%.
+function StorageMeter({ storage }) {
+  if (!storage) {
+    return (
+      <section className="panel storage-meter" aria-labelledby="storage-heading">
+        <h2 id="storage-heading">Storage</h2>
+        <p className="muted">The database didn&apos;t say how full it is just now.</p>
+      </section>
+    );
+  }
+  const level = storage.percent >= 95 ? 'full' : storage.percent >= 80 ? 'high' : 'ok';
+  return (
+    <section className="panel storage-meter" aria-labelledby="storage-heading">
+      <h2 id="storage-heading">Storage</h2>
+      <p>
+        <strong>{mb(storage.usedBytes)}</strong> of {mb(storage.limitBytes)} used ({storage.percent}%)
+      </p>
+      <div
+        className={`meter meter-${level}`}
+        role="meter"
+        aria-label="Database storage used"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.min(100, storage.percent)}
+        aria-valuetext={`${storage.percent}% used`}
+      >
+        <span style={{ width: `${Math.min(100, storage.percent)}%` }} />
+      </div>
+      <p className="muted small">
+        {storage.collections.length > 0 && 'Biggest: '}
+        {storage.collections
+          .slice(0, 4)
+          .map((c) => `${c.label} ${mb(c.bytes)}`)
+          .join(' · ')}
+        {storage.collections.length > 0 && '. '}
+        {level === 'ok'
+          ? 'Admins are emailed if it passes 80%.'
+          : 'Make room: delete photos of products you no longer sell, or move to a bigger Atlas plan.'}
+      </p>
+    </section>
+  );
+}
+
 // A round number at or above `value` for the top of the axis: 1, 2 or 5 times a power of ten.
 function niceMax(value) {
   if (value <= 0) return 100_00;
@@ -386,6 +433,7 @@ export default function AdminDashboard() {
           </div>
 
           <ExportOrders key={days} from={data.daily[0].date} to={data.daily.at(-1).date} />
+          <StorageMeter storage={data.storage} />
         </div>
       )}
     </div>

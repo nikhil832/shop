@@ -16,6 +16,8 @@ export function loadConfig() {
     // visitor would share one network for the login limit.
     clientIpHeader:
       process.env.CLIENT_IP_HEADER?.trim().toLowerCase() || (process.env.RENDER ? 'cf-connecting-ip' : null),
+    // The database's space, for the storage meter: Atlas's free tier is 512 MB.
+    storageLimitMb: Number(process.env.STORAGE_LIMIT_MB) || 512,
     razorpay: razorpayConfig(),
     mail: mailConfig(),
     // Google Search Console's HTML-tag check: the content of its <meta name="google-site-verification">. Only letters,
