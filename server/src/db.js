@@ -19,74 +19,83 @@ export async function ensureIndexes(db) {
     .catch((err) => {
       if (![26, 27].includes(err.code)) throw err; // NamespaceNotFound, IndexNotFound
     });
-  await Promise.all([
-    // Product questions: the answered ones of a product, an asker's own, and the admin's lists.
-    db.collection('questions').createIndex({ productId: 1, hidden: 1, 'answer.at': -1 }),
-    db.collection('questions').createIndex({ userId: 1, productId: 1 }),
-    db.collection('questions').createIndex({ hidden: 1, answer: 1, createdAt: 1 }),
-    // The admin activity log: newest first, by area or person; entries go after ACTIVITY_DAYS (a year).
-    db.collection('activity').createIndex({ at: 1 }, { expireAfterSeconds: ACTIVITY_DAYS * 86_400 }),
-    db.collection('activity').createIndex({ area: 1, at: -1 }),
-    db.collection('activity').createIndex({ 'by.id': 1, at: -1 }),
-    db.collection('categories').createIndex({ slug: 1 }, { unique: true }),
-    db.collection('products').createIndex({ slug: 1 }, { unique: true }),
-    db.collection('products').createIndex({ categoryId: 1, price: 1 }),
-    db.collection('products').createIndex({ brand: 1 }),
-    db.collection('users').createIndex({ email: 1 }, { unique: true }),
-    db.collection('sessions').createIndex({ tokenHash: 1 }, { unique: true }),
-    // MongoDB deletes sessions once expiresAt has passed.
-    db.collection('sessions').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
-    // Password reset links: looked up by token hash, counted per user for the hourly limit, deleted once expired.
-    db.collection('passwordResets').createIndex({ tokenHash: 1 }, { unique: true }),
-    db.collection('passwordResets').createIndex({ userId: 1, createdAt: -1 }),
-    db.collection('passwordResets').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
-    // Email change links: one-time tokens, counted per user per hour, deleted a day after they stop working.
-    db.collection('emailChanges').createIndex({ tokenHash: 1 }, { unique: true }),
-    db.collection('emailChanges').createIndex({ userId: 1, createdAt: -1 }),
-    db.collection('emailChanges').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 86_400 }),
-    // Login attempts per (hashed) email, counted for the lock and deleted once they no longer count.
-    db.collection('loginAttempts').createIndex({ key: 1, at: -1 }),
-    db.collection('loginAttempts').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
-    db.collection('orders').createIndex({ userId: 1, createdAt: -1 }),
-    // The admin order list (newest first) and the sales dashboard (orders since a date).
-    db.collection('orders').createIndex({ createdAt: -1 }),
-    db
-      .collection('orders')
-      .createIndex({ status: 1, expiresAt: 1 }, { partialFilterExpression: { status: 'awaiting_payment' } }),
-    db
-      .collection('orders')
-      .createIndex(
-        { 'payment.razorpayOrderId': 1 },
-        { partialFilterExpression: { 'payment.razorpayOrderId': { $exists: true } } },
-      ),
-    db
-      .collection('orders')
-      .createIndex({ number: 1 }, { unique: true, partialFilterExpression: { number: { $exists: true } } }),
-    // One review per customer per product; listed newest first per product and (for admins) overall.
-    db.collection('reviews').createIndex({ productId: 1, userId: 1 }, { unique: true }),
-    db.collection('reviews').createIndex({ productId: 1, hidden: 1, createdAt: -1 }),
-    db.collection('reviews').createIndex({ createdAt: -1 }),
-    db.collection('wishlist').createIndex({ userId: 1, productId: 1 }, { unique: true }),
-    // Coupons by code; each customer uses a coupon once; a cancelled order's use is found by order.
-    // The unused-upload sweep looks at uploads older than a day.
-    db.collection('images').createIndex({ createdAt: 1 }),
-    db.collection('coupons').createIndex({ code: 1 }, { unique: true }),
-    db.collection('couponRedemptions').createIndex({ couponId: 1, userId: 1 }, { unique: true }),
-    db.collection('couponRedemptions').createIndex({ orderId: 1 }),
-    // One back-in-stock alert per customer per product, or per variant of it (variantId missing for the whole
-    // product); the sweep looks them up by product.
-    db.collection('stockAlerts').createIndex({ userId: 1, productId: 1, variantId: 1 }, { unique: true }),
-    db.collection('stockAlerts').createIndex({ productId: 1 }),
-    db.collection('wishlist').createIndex({ userId: 1, addedAt: -1 }),
-    // Returns: an order's (checked when asking for one) and the admin list by status.
-    db.collection('returns').createIndex({ orderId: 1, createdAt: -1 }),
-    db.collection('returns').createIndex({ status: 1, createdAt: -1 }),
-    // Delivery areas by PIN code prefix, one per prefix.
-    db.collection('deliveryZones').createIndex({ prefix: 1 }, { unique: true }),
-    // Two-step login tickets, between the password and the code.
-    db.collection('loginChallenges').createIndex({ tokenHash: 1 }, { unique: true }),
-    db.collection('loginChallenges').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
-    // Hourly limits (takeHourlySlot): gone an hour after their last use.
-    db.collection('rateLimits').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
-  ]);
+  // One createIndexes command per collection, collections in parallel. Separate commands for one collection, all at
+  // once while it was still being created, once left the products slug index missing at the start of a CI test.
+  await Promise.all(
+    Object.entries(INDEXES).map(([name, specs]) =>
+      db.collection(name).createIndexes(specs.map(([key, options = {}]) => ({ key, ...options }))),
+    ),
+  );
 }
+
+// Every collection's indexes: [keys, options?].
+const INDEXES = {
+  // Product questions: the answered ones of a product, an asker's own, and the admin's lists.
+  questions: [
+    [{ productId: 1, hidden: 1, 'answer.at': -1 }],
+    [{ userId: 1, productId: 1 }],
+    [{ hidden: 1, answer: 1, createdAt: 1 }],
+  ],
+  // The admin activity log: newest first, by area or person; entries go after ACTIVITY_DAYS (a year).
+  activity: [
+    [{ at: 1 }, { expireAfterSeconds: ACTIVITY_DAYS * 86_400 }],
+    [{ area: 1, at: -1 }],
+    [{ 'by.id': 1, at: -1 }],
+  ],
+  categories: [[{ slug: 1 }, { unique: true }]],
+  products: [[{ slug: 1 }, { unique: true }], [{ categoryId: 1, price: 1 }], [{ brand: 1 }]],
+  users: [[{ email: 1 }, { unique: true }]],
+  // MongoDB deletes sessions once expiresAt has passed.
+  sessions: [
+    [{ tokenHash: 1 }, { unique: true }],
+    [{ expiresAt: 1 }, { expireAfterSeconds: 0 }],
+  ],
+  // Password reset links: looked up by token hash, counted per user for the hourly limit, deleted once expired.
+  passwordResets: [
+    [{ tokenHash: 1 }, { unique: true }],
+    [{ userId: 1, createdAt: -1 }],
+    [{ expiresAt: 1 }, { expireAfterSeconds: 0 }],
+  ],
+  // Email change links: one-time tokens, counted per user per hour, deleted a day after they stop working.
+  emailChanges: [
+    [{ tokenHash: 1 }, { unique: true }],
+    [{ userId: 1, createdAt: -1 }],
+    [{ expiresAt: 1 }, { expireAfterSeconds: 86_400 }],
+  ],
+  // Login attempts per (hashed) email, counted for the lock and deleted once they no longer count.
+  loginAttempts: [[{ key: 1, at: -1 }], [{ expiresAt: 1 }, { expireAfterSeconds: 0 }]],
+  orders: [
+    [{ userId: 1, createdAt: -1 }],
+    // The admin order list (newest first) and the sales dashboard (orders since a date).
+    [{ createdAt: -1 }],
+    [{ status: 1, expiresAt: 1 }, { partialFilterExpression: { status: 'awaiting_payment' } }],
+    [{ 'payment.razorpayOrderId': 1 }, { partialFilterExpression: { 'payment.razorpayOrderId': { $exists: true } } }],
+    [{ number: 1 }, { unique: true, partialFilterExpression: { number: { $exists: true } } }],
+  ],
+  // One review per customer per product; listed newest first per product and (for admins) overall.
+  reviews: [
+    [{ productId: 1, userId: 1 }, { unique: true }],
+    [{ productId: 1, hidden: 1, createdAt: -1 }],
+    [{ createdAt: -1 }],
+  ],
+  wishlist: [[{ userId: 1, productId: 1 }, { unique: true }], [{ userId: 1, addedAt: -1 }]],
+  // The unused-upload sweep looks at uploads older than a day.
+  images: [[{ createdAt: 1 }]],
+  // Coupons by code; each customer uses a coupon once; a cancelled order's use is found by order.
+  coupons: [[{ code: 1 }, { unique: true }]],
+  couponRedemptions: [[{ couponId: 1, userId: 1 }, { unique: true }], [{ orderId: 1 }]],
+  // One back-in-stock alert per customer per product, or per variant of it (variantId missing for the whole
+  // product); the sweep looks them up by product.
+  stockAlerts: [[{ userId: 1, productId: 1, variantId: 1 }, { unique: true }], [{ productId: 1 }]],
+  // Returns: an order's (checked when asking for one) and the admin list by status.
+  returns: [[{ orderId: 1, createdAt: -1 }], [{ status: 1, createdAt: -1 }]],
+  // Delivery areas by PIN code prefix, one per prefix.
+  deliveryZones: [[{ prefix: 1 }, { unique: true }]],
+  // Two-step login tickets, between the password and the code.
+  loginChallenges: [
+    [{ tokenHash: 1 }, { unique: true }],
+    [{ expiresAt: 1 }, { expireAfterSeconds: 0 }],
+  ],
+  // Hourly limits (takeHourlySlot): gone an hour after their last use.
+  rateLimits: [[{ expiresAt: 1 }, { expireAfterSeconds: 0 }]],
+};
