@@ -19,6 +19,7 @@ import { questionsRouter } from './routes/questions.js';
 import { returnsRouter } from './routes/returns.js';
 import { stockAlertsRouter } from './routes/stockAlerts.js';
 import { wishlistRouter } from './routes/wishlist.js';
+import { savedCartRouter } from './routes/savedCart.js';
 
 // Builds the Express app around an injected database. ctx = { db, client, config, razorpay, mail } (razorpay is null
 // when online payments aren't configured; mail sends or logs order emails).
@@ -48,6 +49,7 @@ export function createApp(ctx) {
   api.use(questionsRouter(ctx));
   api.use(returnsRouter(ctx));
   api.use(wishlistRouter(ctx));
+  api.use(savedCartRouter(ctx));
   api.use(stockAlertsRouter(ctx));
   api.use(couponsRouter(ctx));
   api.use(dashboardRouter(ctx));

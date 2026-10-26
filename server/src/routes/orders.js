@@ -31,20 +31,19 @@ export const orderTotals = (subtotal) => {
 
 // A cart line: a product, and which variant for a product that has them (e.g. its size).
 const lineKey = (i) => (i.variantId ? `${i.productId}.${i.variantId}` : i.productId);
-const cartItems = z
-  .array(
-    z.object({
-      productId: z.string().regex(/^[0-9a-f]{24}$/, 'Invalid product id'),
-      variantId: z
-        .string()
-        .regex(/^[0-9a-f]{24}$/, 'Invalid variant id')
-        .optional(),
-      qty: z.number().int().min(1).max(MAX_QTY),
-    }),
-  )
-  .min(1, 'Your cart is empty')
-  .max(MAX_CART_ITEMS)
-  .refine((items) => new Set(items.map(lineKey)).size === items.length, 'Duplicate product in cart');
+const cartLine = z.object({
+  productId: z.string().regex(/^[0-9a-f]{24}$/, 'Invalid product id'),
+  variantId: z
+    .string()
+    .regex(/^[0-9a-f]{24}$/, 'Invalid variant id')
+    .optional(),
+  qty: z.number().int().min(1).max(MAX_QTY),
+});
+const eachOnce = (lines) =>
+  lines.refine((items) => new Set(items.map(lineKey)).size === items.length, 'Duplicate product in cart');
+const cartItems = eachOnce(z.array(cartLine).min(1, 'Your cart is empty').max(MAX_CART_ITEMS));
+// What a saved cart holds (routes/savedCart.js): the same lines, and it may be empty.
+export const savedCartLines = eachOnce(z.array(cartLine).max(MAX_CART_ITEMS));
 
 // GET /cart?items=<productId>[.<variantId>]:<qty>,…
 const quoteQuery = z.object({

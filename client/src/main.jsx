@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { AuthProvider } from './auth.jsx';
 import Layout from './components/Layout.jsx';
+import CartSync from './cartSync.jsx';
 import Home from './pages/Home.jsx';
 import Search from './pages/Search.jsx';
 import Product from './pages/Product.jsx';
@@ -75,6 +76,7 @@ Promise.resolve(OPENED_ON?.preload())
     createRoot(document.getElementById('root')).render(
       <StrictMode>
         <AuthProvider>
+          <CartSync />
           <BrowserRouter>
             <Routes>
               <Route element={<Layout />}>

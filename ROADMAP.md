@@ -7,14 +7,13 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                                                                | Why                                                                                           | To start                    |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------- |
-| 1   | **Cart saved to the account**: a logged-in customer's cart follows them between phone and laptop, with one reminder email for a cart left for a day | Today the cart lives only in one browser, so carts started on a phone are lost on the laptop  | "start saved carts"         |
-| 2   | **Packing slips and shipping in bulk**: print slips for several orders at once and mark them shipped together                                       | Saves time on busy days: today each order is opened and shipped one by one                    | "start packing slips"       |
-| 3   | **Private notes on orders**: notes only admins see ("customer called, deliver after 6 pm")                                                          | Keeps what was agreed with a customer in one place, also for other admins                     | "start order notes"         |
-| 4   | **Photos in reviews**: buyers add up to 3 photos to their review                                                                                    | Real photos make reviews more convincing than the generated product pictures                  | "start review photos"       |
-| 5   | **GST in the order export**: taxable value, CGST, SGST and IGST columns in the CSV                                                                  | What an accountant needs for GST returns, now that invoices have it                           | "start GST export"          |
-| 6   | **Accessibility check in the tests**: an automatic check (axe) of the main pages on every push                                                      | Catches problems for people using screen readers or keyboards before they reach the live site | "start accessibility check" |
+| #   | Idea                                                                                                          | Why                                                                                           | To start                    |
+| --- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------- |
+| 1   | **Packing slips and shipping in bulk**: print slips for several orders at once and mark them shipped together | Saves time on busy days: today each order is opened and shipped one by one                    | "start packing slips"       |
+| 2   | **Private notes on orders**: notes only admins see ("customer called, deliver after 6 pm")                    | Keeps what was agreed with a customer in one place, also for other admins                     | "start order notes"         |
+| 3   | **Photos in reviews**: buyers add up to 3 photos to their review                                              | Real photos make reviews more convincing than the generated product pictures                  | "start review photos"       |
+| 4   | **GST in the order export**: taxable value, CGST, SGST and IGST columns in the CSV                            | What an accountant needs for GST returns, now that invoices have it                           | "start GST export"          |
+| 5   | **Accessibility check in the tests**: an automatic check (axe) of the main pages on every push                | Catches problems for people using screen readers or keyboards before they reach the live site | "start accessibility check" |
 
 ## Set aside
 
@@ -67,3 +66,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | GST invoices: store GSTIN and rates per category in Admin → GST, tax invoices with CGST/SGST or IGST for orders placed while on     | Stage 38 (`git log --grep "Stage 38"`) |
 | Faster first visit: admin panel and rarely used pages load on first use; built files cached for a year                              | Stage 39 (`git log --grep "Stage 39"`) |
 | Price-drop emails for wishlist items (5% or more, one email per customer, switch on the account page)                               | Stage 40 (`git log --grep "Stage 40"`) |
+| Cart saved to the account, across devices, with one reminder email for a cart left a day                                            | Stage 41 (`git log --grep "Stage 41"`) |

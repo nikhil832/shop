@@ -57,14 +57,16 @@ export default function Account() {
     saveDetails(async () => setUser((await request('/account', { method: 'PATCH', body: { name } })).user), 'Saved');
   }
 
-  // Saved as soon as it's ticked or unticked.
-  function changePriceDrops(e) {
-    const priceDropEmails = e.target.checked;
-    saveUpdates(
-      async () =>
-        setUser((await request('/account/email-preferences', { method: 'PUT', body: { priceDropEmails } })).user),
-      priceDropEmails ? 'Price-drop emails are on.' : 'Price-drop emails are off.',
-    );
+  // Saved as soon as one is ticked or unticked.
+  function changeEmails(choice, label) {
+    return (e) => {
+      const on = e.target.checked;
+      saveUpdates(
+        async () =>
+          setUser((await request('/account/email-preferences', { method: 'PUT', body: { [choice]: on } })).user),
+        `${label} ${on ? 'on' : 'off'}.`,
+      );
+    };
   }
 
   function submitAddress(e) {
@@ -164,8 +166,22 @@ export default function Account() {
       <section className="panel account-section" aria-labelledby="updates-heading">
         <h2 id="updates-heading">Email updates</h2>
         <label className="check">
-          <input type="checkbox" checked={user.priceDropEmails} disabled={updates.busy} onChange={changePriceDrops} />
+          <input
+            type="checkbox"
+            checked={user.priceDropEmails}
+            disabled={updates.busy}
+            onChange={changeEmails('priceDropEmails', 'Price-drop emails are')}
+          />
           Tell me when something on my wishlist gets 5% cheaper or more
+        </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={user.cartReminderEmails}
+            disabled={updates.busy}
+            onChange={changeEmails('cartReminderEmails', 'Cart reminders are')}
+          />
+          Remind me once about things left in my cart for a day
         </label>
         <Feedback state={updates} />
         <p className="muted small">Emails about your orders always come.</p>

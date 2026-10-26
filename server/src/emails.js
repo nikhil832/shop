@@ -188,6 +188,39 @@ ${button('View the product', url)}
   return { subject, text, html };
 }
 
+// A saved cart left alone for a day: what's in it at today's prices. `lines` are [{ product, variant, qty, price }].
+export function cartReminderEmail(user, lines, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = user.name.split(/\s+/)[0];
+  const subject = 'You left something in your cart';
+  const cartUrl = `${publicUrl}/cart`;
+  const accountUrl = `${publicUrl}/account`;
+  const rows = lines.map((l) => ({
+    title: variantTitle(l.product, l.variant),
+    text: `${l.qty > 1 ? `${l.qty} × ` : ''}${rupees(l.price)}`,
+  }));
+  const text = [
+    `Hi ${firstName},`,
+    'Your cart is saved, ready when you are:',
+    rows.map((r) => `${r.title}: ${r.text}`).join('\n'),
+    `Go to your cart: ${cartUrl}`,
+    `Prices and stock can change until you order. We send this once per cart. To stop these emails, untick them on your account page: ${accountUrl}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const cell = 'padding:8px 0;border-bottom:1px solid #e5e7eb';
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p>Your cart is saved, ready when you are:</p>
+<table style="width:100%;border-collapse:collapse;margin:8px 0 16px">
+${rows.map((r) => `<tr><td style="${cell}">${escapeHtml(r.title)}</td><td style="${cell};text-align:right;white-space:nowrap">${escapeHtml(r.text)}</td></tr>`).join('\n')}
+</table>
+${button('Go to your cart', cartUrl)}
+<p style="font-size:13px;color:#6b7280">Prices and stock can change until you order. To stop these emails, untick them on <a href="${escapeHtml(accountUrl)}">your account page</a>.</p>`,
+    "You're getting this email because you left items in your cart a day ago.",
+  );
+  return { subject, text, html };
+}
+
 // Products on a customer's wishlist got cheaper: `items` are [{ product, from, to }] (paise; `from` is the price they
 // last saw). One email for all of them.
 export function priceDropEmail(user, items, publicUrl = DEFAULT_PUBLIC_URL) {

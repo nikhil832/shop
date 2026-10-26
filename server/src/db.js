@@ -96,6 +96,8 @@ const INDEXES = {
     [{ tokenHash: 1 }, { unique: true }],
     [{ expiresAt: 1 }, { expireAfterSeconds: 0 }],
   ],
+  // Saved carts (one per user, by _id): the reminder sweep looks for ones left alone for a day.
+  carts: [[{ remindedAt: 1, updatedAt: 1 }]],
   // Hourly limits (takeHourlySlot): gone an hour after their last use.
   rateLimits: [[{ expiresAt: 1 }, { expireAfterSeconds: 0 }]],
 };

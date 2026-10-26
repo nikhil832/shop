@@ -874,6 +874,8 @@ address {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  /* A long email address (account page, "My orders") breaks rather than widening the page on phones. */
+  overflow-wrap: anywhere;
 }
 /* The account page: one panel per section, its fields stacked. */
 .account-section {

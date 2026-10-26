@@ -6,6 +6,7 @@ import { useAuth } from '../auth.jsx';
 import AccountNav from '../components/AccountNav.jsx';
 import { ORDER_STATUS, formatDate, formatPrice, orderNumber } from '../format.js';
 import { useFetch } from '../useFetch.js';
+import { forgetCart } from '../cart.js';
 
 export function StatusBadge({ status }) {
   return <span className={`status ${status}`}>{ORDER_STATUS[status] ?? status}</span>;
@@ -26,6 +27,7 @@ export default function Orders() {
     await request('/auth/logout', { method: 'POST' }).catch(() => {});
     setLogout('done');
     setUser(null);
+    forgetCart(); // it stays saved in the account
   }
 
   return (

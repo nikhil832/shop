@@ -179,4 +179,6 @@ export const toUser = (doc) => ({
   twoStep: Boolean(doc.totp?.enabledAt),
   // Emails when something on the wishlist gets cheaper; on unless switched off.
   priceDropEmails: doc.priceDropEmails !== false,
+  // One reminder for a cart left for a day; on unless switched off.
+  cartReminderEmails: doc.cartReminderEmails !== false,
 });

@@ -94,3 +94,14 @@ test('asking for a new email shows it as waiting until confirmed, and can be can
   await page.getByRole('button', { name: 'Confirm new email' }).click();
   await expect(page.getByRole('alert')).toContainText('This link has expired or was already used.');
 });
+
+test('a long email address wraps instead of widening the account pages on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const email = `a.very.long.name.for.shopping.${Date.now()}@example.com`;
+  await page.request.post('/api/auth/register', { data: { name: 'Leela Nair', email, password: 'password123' } });
+  for (const path of ['/account', '/orders']) {
+    await page.goto(path);
+    await expect(page.getByText(email).first()).toBeVisible();
+    expect(await page.locator('html').evaluate((html) => html.scrollWidth), path).toBeLessThanOrEqual(390);
+  }
+});
