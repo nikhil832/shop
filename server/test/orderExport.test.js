@@ -106,18 +106,21 @@ test('downloads the orders in the range as a CSV, one row per order, in India ti
   const [header, ...lines] = rows(res);
   assert.equal(
     header,
-    'Order,Date (India time),Status,Customer,Email,Items,Item details,Items total (₹),Delivery (₹),Discount (₹),Coupon,Total (₹),Refunded (₹),Net total (₹),Payment,Payment status,City,State,PIN code,Courier,Tracking number',
+    'Order,Date (India time),Status,Customer,Email,Items,Item details,Items total (₹),Delivery (₹),Discount (₹),Coupon,Total (₹),Refunded (₹),Net total (₹),Place of supply,Taxable value (₹),CGST (₹),SGST (₹),IGST (₹),Payment,Payment status,City,State,PIN code,Courier,Tracking number',
   );
   assert.equal(lines.length, 2);
   assert.equal(
     lines[0],
     `${first.number},2026-03-01 00:10,placed,Asha Rao,customer@example.com,3,` +
-      '"Orbit A14 (4GB RAM, 64GB) × 2; The Quiet Engineer × 1",18347.00,0.00,100.00,WELCOME100,18247.00,0.00,18247.00,' +
+      '"Orbit A14 (4GB RAM, 64GB) × 2; The Quiet Engineer × 1",18347.00,0.00,100.00,WELCOME100,18247.00,0.00,18247.00,,,,,,' +
       'Online,paid,Bengaluru,Karnataka,560001,,',
   );
   // Fields with commas are quoted; amounts are rupees with two decimals.
   assert.ok(lines[1].includes(',2026-03-31 23:50,delivered,'));
-  assert.ok(lines[1].includes(',"Pen, blue × 3",60.00,40.00,0.00,,100.00,0.00,100.00,Cash on Delivery,,'), lines[1]);
+  assert.ok(
+    lines[1].includes(',"Pen, blue × 3",60.00,40.00,0.00,,100.00,0.00,100.00,,,,,,Cash on Delivery,,'),
+    lines[1],
+  );
 
   // One status only.
   const delivered = await admin('GET', '/admin/orders/export?from=2026-03-01&to=2026-03-31&status=delivered');
@@ -171,5 +174,5 @@ test("approved returns show as the order's refund and net total", async () => {
     .collection('returns')
     .insertMany([ret('refunded', 50000), ret('declined', 50000), ret('requested', 50000)]);
   const [, line] = rows(await admin('GET', '/admin/orders/export?from=2026-08-05&to=2026-08-05'));
-  assert.ok(line.includes(',1000.00,500.00,500.00,Cash on Delivery,'), line);
+  assert.ok(line.includes(',1000.00,500.00,500.00,,,,,,Cash on Delivery,'), line);
 });

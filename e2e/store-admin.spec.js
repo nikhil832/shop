@@ -269,3 +269,20 @@ test('the activity log shows what admins changed, filtered by area', async ({ pa
   await page.getByLabel('Area').selectOption('products');
   await expect(entries.first().getByRole('link')).toHaveAttribute('href', /^\/admin\/products\/[0-9a-f]{24}$/);
 });
+
+test('the dashboard downloads a GST summary by place of supply and rate', async ({ page }) => {
+  await logIn(page, ADMIN);
+  const exportForm = page.getByRole('form', { name: 'Export orders' });
+  await exportForm.getByLabel('Report').selectOption('gst');
+  await expect(exportForm.getByLabel('Status')).toBeDisabled();
+  await expect(exportForm).toContainText('For the GST return');
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    exportForm.getByRole('button', { name: 'Download CSV' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^gst-summary-\d{4}-\d{2}-\d{2}-to-\d{4}-\d{2}-\d{2}\.csv$/);
+  const file = (await readFile(await download.path(), 'utf8')).replace(/^\uFEFF/, '');
+  expect(file.split('\r\n')[0]).toBe(
+    'Place of supply,State code,GST rate (%),Orders,Taxable value (₹),CGST (₹),SGST (₹),IGST (₹),Total tax (₹)',
+  );
+});

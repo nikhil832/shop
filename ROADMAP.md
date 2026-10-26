@@ -9,8 +9,7 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 | #   | Idea                                                                                           | Why                                                                                           | To start                    |
 | --- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------- |
-| 1   | **GST in the order export**: taxable value, CGST, SGST and IGST columns in the CSV             | What an accountant needs for GST returns, now that invoices have it                           | "start GST export"          |
-| 2   | **Accessibility check in the tests**: an automatic check (axe) of the main pages on every push | Catches problems for people using screen readers or keyboards before they reach the live site | "start accessibility check" |
+| 1   | **Accessibility check in the tests**: an automatic check (axe) of the main pages on every push | Catches problems for people using screen readers or keyboards before they reach the live site | "start accessibility check" |
 
 ## Set aside
 
@@ -67,3 +66,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Packing slips for chosen orders, and marking several orders shipped at once                                                         | Stage 42 (`git log --grep "Stage 42"`) |
 | Private notes on orders, optionally printed on the packing slip                                                                     | Stage 43 (`git log --grep "Stage 43"`) |
 | Photos in reviews (up to 3, shrunk in the browser, location data removed)                                                           | Stage 44 (`git log --grep "Stage 44"`) |
+| GST in the order export, and a GST summary by place of supply and rate                                                              | Stage 45 (`git log --grep "Stage 45"`) |

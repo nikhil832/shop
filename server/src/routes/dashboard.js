@@ -15,7 +15,7 @@ const dashboardQuery = z.object({
 });
 
 // Orders that count as sales: paid for or to be paid on delivery. Unpaid online orders and cancelled ones don't.
-const SOLD = ['placed', 'shipped', 'delivered'];
+export const SOLD = ['placed', 'shipped', 'delivered'];
 // Returns that take money back: approved ones and later (requested and declined ones don't). They count against the
 // period of the order they came from, so "these 30 days" means what was sold then and kept.
 export const REFUNDED_RETURNS = ['approved', 'refunding', 'refunded', 'refund_failed'];

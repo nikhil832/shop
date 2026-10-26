@@ -25,6 +25,7 @@ const formatLongDay = (date) => longDay.format(new Date(date));
 // The dates start as the dashboard's period (remounted with a `key` when it changes).
 function ExportOrders({ from, to }) {
   const [error, setError] = useState(null);
+  const [report, setReport] = useState('orders');
   function check(e) {
     const { from: start, to: end } = Object.fromEntries(new FormData(e.currentTarget));
     if (start > end) {
@@ -44,8 +45,9 @@ function ExportOrders({ from, to }) {
     >
       <h2 id="export-orders">Export orders</h2>
       <p className="muted small">
-        A CSV file for Excel or Google Sheets: one row per order placed between the two dates (India time, both
-        included), with the customer, items, amounts in rupees, payment and delivery city.
+        {report === 'gst'
+          ? 'For the GST return: tax on sales (placed, shipped or delivered orders) between the two dates, by place of supply and rate. Only orders placed while GST invoices were on count; refunds of returns are not taken off.'
+          : 'A CSV file for Excel or Google Sheets: one row per order placed between the two dates (India time, both included), with the customer, items, amounts in rupees (with GST for orders placed while it was on), payment and delivery city.'}
       </p>
       <div className="export-fields">
         <label>
@@ -57,8 +59,15 @@ function ExportOrders({ from, to }) {
           <input type="date" name="to" defaultValue={to} max={to} required />
         </label>
         <label>
+          Report
+          <select name="report" value={report} onChange={(e) => setReport(e.target.value)}>
+            <option value="orders">Orders</option>
+            <option value="gst">GST summary</option>
+          </select>
+        </label>
+        <label>
           Status
-          <select name="status" defaultValue="">
+          <select name="status" defaultValue="" disabled={report === 'gst'}>
             <option value="">All</option>
             {Object.entries(ORDER_STATUS).map(([value, label]) => (
               <option key={value} value={value}>
