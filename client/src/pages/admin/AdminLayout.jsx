@@ -35,7 +35,8 @@ export default function AdminLayout() {
         <NavLink to="/admin/activity">Activity</NavLink>
       </nav>
       {!user.twoStep && (
-        <p className="notice" role="note">
+        // Not on printed invoices and packing slips.
+        <p className="notice no-print" role="note">
           This account can refund money and see every customer&rsquo;s address. Protect it with{' '}
           <Link to="/account#two-step">two-step login</Link>.
         </p>

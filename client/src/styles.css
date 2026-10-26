@@ -1946,6 +1946,60 @@ textarea {
   margin: 0 auto;
 }
 
+/* Admin orders: ticking orders, and what to do with them. */
+.select-cell {
+  width: 1%;
+}
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+}
+/* Packing slips: one per printed page. */
+.slips-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.slip {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px;
+}
+.slip p {
+  margin: 0;
+}
+.slip-address {
+  font-style: normal;
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+.slip-qty {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.slip-box {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--text);
+  border-radius: 3px;
+}
+.slip-payment {
+  font-weight: 700;
+  font-size: 1.05rem;
+  padding: 10px 12px;
+  border: 2px solid var(--text);
+  border-radius: 6px;
+}
+
 /* Printing an invoice: only the invoice, in black on white whatever the screen's theme. */
 @media print {
   :root {
@@ -1974,6 +2028,18 @@ textarea {
     border: none;
     box-shadow: none;
     padding: 0;
+  }
+  .slip {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    break-after: page;
+  }
+  .slip:last-child {
+    break-after: auto;
+  }
+  .slips-page {
+    gap: 0;
   }
 }
 

@@ -7,13 +7,12 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                          | Why                                                                                           | To start                    |
-| --- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------- |
-| 1   | **Packing slips and shipping in bulk**: print slips for several orders at once and mark them shipped together | Saves time on busy days: today each order is opened and shipped one by one                    | "start packing slips"       |
-| 2   | **Private notes on orders**: notes only admins see ("customer called, deliver after 6 pm")                    | Keeps what was agreed with a customer in one place, also for other admins                     | "start order notes"         |
-| 3   | **Photos in reviews**: buyers add up to 3 photos to their review                                              | Real photos make reviews more convincing than the generated product pictures                  | "start review photos"       |
-| 4   | **GST in the order export**: taxable value, CGST, SGST and IGST columns in the CSV                            | What an accountant needs for GST returns, now that invoices have it                           | "start GST export"          |
-| 5   | **Accessibility check in the tests**: an automatic check (axe) of the main pages on every push                | Catches problems for people using screen readers or keyboards before they reach the live site | "start accessibility check" |
+| #   | Idea                                                                                           | Why                                                                                           | To start                    |
+| --- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------- |
+| 1   | **Private notes on orders**: notes only admins see ("customer called, deliver after 6 pm")     | Keeps what was agreed with a customer in one place, also for other admins                     | "start order notes"         |
+| 2   | **Photos in reviews**: buyers add up to 3 photos to their review                               | Real photos make reviews more convincing than the generated product pictures                  | "start review photos"       |
+| 3   | **GST in the order export**: taxable value, CGST, SGST and IGST columns in the CSV             | What an accountant needs for GST returns, now that invoices have it                           | "start GST export"          |
+| 4   | **Accessibility check in the tests**: an automatic check (axe) of the main pages on every push | Catches problems for people using screen readers or keyboards before they reach the live site | "start accessibility check" |
 
 ## Set aside
 
@@ -67,3 +66,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Faster first visit: admin panel and rarely used pages load on first use; built files cached for a year                              | Stage 39 (`git log --grep "Stage 39"`) |
 | Price-drop emails for wishlist items (5% or more, one email per customer, switch on the account page)                               | Stage 40 (`git log --grep "Stage 40"`) |
 | Cart saved to the account, across devices, with one reminder email for a cart left a day                                            | Stage 41 (`git log --grep "Stage 41"`) |
+| Packing slips for chosen orders, and marking several orders shipped at once                                                         | Stage 42 (`git log --grep "Stage 42"`) |

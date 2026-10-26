@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { query } from '../../api.js';
+import { query, request } from '../../api.js';
 import { ORDER_STATUS, formatDate, formatPrice, orderNumber } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 import Pager from '../../components/Pager.jsx';
@@ -10,7 +11,32 @@ export default function AdminOrders() {
   const status = params.get('status') ?? '';
   const q = params.get('q') ?? '';
   const page = Math.max(1, Number(params.get('page')) || 1);
-  const { data, error, loading } = useFetch(`/admin/orders${query({ status, q, page: page > 1 ? page : '' })}`);
+  const path = `/admin/orders${query({ status, q, page: page > 1 ? page : '' })}`;
+  const [version, setVersion] = useState(0);
+  const { data, error, loading } = useFetch(path, version);
+  // Orders ticked on this page of the list (a new page or filter starts with none), and the last bulk result.
+  const [selection, setSelection] = useState({ path, ids: [] });
+  const selected = selection.path === path ? selection.ids : [];
+  const [bulk, setBulk] = useState({ busy: false, result: null, error: null });
+
+  const toggle = (id) =>
+    setSelection({ path, ids: selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id] });
+  const allOnPage = data?.items.length > 0 && data.items.every((o) => selected.includes(o.id));
+  const toggleAll = () => setSelection({ path, ids: allOnPage ? [] : data.items.map((o) => o.id) });
+
+  async function shipSelected() {
+    const n = selected.length;
+    if (!window.confirm(`Mark ${n} ${n === 1 ? 'order' : 'orders'} shipped? Each customer is emailed.`)) return;
+    setBulk({ busy: true, result: null, error: null });
+    try {
+      const result = await request('/admin/orders/ship', { method: 'POST', body: { ids: selected } });
+      setBulk({ busy: false, result, error: null });
+      setSelection({ path, ids: [] });
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setBulk({ busy: false, result: null, error: err.message });
+    }
+  }
 
   // Any change other than the page goes back to page 1.
   const update = (changes) => {
@@ -58,6 +84,43 @@ export default function AdminOrders() {
         ))}
       </div>
 
+      {bulk.result && (
+        <div className="notice" role="status">
+          <p>
+            {bulk.result.shipped.length
+              ? `Marked ${bulk.result.shipped.length} ${bulk.result.shipped.length === 1 ? 'order' : 'orders'} shipped.`
+              : 'No orders were shipped.'}
+          </p>
+          {bulk.result.skipped.length > 0 && (
+            <ul className="small">
+              {bulk.result.skipped.map((s) => (
+                <li key={s.id}>
+                  {s.number ? `#${s.number}` : 'An order'}: {s.reason}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {bulk.error && (
+        <p className="error" role="alert">
+          {bulk.error}
+        </p>
+      )}
+      {selected.length > 0 && (
+        <div className="bulk-bar" role="group" aria-label="Selected orders">
+          <strong>{selected.length} selected</strong>
+          <Link className="btn small" to={`/admin/orders/slips?ids=${selected.join(',')}`}>
+            Print packing slips
+          </Link>
+          <button type="button" className="btn primary small" disabled={bulk.busy} onClick={shipSelected}>
+            Mark shipped
+          </button>
+          <button type="button" className="link" onClick={() => setSelection({ path, ids: [] })}>
+            Clear
+          </button>
+        </div>
+      )}
       {error && <p className="error">{error.message}</p>}
       {data?.items.length === 0 && <p className="muted">No orders match.</p>}
       {data?.items.length > 0 && (
@@ -65,6 +128,14 @@ export default function AdminOrders() {
           <table className="admin-table">
             <thead>
               <tr>
+                <th className="select-cell">
+                  <input
+                    type="checkbox"
+                    checked={allOnPage}
+                    onChange={toggleAll}
+                    aria-label="Select all orders on this page"
+                  />
+                </th>
                 <th>Order</th>
                 <th>Date</th>
                 <th>Customer</th>
@@ -76,6 +147,14 @@ export default function AdminOrders() {
             <tbody>
               {data.items.map((o) => (
                 <tr key={o.id}>
+                  <td className="select-cell">
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(o.id)}
+                      onChange={() => toggle(o.id)}
+                      aria-label={`Select order #${orderNumber(o)}`}
+                    />
+                  </td>
                   <td>
                     <Link to={`/admin/orders/${o.id}`}>#{orderNumber(o)}</Link>
                   </td>

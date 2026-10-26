@@ -153,11 +153,26 @@ const categoryBody = z.object({
   icon: z.string().trim().min(1).max(8).optional(),
 });
 
+// At most this many orders are printed or shipped at once (a page of the list is 25).
+const BULK_ORDERS = 50;
+const orderIds = z
+  .array(z.string().regex(/^[0-9a-f]{24}$/, 'Invalid order id'))
+  .min(1, 'Choose some orders')
+  .max(BULK_ORDERS, `At most ${BULK_ORDERS} orders at once`)
+  .transform((ids) => [...new Set(ids)]);
 const orderQuery = z.object({
   status: z.enum(ORDER_STATUSES).optional(),
   q: z.string().trim().max(100).optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
+  // Particular orders (comma-separated ids), in that order: the packing slips page.
+  ids: z
+    .string()
+    .max(5000) // well over 50 ids, so the count below gives the message
+    .transform((s) => s.split(',').filter(Boolean))
+    .pipe(orderIds)
+    .optional(),
 });
+const bulkShipBody = z.object({ ids: orderIds });
 
 const reviewQuery = z.object({
   status: z.enum(['visible', 'hidden']).optional(),
@@ -525,6 +540,12 @@ export function adminRouter(ctx) {
 
   router.get('/admin/orders', async (req, res) => {
     const query = parse(orderQuery, req.query);
+    if (query.ids) {
+      const docs = await orders.find({ _id: { $in: query.ids.map((id) => new ObjectId(id)) } }).toArray();
+      const byId = new Map(docs.map((d) => [d._id.toString(), d]));
+      const found = query.ids.filter((id) => byId.has(id)).map((id) => byId.get(id));
+      return res.json({ items: await withCustomers(found), total: found.length, page: 1, pageSize: BULK_ORDERS });
+    }
     const filter = {};
     if (query.status) filter.status = query.status;
     if (query.q) {
@@ -569,9 +590,9 @@ export function adminRouter(ctx) {
     res.json((await withCustomers([doc]))[0]);
   });
 
-  router.post('/admin/orders/:id/status', async (req, res) => {
-    const _id = parseObjectId(req.params.id, 'order id');
-    const { status, shipment } = parse(statusBody, req.body);
+  // Moves an order on to `status` (shipped, delivered or cancelled): the step's checks, the customer's email and the
+  // activity log, for one order or several (bulk shipping). Throws HttpError 404/409 when it can't.
+  async function advanceOrder(req, _id, status, shipment) {
     let doc;
     if (status === 'cancelled') {
       doc = await cancelOrder(ctx, { _id }, { from: NEXT_FROM.cancelled, by: 'admin' });
@@ -609,7 +630,32 @@ export function adminRouter(ctx) {
         ...(status === 'cancelled' && doc.payment?.status ? [{ field: 'Payment', to: doc.payment.status }] : []),
       ],
     });
-    res.json((await withCustomers([doc]))[0]);
+    return doc;
+  }
+
+  router.post('/admin/orders/:id/status', async (req, res) => {
+    const _id = parseObjectId(req.params.id, 'order id');
+    const { status, shipment } = parse(statusBody, req.body);
+    res.json((await withCustomers([await advanceOrder(req, _id, status, shipment)]))[0]);
+  });
+
+  // Marks several placed orders shipped at once (each emailed and logged as if done one by one). Orders that can't be
+  // shipped are skipped with the reason; the rest go ahead.
+  router.post('/admin/orders/ship', async (req, res) => {
+    const { ids } = parse(bulkShipBody, req.body);
+    const shipped = [];
+    const skipped = [];
+    for (const id of ids) {
+      try {
+        const doc = await advanceOrder(req, new ObjectId(id), 'shipped');
+        shipped.push({ id, number: doc.number ?? null });
+      } catch (err) {
+        if (!(err instanceof HttpError)) throw err;
+        const doc = await orders.findOne({ _id: new ObjectId(id) }, { projection: { number: 1 } });
+        skipped.push({ id, number: doc?.number ?? null, reason: err.message });
+      }
+    }
+    res.json({ shipped, skipped });
   });
 
   // Adds or corrects the tracking details of a shipped (or delivered) order; empty fields remove them. No email: the

@@ -9,6 +9,7 @@ import AdminImport from './AdminImport.jsx';
 import AdminLayout from './AdminLayout.jsx';
 import AdminOrder from './AdminOrder.jsx';
 import AdminOrders from './AdminOrders.jsx';
+import AdminPackingSlips from './AdminPackingSlips.jsx';
 import AdminProduct from './AdminProduct.jsx';
 import AdminProducts from './AdminProducts.jsx';
 import AdminQuestions from './AdminQuestions.jsx';
@@ -24,6 +25,7 @@ export default function AdminRoutes() {
       <Route element={<AdminLayout />}>
         <Route index element={<AdminDashboard />} />
         <Route path="orders" element={<AdminOrders />} />
+        <Route path="orders/slips" element={<AdminPackingSlips />} />
         <Route path="orders/:id" element={<AdminOrder />} />
         <Route path="orders/:id/invoice" element={<Invoice admin />} />
         <Route path="products" element={<AdminProducts />} />
