@@ -7,14 +7,19 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                                                        | Why                                                                                                   | To start                |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------- |
-| 1   | **Buy again**: one button on a past order puts its items (still sold, at today's prices) back in the cart                                   | Quick reorders for books, kitchen items and the like                                                  | "start buy again"       |
-| 2   | **Credit notes for returns**: a GST credit note for each approved return, printable like the invoice, and taken off the GST summary         | The GST summary can't subtract returns today; this completes the GST paperwork                        | "start credit notes"    |
-| 3   | **Error reports from the browser**: when a page fails to load or crashes for a visitor, the store records it, and admins see them in a list | Problems customers hit (like the ones fixed this week) show up before anyone complains                | "start error reports"   |
-| 4   | **New-device login alerts for admins**: an email when an admin account logs in from a new browser or network                                | Admin accounts can refund money and see addresses; an unexpected login is worth knowing about at once | "start login alerts"    |
-| 5   | **Address book**: customers keep several addresses (home, office, parents) and pick one at checkout                                         | Today one address is saved, and each order to a different place replaces it                           | "start address book"    |
-| 6   | **Frequently bought together**: on a product page, what other customers bought in the same orders                                           | Uses real orders instead of category alone, which suggests better add-ons                             | "start bought together" |
+| #   | Idea                                                                                                                                                                                         | Why                                                                                                   | To start                |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------- |
+| 1   | **Buy again**: one button on a past order puts its items (still sold, at today's prices) back in the cart                                                                                    | Quick reorders for books, kitchen items and the like                                                  | "start buy again"       |
+| 2   | **Credit notes for returns**: a GST credit note for each approved return, printable like the invoice, and taken off the GST summary                                                          | The GST summary can't subtract returns today; this completes the GST paperwork                        | "start credit notes"    |
+| 3   | **Error reports from the browser**: when a page fails to load or crashes for a visitor, the store records it, and admins see them in a list                                                  | Problems customers hit (like the ones fixed this week) show up before anyone complains                | "start error reports"   |
+| 4   | **New-device login alerts for admins**: an email when an admin account logs in from a new browser or network                                                                                 | Admin accounts can refund money and see addresses; an unexpected login is worth knowing about at once | "start login alerts"    |
+| 5   | **Address book**: customers keep several addresses (home, office, parents) and pick one at checkout                                                                                          | Today one address is saved, and each order to a different place replaces it                           | "start address book"    |
+| 6   | **Frequently bought together**: on a product page, what other customers bought in the same orders                                                                                            | Uses real orders instead of category alone, which suggests better add-ons                             | "start bought together" |
+| 7   | **AI product writer** (Claude API): in the admin product form, "Write for me" drafts the description and highlights from the title, brand, category and photo; the admin edits before saving | Saves the slowest part of adding products; admin-only and on demand, so the cost stays tiny           | "start ai writer"       |
+| 8   | **AI answer drafts** (Claude API): on an unanswered product question, "Draft an answer" from the product's details; the admin edits and sends                                                | Faster answers to questions; nothing reaches customers without the admin                              | "start ai answers"      |
+| 9   | **Review summary** (Claude API): "What customers say" on product pages with enough reviews, written again only when visible reviews change                                                   | Busy products get a quick read of many reviews; one call per change, stored on the product            | "start review summary"  |
+| 10  | **Photo descriptions** (Claude API): alt text for uploaded product photos, suggested in the admin form                                                                                       | Screen-reader users hear what the photo shows (follows stage 46's accessibility work)                 | "start alt text"        |
+| 11  | **Plain-words search** (Claude API): when a search finds nothing, turn sentences like "running shoes under 2000" into a category, words and price filters                                    | Covers searches "Did you mean…?" can't; runs per visitor, so it needs an hourly limit                 | "start smart search"    |
 
 ## Set aside
 
@@ -25,6 +30,9 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
   sweep runs on time. A switch on Render, no code change.
 - **Partial search matches**: every search word must match something, so "wireless earbuds" finds nothing. Showing
   products that match only some words would also bring in weak results; left out on purpose.
+- **Shopping assistant chat** (Claude API): a chat box that answers questions and suggests products. Every visitor's
+  messages cost money, it's open to misuse and it can say wrong things about prices or stock; the smaller ideas above
+  (7–11) come first.
 
 ## Done
 
