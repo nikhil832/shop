@@ -25,7 +25,8 @@ function CartLine({ line, qty }) {
   const options = Math.max(qty, Math.min(MAX_QTY, stock));
   return (
     <li className="cart-line">
-      <Link to={`/p/${product.slug}`} className="cart-thumb">
+      {/* The picture repeats the name's link next to it: a shortcut for the mouse, skipped by keyboards and screen readers. */}
+      <Link to={`/p/${product.slug}`} className="cart-thumb" tabIndex={-1} aria-hidden="true">
         {(line.image ?? product.image) && <img src={line.image ?? product.image} alt="" width="96" height="96" />}
       </Link>
       <div className="cart-line-body">

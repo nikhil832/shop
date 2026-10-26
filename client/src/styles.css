@@ -3,14 +3,20 @@
   --surface: #ffffff;
   --border: #e2e5ea;
   --text: #1a1d23;
-  --muted: #6b7280;
+  /* Dark enough for 4.5:1 (WCAG AA) on every light background used, the e2e accessibility check makes sure. */
+  --muted: #5f6672;
   --accent: #2563eb;
   --accent-text: #ffffff;
   --accent-soft: #e8efff;
+  /* Accent text on --accent-soft (status badges). */
+  --accent-strong: #1d4ed8;
   --header: #1e3a8a;
+  /* The store's name in printable pages (the invoice). */
+  --brand: #1e3a8a;
   --header-text: #ffffff;
   --success: #15803d;
-  --rating: #16a34a;
+  /* Behind white text: dark enough for 4.5:1 in both themes. */
+  --rating: #15803d;
   --warning: #c2410c;
   --danger: #dc2626;
   /* Chart bars; checked for contrast on the surface in each theme. */
@@ -39,9 +45,10 @@
     --accent: #60a5fa;
     --accent-text: #0b1220;
     --accent-soft: #1d2a44;
+    --accent-strong: #60a5fa;
     --header: #172554;
+    --brand: #93c5fd;
     --success: #4ade80;
-    --rating: #22c55e;
     --warning: #fb923c;
     --danger: #f87171;
     --chart: #3b82f6;
@@ -438,6 +445,14 @@ a:focus-visible {
   align-items: center;
   gap: 6px;
   font-size: 0.85rem;
+}
+/* Links in notice boxes: the accent on --accent-soft is just short of 4.5:1. */
+.notice a:not(.btn) {
+  color: var(--accent-strong);
+}
+/* A link inside a sentence is underlined, so it doesn't rely on colour alone to stand out. */
+p a:not(.btn) {
+  text-decoration: underline;
 }
 .rating-badge {
   background: var(--rating);
@@ -861,7 +876,7 @@ address {
   padding: 3px 10px;
   border-radius: 999px;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong);
   white-space: nowrap;
 }
 .status.cancelled {
@@ -1070,9 +1085,9 @@ address {
   align-items: center;
 }
 .status-tabs button.active {
-  border-color: var(--accent);
+  border-color: var(--accent-strong);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong);
   font-weight: 700;
 }
 .status-tabs .count {
@@ -1518,7 +1533,7 @@ textarea {
 .variant-options button.selected {
   border: 2px solid var(--accent);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong);
   padding: 7px 11px;
 }
 /* Sold out: still choosable, to ask for an email when it's back. */
@@ -1827,7 +1842,7 @@ textarea {
 .invoice-brand {
   font-size: 1.6rem;
   font-weight: 800;
-  color: var(--header);
+  color: var(--brand);
 }
 .invoice-meta h1 {
   margin: 0 0 6px;
@@ -2011,6 +2026,7 @@ textarea {
     --muted: #4b5563;
     --border: #d1d5db;
     --header: #1e3a8a;
+    --brand: #1e3a8a;
     --surface: #ffffff;
   }
   body {

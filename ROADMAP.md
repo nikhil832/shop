@@ -7,9 +7,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                           | Why                                                                                           | To start                    |
-| --- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------- |
-| 1   | **Accessibility check in the tests**: an automatic check (axe) of the main pages on every push | Catches problems for people using screen readers or keyboards before they reach the live site | "start accessibility check" |
+| #   | Idea | Why | To start |
+| --- | ---- | --- | -------- |
 
 ## Set aside
 
@@ -67,3 +66,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Private notes on orders, optionally printed on the packing slip                                                                     | Stage 43 (`git log --grep "Stage 43"`) |
 | Photos in reviews (up to 3, shrunk in the browser, location data removed)                                                           | Stage 44 (`git log --grep "Stage 44"`) |
 | GST in the order export, and a GST summary by place of supply and rate                                                              | Stage 45 (`git log --grep "Stage 45"`) |
+| Accessibility check (axe, WCAG 2.1 AA) on every page in the browser tests, and the contrast and link fixes it found                 | Stage 46 (`git log --grep "Stage 46"`) |

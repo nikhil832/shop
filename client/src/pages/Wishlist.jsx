@@ -25,7 +25,8 @@ function WishRow({ product, onRemoved }) {
 
   return (
     <li className="panel wish-row">
-      <Link to={`/p/${product.slug}`} className="wish-image">
+      {/* The picture repeats the name's link next to it: a shortcut for the mouse, skipped by keyboards and screen readers. */}
+      <Link to={`/p/${product.slug}`} className="wish-image" tabIndex={-1} aria-hidden="true">
         {product.image && <img src={product.image} alt="" width="88" height="88" />}
       </Link>
       <div className="wish-info">

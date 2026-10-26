@@ -147,7 +147,8 @@ export default function Order() {
             <ul className="cart-lines">
               {order.items.map((i) => (
                 <li key={lineKey(i)} className="cart-line">
-                  <Link to={`/p/${i.slug}`} className="cart-thumb">
+                  {/* The picture repeats the name's link next to it: a shortcut for the mouse, skipped by keyboards and screen readers. */}
+                  <Link to={`/p/${i.slug}`} className="cart-thumb" tabIndex={-1} aria-hidden="true">
                     {i.image && <img src={i.image} alt="" width="96" height="96" />}
                   </Link>
                   <div className="cart-line-body">
