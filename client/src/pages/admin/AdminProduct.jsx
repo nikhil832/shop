@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { request, upload } from '../../api.js';
 import { toPaise, toRupees } from '../../format.js';
@@ -271,8 +271,65 @@ function Variants({ names, onNames, rows, photos, onChange }) {
   );
 }
 
+// "Write for me" (stage 51): Claude drafts the description and highlights from the title, brand, category, the
+// highlights typed so far (as facts) and the first uploaded photo; the admin edits them before saving. Shown only when
+// the server has an API key, since each draft costs a little.
+function WriteForMe({ formRef, images }) {
+  const { data: ai } = useFetch('/admin/ai');
+  const [state, setState] = useState({ busy: false, error: null, done: false });
+  if (!ai?.enabled) return null;
+
+  async function write() {
+    const field = (name) => formRef.current.elements.namedItem(name);
+    if (field('description').value.trim() && !window.confirm('Replace the description and highlights with a draft?')) {
+      return;
+    }
+    const photo = images.find((src) => src.startsWith('/api/images/'));
+    setState({ busy: true, error: null, done: false });
+    try {
+      const draft = await request('/admin/ai/product-draft', {
+        method: 'POST',
+        body: {
+          title: field('title').value,
+          brand: field('brand').value,
+          categoryId: field('categoryId').value,
+          facts: field('highlights')
+            .value.split('\n')
+            .map((h) => h.trim())
+            .filter(Boolean),
+          ...(photo && { image: photo }),
+        },
+      });
+      field('highlights').value = draft.highlights.join('\n');
+      field('description').value = draft.description;
+      setState({ busy: false, error: null, done: true });
+    } catch (err) {
+      setState({ busy: false, error: err.message, done: false });
+    }
+  }
+
+  return (
+    <div className="wide write-for-me">
+      <button type="button" className="btn small" onClick={write} disabled={state.busy}>
+        {state.busy ? 'Writing…' : 'Write for me'}
+      </button>
+      <p className="muted small" aria-live="polite">
+        {state.done
+          ? 'Draft written. Check every detail before saving: it can get things wrong.'
+          : 'Drafts the description and highlights from the title, brand, category, the highlights above and the first photo.'}
+      </p>
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function ProductForm({ product, categories }) {
   const navigate = useNavigate();
+  const formRef = useRef(null);
   const [images, setImages] = useState(product?.images ?? []);
   const [state, setState] = useState({ busy: false, error: null });
   // Variant rows, or null for a product without variants, and the names of their one or two options.
@@ -328,7 +385,7 @@ function ProductForm({ product, categories }) {
   }
 
   return (
-    <form className="panel admin-form" onSubmit={submit}>
+    <form className="panel admin-form" onSubmit={submit} ref={formRef}>
       <div className="admin-head">
         <h1>{product ? 'Edit product' : 'Add product'}</h1>
         {product && (
@@ -409,6 +466,7 @@ function ProductForm({ product, categories }) {
           Description
           <textarea name="description" rows="5" maxLength={5000} defaultValue={product?.description} />
         </label>
+        <WriteForMe formRef={formRef} images={images} />
       </div>
       <Images images={images} onChange={setImages} />
       <label className="check">

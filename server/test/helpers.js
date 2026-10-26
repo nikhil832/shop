@@ -4,14 +4,18 @@ import { createApp } from '../src/app.js';
 import { razorpayClient } from '../src/razorpay.js';
 import { seedCatalog } from '../src/seed.js';
 import { FAKE_KEYS, startFakeRazorpay } from './fake-razorpay.js';
+import { aiClient } from '../src/ai.js';
+import { FAKE_ANTHROPIC_KEY, startFakeAnthropic } from './fake-anthropic.js';
 
 // Starts the API on a fresh in-memory replica set seeded with the sample catalog.
 // With { razorpay: true }, online payments are on, talking to a stand-in Razorpay (t.fake).
-export async function startTestServer({ razorpay = false } = {}) {
+// With { ai: 'model-id' }, the writing assistant is on, talking to a stand-in Claude API (t.claude).
+export async function startTestServer({ razorpay = false, ai = null } = {}) {
   const mongo = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   const { client, db } = await connectDb(mongo.getUri(), 'test');
   await seedCatalog(db);
   const fake = razorpay ? await startFakeRazorpay() : null;
+  const claude = ai ? await startFakeAnthropic() : null;
   // Records order emails instead of sending them (t.mail.sent); t.mail.failNext() makes the next send throw.
   const mail = {
     enabled: true,
@@ -34,6 +38,7 @@ export async function startTestServer({ razorpay = false } = {}) {
     config: { mail: { publicUrl: 'https://bazaar.test' } },
     razorpay: fake && razorpayClient({ ...FAKE_KEYS, apiUrl: fake.url }),
     mail,
+    ai: claude && aiClient({ apiKey: FAKE_ANTHROPIC_KEY, model: ai, apiUrl: claude.url }),
   };
   const server = createApp(ctx).listen(0);
   await new Promise((resolve) => server.once('listening', resolve));
@@ -74,10 +79,11 @@ export async function startTestServer({ razorpay = false } = {}) {
   async function stop() {
     server.close();
     await fake?.stop();
+    await claude?.stop();
     await client.close();
     await mongo.stop();
   }
 
   // `uri` is the in-memory database's, for tests that run a command-line script against it (never Atlas).
-  return { db, ctx, fake, mail, base, call, browser, webhook, stop, uri: mongo.getUri() };
+  return { db, ctx, fake, claude, mail, base, call, browser, webhook, stop, uri: mongo.getUri() };
 }

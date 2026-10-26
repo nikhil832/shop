@@ -1,3 +1,4 @@
+import { DEFAULT_AI_MODEL } from './ai.js';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -20,6 +21,7 @@ export function loadConfig() {
     storageLimitMb: Number(process.env.STORAGE_LIMIT_MB) || 512,
     razorpay: razorpayConfig(),
     mail: mailConfig(),
+    ai: aiConfig(),
     // Google Search Console's HTML-tag check: the content of its <meta name="google-site-verification">. Only letters,
     // digits, - and _ (what Google's codes use), so it can go into the page as is.
     googleSiteVerification: /^[\w-]{10,100}$/.test(process.env.GOOGLE_SITE_VERIFICATION?.trim() ?? '')
@@ -31,6 +33,20 @@ export function loadConfig() {
     process.exit(1);
   }
   return config;
+}
+
+// "Write for me" in the admin product form uses Claude's API when ANTHROPIC_API_KEY is set (each draft costs a little);
+// AI_MODEL picks the model. Without a key the button isn't shown. Messages never include the key.
+function aiConfig() {
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey) return null;
+  const model = process.env.AI_MODEL?.trim() || DEFAULT_AI_MODEL;
+  if (!/^claude-[a-z0-9-]+$/.test(model)) {
+    console.error('AI_MODEL must be a Claude model id, like claude-opus-5-5 or claude-haiku-5-5.');
+    process.exit(1);
+  }
+  // Overridden only by the tests, which point it at a stand-in server.
+  return { apiKey, model, apiUrl: process.env.ANTHROPIC_API_URL || null };
 }
 
 // Order emails go out through Brevo when BREVO_API_KEY is set; otherwise they are only printed in the server log.

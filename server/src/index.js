@@ -6,6 +6,7 @@ import { connectDb } from './db.js';
 import { createApp } from './app.js';
 import { razorpayClient } from './razorpay.js';
 import { mailClient } from './mail.js';
+import { aiClient } from './ai.js';
 import { expireUnpaidOrders } from './routes/orders.js';
 import { sendBackInStockAlerts } from './routes/stockAlerts.js';
 import { sendPriceDropEmails } from './routes/wishlist.js';
@@ -20,7 +21,14 @@ const config = loadConfig();
 const CLIENT_DIST = fileURLToPath(new URL('../../client/dist', import.meta.url));
 
 const { client, db } = await connectDb(config.mongodbUri, config.mongodbDb);
-const ctx = { db, client, config, razorpay: razorpayClient(config.razorpay), mail: mailClient(config.mail) };
+const ctx = {
+  db,
+  client,
+  config,
+  razorpay: razorpayClient(config.razorpay),
+  mail: mailClient(config.mail),
+  ai: aiClient(config.ai),
+};
 const app = createApp(ctx);
 
 // Every minute: release the stock of online orders whose 30-minute payment window has passed, then email customers
@@ -63,6 +71,7 @@ if (existsSync(CLIENT_DIST)) {
 
 const server = app.listen(config.port, () => {
   console.log(`API listening on http://localhost:${config.port} (database "${config.mongodbDb}")`);
+  console.log(ctx.ai ? `Writing assistant: on (${ctx.ai.model}).` : 'Writing assistant: off (no ANTHROPIC_API_KEY).');
   console.log(ctx.razorpay ? 'Online payments: Razorpay test mode.' : 'Online payments: off (Cash on Delivery only).');
   console.log(ctx.mail.enabled ? 'Order emails: sent through Brevo.' : 'Order emails: printed here, not sent.');
 });

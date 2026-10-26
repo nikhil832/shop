@@ -83,6 +83,7 @@ Built in stages. Done so far:
 48. **"Did you mean…?"**: a search that finds nothing suggests the closest words the store knows (from shown products' names, brands, highlights and category names), for example "electirc kettel" → "electric kettle" (one typo in short words, two in longer ones), only when the corrected search finds something with the same filters, and says how many.
 49. **Buy again**: a button on any past order (not one still awaiting payment) puts its items back in the cart at today's prices, as many as were bought or as are left; the cart then says what was added and what wasn't (no longer sold, out of stock, now needs a size or colour, or a full cart). Items already in the cart keep the larger quantity.
 50. **Credit notes for returns**: approving a return of an order placed with GST on issues a GST credit note (its own series: CN-1, CN-2, …), with the returned items' refund split into taxable value and CGST/SGST or IGST at the invoice's rates. Customers and admins open it from the order page and print it like the invoice, and the GST summary takes credit notes off by the date they were issued, so it shows sales net of returns.
+51. **Write for me** (optional, costs a little per use): with an Anthropic API key, the admin product form gets a button that asks Claude to draft the description and highlights from the title, brand, category, the highlights typed so far and the first uploaded photo. The admin checks and edits the draft before saving; nothing is saved by the button. Without a key the button isn't shown. 30 drafts per admin per hour.
 
 What's next: see [ROADMAP.md](ROADMAP.md).
 
@@ -141,6 +142,12 @@ touching the live data, restore it into another database: `MONGODB_DB=shop-resto
 
 Emails sent from a Gmail address through Brevo can land in spam; a domain of your own, verified in Brevo, fixes that.
 
+### Writing assistant (optional, paid per use)
+
+1. Create an account at [console.anthropic.com](https://console.anthropic.com), add credit under Billing, and create an API key.
+2. Set `ANTHROPIC_API_KEY` in `server/.env` (or on Render, under the service's Environment). `AI_MODEL` picks the model: `claude-opus-5-5` (the default, about ₹1.70 a draft) or `claude-haiku-5-5` (about ₹0.05 a draft).
+3. Restart: the server prints "Writing assistant: on (…)" and the admin product form shows **Write for me**. `npm run demo` never uses the key, so the demo costs nothing.
+
 ### Razorpay (optional, test mode only)
 
 1. In the Razorpay Dashboard, switch to **Test Mode**, then Account & Settings → API keys → generate a key.
@@ -155,8 +162,9 @@ Emails sent from a Gmail address through Brevo can land in spam; a domain of you
 1. In Atlas, Network Access → add `0.0.0.0/0` (Render's free plan has no fixed IP address; the database password still protects it).
 2. On [Render](https://render.com), New → Blueprint → pick this repository. When asked, set `MONGODB_URI`, and optionally the Razorpay test keys (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`); leave any you don't use empty.
 3. Once it's live, set up the Razorpay webhook (step 4 above) with the Render address, put its secret in `RAZORPAY_WEBHOOK_SECRET` under the service's Environment, and save (it redeploys).
-4. For order emails, set `BREVO_API_KEY`, `MAIL_FROM` and `PUBLIC_URL` (the Render address) the same way, and optionally `ADMIN_EMAIL` for new-order alerts.
-5. To be found on Google (free): in [Google Search Console](https://search.google.com/search-console) add the Render address as a **URL prefix** property and choose the **HTML tag** check. Copy only the `content="…"` code into `GOOGLE_SITE_VERIFICATION` on Render, save (it redeploys), then press Verify. Under Sitemaps, submit `sitemap.xml`. Google's [Rich Results Test](https://search.google.com/test/rich-results) shows what it reads from a product page.
+4. Optional: for **Write for me**, set `ANTHROPIC_API_KEY` (and `AI_MODEL` if you want another model) the same way.
+5. For order emails, set `BREVO_API_KEY`, `MAIL_FROM` and `PUBLIC_URL` (the Render address) the same way, and optionally `ADMIN_EMAIL` for new-order alerts.
+6. To be found on Google (free): in [Google Search Console](https://search.google.com/search-console) add the Render address as a **URL prefix** property and choose the **HTML tag** check. Copy only the `content="…"` code into `GOOGLE_SITE_VERIFICATION` on Render, save (it redeploys), then press Verify. Under Sitemaps, submit `sitemap.xml`. Google's [Rich Results Test](https://search.google.com/test/rich-results) shows what it reads from a product page.
 
 The free plan sleeps after 15 minutes without visitors; the next visit takes about a minute to wake it. Unpaid online orders past their 30 minutes are cancelled once it's awake again.
 
@@ -240,6 +248,8 @@ Without keys the store works as before, with Cash on Delivery only. Tests never 
 | PUT    | `/api/admin/dashboard/low-stock-email`                           | Admin: `{ enabled }` switches the morning low-stock email on or off for every admin (`lowStockEmail` in the dashboard says which)                                                                                                                                           |
 | GET    | `/api/admin/activity?area=&by=&page=`                            | Admin: the activity log, newest first, 50 a page (`area` one of products, categories, orders, returns, reviews, coupons, delivery, settings, accounts; `by` an admin's id or `cli`); `people` for the filter                                                                |
 | GET    | `/api/admin/gst`                                                 | Admin: GST settings (`enabled`, `gstin`, `legalName`, `address`, `state`, `defaultRate`), `categories` with `rate`/`hsn`, and the allowed `rates` and `states`                                                                                                              |
+| GET    | `/api/admin/ai`                                                  | Admin: `{ enabled, model }`, whether the writing assistant is on                                                                                                                                                                                                            |
+| POST   | `/api/admin/ai/product-draft`                                    | Admin. `{ title, brand, categoryId, facts?, image? }` → `{ description, highlights }` drafted by Claude (nothing saved); 503 without `ANTHROPIC_API_KEY`, 429 after 30 an hour, 502 if Claude fails or declines                                                             |
 | PUT    | `/api/admin/gst`                                                 | Admin: saves them (switching on needs every store detail; the GSTIN must be valid and from the chosen state); orders in `GET /api/orders/:id` then carry `gstInvoice`                                                                                                       |
 | GET    | `/api/admin/products`                                            | Admin. `q`, `category` (id), `status` (`active`, `hidden`, `low`), `page`; 50 per page, hidden products included                                                                                                                                                            |
 | GET    | `/api/admin/products/:id`                                        | Admin                                                                                                                                                                                                                                                                       |

@@ -10,6 +10,8 @@ process.env.MONGODB_URI = mongo.getUri();
 process.env.MONGODB_DB = 'demo';
 // Demo accounts are made up: never email them, even with a Brevo key in .env (set, even empty, beats the file).
 process.env.BREVO_API_KEY = '';
+// Nor spend money on Claude's API: the writing assistant is on in the demo only when pointed at the tests' stand-in.
+if (!process.env.ANTHROPIC_API_URL) process.env.ANTHROPIC_API_KEY = '';
 process.once('exit', () => mongo.stop());
 
 const { client, db } = await connectDb(process.env.MONGODB_URI, process.env.MONGODB_DB);

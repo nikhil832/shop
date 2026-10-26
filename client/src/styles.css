@@ -2535,3 +2535,19 @@ textarea {
 .did-you-mean a {
   font-weight: 700;
 }
+
+/* "Write for me" under the product description (admin). */
+.write-for-me {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.write-for-me p {
+  margin: 0;
+  flex: 1;
+  min-width: 200px;
+}
+.write-for-me .error {
+  flex-basis: 100%;
+}

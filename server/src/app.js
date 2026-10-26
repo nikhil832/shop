@@ -10,6 +10,7 @@ import { orderExportRouter } from './routes/orderExport.js';
 import { productImportRouter } from './routes/productImport.js';
 import { ordersRouter } from './routes/orders.js';
 import { paymentsRouter } from './routes/payments.js';
+import { aiWriterRouter } from './routes/aiWriter.js';
 import { adminRouter } from './routes/admin.js';
 import { activityRouter } from './activity.js';
 import { gstSettingsRouter } from './routes/gstSettings.js';
@@ -59,6 +60,7 @@ export function createApp(ctx) {
   // Before adminRouter, whose /admin/orders/:id and /admin/products/:id would take "export" or "import" for an id.
   api.use(orderExportRouter(ctx));
   api.use(productImportRouter(ctx));
+  api.use(aiWriterRouter(ctx));
   api.use(adminRouter(ctx));
   api.use((req, res) => res.status(404).json({ error: 'Not found' }));
   app.use('/api', api);

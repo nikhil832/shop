@@ -2,6 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 const PORT = 4100;
 const FAKE_RAZORPAY_PORT = 4101;
+const FAKE_ANTHROPIC_PORT = 4102;
 
 export default defineConfig({
   testDir: 'e2e',
@@ -24,6 +25,13 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
+      // A stand-in for Claude's API, so the writing assistant is tested without the real service or its cost.
+      command: 'node server/test/fake-anthropic.js',
+      env: { FAKE_ANTHROPIC_PORT: String(FAKE_ANTHROPIC_PORT) },
+      port: FAKE_ANTHROPIC_PORT,
+      reuseExistingServer: false,
+    },
+    {
       // Production build + demo mode (in-memory MongoDB with the sample catalog) on a dedicated port:
       // never touches real data or a running dev server. Env vars set here take precedence over server/.env,
       // so real Razorpay keys there are never used: these are the stand-in's fake test keys.
@@ -34,6 +42,8 @@ export default defineConfig({
         RAZORPAY_KEY_SECRET: 'fake_secret_for_tests',
         RAZORPAY_WEBHOOK_SECRET: 'fake_webhook_secret',
         RAZORPAY_API_URL: `http://localhost:${FAKE_RAZORPAY_PORT}`,
+        ANTHROPIC_API_KEY: 'sk-ant-fake-key-for-tests',
+        ANTHROPIC_API_URL: `http://localhost:${FAKE_ANTHROPIC_PORT}`,
       },
       url: `http://localhost:${PORT}/api/categories`,
       reuseExistingServer: false,

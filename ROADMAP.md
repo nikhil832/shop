@@ -23,10 +23,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
   sweep runs on time. A switch on Render, no code change.
 - **Partial search matches**: every search word must match something, so "wireless earbuds" finds nothing. Showing
   products that match only some words would also bring in weak results; left out on purpose.
-- **AI features with the Claude API** (each call costs a little; set aside on 2026-10-26 until the user wants to pay for
-  an API key). Cheapest first, all with Claude Haiku 5.5 at well under ₹1 a call:
-  - **AI product writer**: "Write for me" in the admin product form drafts the description and highlights from the
-    title, brand, category and photo; the admin edits before saving. To start: "start ai writer".
+- **AI features with the Claude API** (each call costs a little; set aside on 2026-10-26; the product writer was built after all as stage 51, and these can use its
+  API key). Each well under ₹1 a call with Claude Haiku 5.5:
   - **AI answer drafts**: "Draft an answer" on an unanswered product question; the admin edits and sends. To start:
     "start ai answers".
   - **Review summary**: "What customers say" on products with enough reviews, rewritten only when they change. To
@@ -88,3 +86,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | "Did you mean…?" for searches that find nothing                                                                                     | Stage 48 (`git log --grep "Stage 48"`) |
 | Buy again: a past order's items back in the cart at today's prices, saying what couldn't be added                                   | Stage 49 (`git log --grep "Stage 49"`) |
 | Credit notes for returns (GST), printable, and taken off the GST summary                                                            | Stage 50 (`git log --grep "Stage 50"`) |
+| Write for me: Claude drafts a product's description and highlights in the admin form (needs an Anthropic API key; paid per use)     | Stage 51 (`git log --grep "Stage 51"`) |
