@@ -16,6 +16,7 @@ import AdminQuestions from './AdminQuestions.jsx';
 import AdminReturns from './AdminReturns.jsx';
 import AdminReviews from './AdminReviews.jsx';
 import Invoice from '../Invoice.jsx';
+import CreditNote from '../CreditNote.jsx';
 
 // Every admin page, under /admin/*. main.jsx loads this file the first time an admin page opens, so shoppers never
 // download the admin panel; once loaded, moving between admin pages needs nothing more.
@@ -28,6 +29,7 @@ export default function AdminRoutes() {
         <Route path="orders/slips" element={<AdminPackingSlips />} />
         <Route path="orders/:id" element={<AdminOrder />} />
         <Route path="orders/:id/invoice" element={<Invoice admin />} />
+        <Route path="orders/:id/credit-notes/:returnId" element={<CreditNote admin />} />
         <Route path="products" element={<AdminProducts />} />
         <Route path="products/new" element={<AdminProduct />} />
         <Route path="products/import" element={<AdminImport />} />

@@ -1732,7 +1732,8 @@ textarea {
   flex: 1;
   min-width: 0;
 }
-.return-row > p.small {
+.return-row > p.small,
+.return-row > a {
   flex-basis: 100%;
 }
 .status.return-declined {

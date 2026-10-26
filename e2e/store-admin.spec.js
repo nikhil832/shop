@@ -283,7 +283,7 @@ test('the dashboard downloads a GST summary by place of supply and rate', async 
   expect(download.suggestedFilename()).toMatch(/^gst-summary-\d{4}-\d{2}-\d{2}-to-\d{4}-\d{2}-\d{2}\.csv$/);
   const file = (await readFile(await download.path(), 'utf8')).replace(/^\uFEFF/, '');
   expect(file.split('\r\n')[0]).toBe(
-    'Place of supply,State code,GST rate (%),Orders,Taxable value (₹),CGST (₹),SGST (₹),IGST (₹),Total tax (₹)',
+    'Place of supply,State code,GST rate (%),Orders,Credit notes,Taxable value (₹),CGST (₹),SGST (₹),IGST (₹),Total tax (₹)',
   );
 });
 

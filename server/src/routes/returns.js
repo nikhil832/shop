@@ -6,6 +6,8 @@ import { HttpError, parse, parseObjectId } from '../http.js';
 import { refundErrorText } from '../payments.js';
 import { inTransaction } from './reviews.js';
 import { logActivity, rupees } from '../activity.js';
+import { creditNoteNumber, gstCreditNote } from '../gst.js';
+import { toOrder } from './orders.js';
 
 // Returns: a customer asks to send back some items of a delivered order, within RETURN_DAYS of delivery; an admin
 // approves it once the items are back (stock is put back and the money refunded: through Razorpay for online payments,
@@ -65,6 +67,8 @@ const toReturn = (doc) => ({
   createdAt: doc.createdAt,
   decidedAt: doc.decidedAt ?? null,
   refundedAt: doc.refundedAt ?? null,
+  // Approved returns of orders placed with GST on (stage 50).
+  creditNote: doc.creditNote ? { number: creditNoteNumber(doc.creditNote), date: doc.creditNote.date } : null,
 });
 
 // For each order line, how many can still be returned (bought, less what is in open returns).
@@ -168,6 +172,26 @@ export function returnsRouter(ctx) {
     res.status(201).json(toReturn(ret));
   });
 
+  // A return's credit note, with what the printed page needs; 404 when it has none (not approved, or GST was off).
+  async function creditNoteFor(orderFilter, returnId) {
+    const order = await orders.findOne(orderFilter);
+    if (!order) throw new HttpError(404, 'Order not found');
+    const ret = await returns.findOne({ _id: parseObjectId(returnId, 'return id'), orderId: order._id });
+    const note = ret && gstCreditNote(order, ret);
+    if (!note) throw new HttpError(404, 'This return has no credit note');
+    const { id, number, address, createdAt } = toOrder(order);
+    return {
+      note: { ...note, order: { id, number, address, createdAt }, return: toReturn(ret) },
+      userId: order.userId,
+    };
+  }
+
+  router.get('/orders/:id/credit-notes/:returnId', requireUser, async (req, res) => {
+    const filter = { _id: parseObjectId(req.params.id, 'order id'), userId: req.user._id };
+    const { note } = await creditNoteFor(filter, req.params.returnId);
+    res.json({ ...note, email: req.user.email });
+  });
+
   // ---- Admin ----
 
   router.use('/admin/returns', requireAdmin);
@@ -256,6 +280,20 @@ export function returnsRouter(ctx) {
         if (!existing) throw new HttpError(404, 'Return not found');
         throw new HttpError(409, `This return is already ${existing.status}`);
       }
+      // A return of an order placed with GST on gets a credit note, numbered in its own series inside the transaction
+      // (like order numbers), so numbers have no gaps or repeats.
+      const order = await orders.findOne({ _id: doc.orderId }, { session, projection: { gst: 1 } });
+      if (order?.gst) {
+        const counter = await db
+          .collection('counters')
+          .findOneAndUpdate(
+            { _id: 'creditNoteNumber' },
+            { $inc: { seq: 1 } },
+            { session, upsert: true, returnDocument: 'after' },
+          );
+        doc.creditNote = { seq: counter.seq, date: now };
+        await returns.updateOne({ _id }, { $set: { creditNote: doc.creditNote } }, { session });
+      }
       await db.collection('products').bulkWrite(
         doc.items.map((i) => ({
           updateOne: i.variantId
@@ -316,6 +354,15 @@ export function returnsRouter(ctx) {
     const after = await refundOnline(ret);
     await logReturn(req, after, 'Retried return refund');
     res.json(adminView(after));
+  });
+
+  router.get('/admin/orders/:id/credit-notes/:returnId', requireAdmin, async (req, res) => {
+    const { note, userId } = await creditNoteFor(
+      { _id: parseObjectId(req.params.id, 'order id') },
+      req.params.returnId,
+    );
+    const customer = await users.findOne({ _id: userId }, { projection: { email: 1 } });
+    res.json({ ...note, email: customer?.email ?? null });
   });
 
   // The returns of one order, for the admin's order page.

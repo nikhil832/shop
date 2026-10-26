@@ -152,34 +152,23 @@ function split(value, rate, intraState) {
   return { value, taxable, tax, cgst, sgst: intraState ? tax - cgst : 0, igst: intraState ? 0 : tax };
 }
 
-// The GST lines of an order placed with GST on, or null. Coupon discounts lower the items' values in proportion
-// (a free-delivery coupon lowers the delivery), delivery is taxed at the highest item rate (it goes with the goods),
-// and the lines add up to the order's total.
-export function gstInvoice(order) {
-  if (!order.gst) return null;
-  const store = order.gst;
+// Where an order was supplied and whether that's in the store's own state (CGST + SGST) or not (IGST).
+function supplyOf(order) {
   const place = findState(order.address.state);
-  const intraState = Boolean(place && place.code === store.stateCode);
-  const freeDelivery = order.coupon?.type === 'free_delivery';
-  const itemValues = order.items.map((i) => i.price * i.qty);
-  const itemDiscounts = freeDelivery ? itemValues.map(() => 0) : prorate(order.discount ?? 0, itemValues);
-  const lines = order.items.map((item, i) => ({
-    title: item.title,
-    hsn: item.hsn ?? '',
-    rate: item.gstRate ?? 0,
-    qty: item.qty,
-    ...split(itemValues[i] - itemDiscounts[i], item.gstRate ?? 0, intraState),
-  }));
-  const delivery = (order.delivery ?? 0) - (freeDelivery ? (order.discount ?? 0) : 0);
-  if (delivery > 0) {
-    lines.push({
-      title: 'Delivery',
-      hsn: '',
-      rate: store.deliveryRate,
-      qty: 1,
-      ...split(delivery, store.deliveryRate, intraState),
-    });
-  }
+  return {
+    seller: {
+      legalName: order.gst.legalName,
+      address: order.gst.address,
+      gstin: order.gst.gstin,
+      state: order.gst.state,
+    },
+    placeOfSupply: place ? { name: place.name, code: place.code } : { name: order.address.state, code: null },
+    intraState: Boolean(place && place.code === order.gst.stateCode),
+  };
+}
+
+// The tax by rate and the totals of a document's lines.
+function summarize(lines) {
   const sum = (list, key) => list.reduce((n, l) => n + l[key], 0);
   const rates = [...new Set(lines.map((l) => l.rate))].sort((a, b) => a - b);
   const byRate = rates.map((rate) => {
@@ -187,9 +176,6 @@ export function gstInvoice(order) {
     return { rate, taxable: sum(at, 'taxable'), cgst: sum(at, 'cgst'), sgst: sum(at, 'sgst'), igst: sum(at, 'igst') };
   });
   return {
-    seller: { legalName: store.legalName, address: store.address, gstin: store.gstin, state: store.state },
-    placeOfSupply: place ? { name: place.name, code: place.code } : { name: order.address.state, code: null },
-    intraState,
     lines,
     byRate,
     totals: {
@@ -202,3 +188,58 @@ export function gstInvoice(order) {
     },
   };
 }
+
+// The GST lines of an order placed with GST on, or null. Coupon discounts lower the items' values in proportion
+// (a free-delivery coupon lowers the delivery), delivery is taxed at the highest item rate (it goes with the goods),
+// and the lines add up to the order's total.
+export function gstInvoice(order) {
+  if (!order.gst) return null;
+  const supply = supplyOf(order);
+  const freeDelivery = order.coupon?.type === 'free_delivery';
+  const itemValues = order.items.map((i) => i.price * i.qty);
+  const itemDiscounts = freeDelivery ? itemValues.map(() => 0) : prorate(order.discount ?? 0, itemValues);
+  const lines = order.items.map((item, i) => ({
+    title: item.title,
+    hsn: item.hsn ?? '',
+    rate: item.gstRate ?? 0,
+    qty: item.qty,
+    ...split(itemValues[i] - itemDiscounts[i], item.gstRate ?? 0, supply.intraState),
+  }));
+  const delivery = (order.delivery ?? 0) - (freeDelivery ? (order.discount ?? 0) : 0);
+  if (delivery > 0) {
+    lines.push({
+      title: 'Delivery',
+      hsn: '',
+      rate: order.gst.deliveryRate,
+      qty: 1,
+      ...split(delivery, order.gst.deliveryRate, supply.intraState),
+    });
+  }
+  return { ...supply, ...summarize(lines) };
+}
+
+// The credit note of an approved return of an order placed with GST on (its number is given on approval), or null.
+// The refund is spread over the returned items by value and split at each item's rate as on the invoice, so the lines
+// add up to the refund; delivery isn't refunded, so it has no line.
+export function gstCreditNote(order, ret) {
+  if (!order.gst || !ret.creditNote) return null;
+  const supply = supplyOf(order);
+  const values = prorate(
+    ret.refund,
+    ret.items.map((i) => i.price * i.qty),
+  );
+  const lines = ret.items.map((i, n) => {
+    const rate = order.items[i.index].gstRate ?? 0;
+    return {
+      title: i.title,
+      hsn: order.items[i.index].hsn ?? '',
+      rate,
+      qty: i.qty,
+      ...split(values[n], rate, supply.intraState),
+    };
+  });
+  return { number: creditNoteNumber(ret.creditNote), date: ret.creditNote.date, ...supply, ...summarize(lines) };
+}
+
+// "CN-12": credit notes have their own series, apart from invoices (order numbers).
+export const creditNoteNumber = (creditNote) => `CN-${creditNote.seq}`;

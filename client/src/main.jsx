@@ -59,12 +59,14 @@ function lazyPage(load) {
 // admin page waits for one load, not two), and pages most visitors never see.
 const AdminRoutes = lazyPage(() => import('./pages/admin/AdminRoutes.jsx'));
 const Invoice = lazyPage(() => import('./pages/Invoice.jsx'));
+const CreditNote = lazyPage(() => import('./pages/CreditNote.jsx'));
 const ReturnRequest = lazyPage(() => import('./pages/ReturnRequest.jsx'));
 const Account = lazyPage(() => import('./pages/Account.jsx'));
 // Which of them the browser opened on, if any.
 const OPENED_ON = [
   [/^\/admin(\/|$)/, AdminRoutes],
   [/^\/orders\/[^/]+\/invoice$/, Invoice],
+  [/^\/orders\/[^/]+\/credit-notes\/[^/]+$/, CreditNote],
   [/^\/orders\/[^/]+\/return$/, ReturnRequest],
   [/^\/account$/, Account],
 ].find(([path]) => path.test(window.location.pathname))?.[1];
@@ -93,6 +95,7 @@ Promise.resolve(OPENED_ON?.preload())
                 <Route path="orders" element={<Orders />} />
                 <Route path="orders/:id" element={<Order />} />
                 <Route path="orders/:id/invoice" element={<Invoice />} />
+                <Route path="orders/:id/credit-notes/:returnId" element={<CreditNote />} />
                 <Route path="orders/:id/return" element={<ReturnRequest />} />
                 <Route path="wishlist" element={<Wishlist />} />
                 <Route path="account" element={<Account />} />

@@ -226,6 +226,11 @@ export default function Order() {
                   </p>
                   <span className={`status return-${r.status}`}>{returnStatusLabel(r)}</span>
                   {r.status === 'declined' && r.declineReason && <p className="muted small">Why: {r.declineReason}</p>}
+                  {r.creditNote && (
+                    <Link to={`/orders/${order.id}/credit-notes/${r.id}`} className="small">
+                      Credit note {r.creditNote.number}
+                    </Link>
+                  )}
                 </div>
               ))}
               {returnInfo.canReturn && returnInfo.items.some((i) => i.returnable > 0) && (

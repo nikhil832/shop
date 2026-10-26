@@ -46,7 +46,7 @@ function ExportOrders({ from, to }) {
       <h2 id="export-orders">Export orders</h2>
       <p className="muted small">
         {report === 'gst'
-          ? 'For the GST return: tax on sales (placed, shipped or delivered orders) between the two dates, by place of supply and rate. Only orders placed while GST invoices were on count; refunds of returns are not taken off.'
+          ? 'For the GST return: tax on sales (placed, shipped or delivered orders) between the two dates, by place of supply and rate. Only orders placed while GST invoices were on count, less the credit notes of returns approved between the same dates.'
           : 'A CSV file for Excel or Google Sheets: one row per order placed between the two dates (India time, both included), with the customer, items, amounts in rupees (with GST for orders placed while it was on), payment and delivery city.'}
       </p>
       <div className="export-fields">

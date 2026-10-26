@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 // Runs before invoices.spec.js on the shared demo server, so it switches GST off again at the end.
 const ADMIN = { email: 'admin@bazaar.demo', password: 'demo-admin-123' }; // created by server/src/demo.js
@@ -72,6 +73,36 @@ test('with GST on, a new order gets a tax invoice with CGST and SGST', async ({ 
     await expect(page.getByRole('row', { name: /^SGST/ })).toContainText('₹686.37');
     await expect(page.getByRole('row', { name: /^IGST/ })).toHaveCount(0);
     await expect(page.getByText('Prices include GST of ₹1,372.73.')).toBeVisible();
+
+    // Stage 50: delivered, returned and approved, the phone gets a credit note, linked from the order page.
+    for (const status of ['shipped', 'delivered']) {
+      expect((await admin.request.post(`/api/admin/orders/${order.id}/status`, { data: { status } })).ok()).toBe(true);
+    }
+    const asked = await page.request.post(`/api/orders/${order.id}/returns`, {
+      data: { items: [{ index: 0, qty: 1 }], reason: 'damaged' },
+    });
+    const ret = await asked.json();
+    expect((await admin.request.post(`/api/admin/returns/${ret.id}/approve`)).ok()).toBe(true);
+
+    await page.goto(`/orders/${order.id}`);
+    await page.getByRole('link', { name: /^Credit note CN-\d+$/ }).click();
+    await expect(page.getByRole('heading', { name: 'Credit note' })).toBeVisible();
+    await expect(page.getByText(`#${order.number} of`)).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Issued to' })).toContainText('Place of supply: Karnataka (29)');
+    await expect(page.getByRole('row', { name: /^CGST/ })).toContainText('₹686.36');
+    await expect(page.getByRole('row', { name: /^Total credit/ })).toContainText('₹8,999.00');
+    await expect(page.getByText('Goods returned: Arrived damaged or faulty')).toBeVisible();
+    // A new page, so checked by axe here (accessibility.spec.js runs with GST off).
+    const { violations } = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(violations.map((v) => v.id)).toEqual([]);
+
+    // The admin reaches it from the order's page in the admin panel.
+    await admin.goto(`/admin/orders/${order.id}`);
+    await admin.getByRole('link', { name: /^Credit note CN-\d+$/ }).click();
+    await expect(admin.getByRole('heading', { name: 'Credit note' })).toBeVisible();
+    await expect(admin.getByRole('region', { name: 'Issued to' })).toContainText(email);
   } finally {
     await saveGst(admin, false);
     await adminContext.close();

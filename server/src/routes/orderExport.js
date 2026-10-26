@@ -4,7 +4,7 @@ import { requireAdmin } from '../auth.js';
 import { HttpError, parse } from '../http.js';
 import { ORDER_STATUSES } from './orders.js';
 import { REFUNDED_RETURNS, SOLD } from './dashboard.js';
-import { findState, gstInvoice } from '../gst.js';
+import { findState, gstCreditNote, gstInvoice } from '../gst.js';
 
 // Days are India time, like the dashboard (a fixed +5:30, no daylight saving).
 const IST_OFFSET = 330 * 60_000;
@@ -79,6 +79,7 @@ const GST_COLUMNS = [
   'State code',
   'GST rate (%)',
   'Orders',
+  'Credit notes',
   'Taxable value (₹)',
   'CGST (₹)',
   'SGST (₹)',
@@ -87,29 +88,37 @@ const GST_COLUMNS = [
 ];
 
 // The GST summary: sold orders (placed, shipped or delivered) placed with GST on, added up per place of supply and rate
-// from their invoices' lines, which is how B2C sales are reported in the GST return. Returns' refunds aren't taken
-// off here (they need credit notes).
-function gstSummaryRows(docs) {
+// from their invoices' lines, less the credit notes of returns issued in the same dates (whenever their order was
+// placed), which is how B2C sales are reported in the GST return: net of credit notes, in the period they're issued.
+// `credited` is [{ order, ret }].
+function gstSummaryRows(docs, credited) {
   const groups = new Map();
-  for (const o of docs) {
-    const inv = gstInvoice(o);
-    if (!inv || !SOLD.includes(o.status)) continue;
-    for (const r of inv.byRate) {
-      const key = `${inv.placeOfSupply.name}|${r.rate}`;
-      const g = groups.get(key) ?? {
-        place: inv.placeOfSupply.name,
-        code: inv.placeOfSupply.code ?? findState(inv.placeOfSupply.name)?.code ?? '',
+  function add(doc, sign, key) {
+    for (const r of doc.byRate) {
+      const id = `${doc.placeOfSupply.name}|${r.rate}`;
+      const g = groups.get(id) ?? {
+        place: doc.placeOfSupply.name,
+        code: doc.placeOfSupply.code ?? findState(doc.placeOfSupply.name)?.code ?? '',
         rate: r.rate,
         orders: new Set(),
+        creditNotes: new Set(),
         taxable: 0,
         cgst: 0,
         sgst: 0,
         igst: 0,
       };
-      g.orders.add(o._id.toString());
-      for (const k of ['taxable', 'cgst', 'sgst', 'igst']) g[k] += r[k];
-      groups.set(key, g);
+      g[sign > 0 ? 'orders' : 'creditNotes'].add(key);
+      for (const k of ['taxable', 'cgst', 'sgst', 'igst']) g[k] += sign * r[k];
+      groups.set(id, g);
     }
+  }
+  for (const o of docs) {
+    const inv = gstInvoice(o);
+    if (inv && SOLD.includes(o.status)) add(inv, 1, o._id.toString());
+  }
+  for (const { order, ret } of credited) {
+    const note = gstCreditNote(order, ret);
+    if (note) add(note, -1, ret._id.toString());
   }
   return [...groups.values()]
     .sort((a, b) => a.place.localeCompare(b.place) || a.rate - b.rate)
@@ -119,6 +128,7 @@ function gstSummaryRows(docs) {
         cell(g.code),
         cell(g.rate),
         cell(g.orders.size),
+        cell(g.creditNotes.size),
         cell(rupees(g.taxable)),
         cell(rupees(g.cgst)),
         cell(rupees(g.sgst)),
@@ -161,7 +171,16 @@ export function orderExportRouter({ db }) {
         .find({ ...filter, status: { $in: SOLD }, gst: { $exists: true } })
         .limit(MAX_ROWS)
         .toArray();
-      return csvFile(res, `gst-summary-${query.from}-to-${query.to}.csv`, GST_COLUMNS, gstSummaryRows(docs));
+      // Credit notes go by their own date: a return approved in these dates counts here even for an older order.
+      const notes = await db
+        .collection('returns')
+        .find({ status: { $in: REFUNDED_RETURNS }, 'creditNote.date': filter.createdAt })
+        .limit(MAX_ROWS)
+        .toArray();
+      const noteOrders = await orders.find({ _id: { $in: notes.map((r) => r.orderId) } }).toArray();
+      const byId = new Map(noteOrders.map((o) => [o._id.toString(), o]));
+      const credited = notes.map((ret) => ({ order: byId.get(ret.orderId.toString()), ret })).filter((c) => c.order);
+      return csvFile(res, `gst-summary-${query.from}-to-${query.to}.csv`, GST_COLUMNS, gstSummaryRows(docs, credited));
     }
     if (query.status) filter.status = query.status;
     const docs = await orders.find(filter).sort({ createdAt: 1, _id: 1 }).limit(MAX_ROWS).toArray();

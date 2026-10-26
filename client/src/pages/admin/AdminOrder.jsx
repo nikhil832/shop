@@ -254,6 +254,11 @@ export default function AdminOrder() {
                     </span>
                   </p>
                   <span className={`status return-${r.status}`}>{returnStatusLabel(r, { admin: true })}</span>
+                  {r.creditNote && (
+                    <Link to={`/admin/orders/${order.id}/credit-notes/${r.id}`} className="small">
+                      Credit note {r.creditNote.number}
+                    </Link>
+                  )}
                 </div>
               ))}
               <Link to={`/admin/returns${returns.some((r) => r.status === 'requested') ? '' : '?status=all'}`}>

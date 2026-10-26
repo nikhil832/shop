@@ -94,6 +94,7 @@ test('the GST summary adds up sold orders by place of supply and rate', async ()
     'State code',
     'GST rate (%)',
     'Orders',
+    'Credit notes',
     'Taxable value (₹)',
     'CGST (₹)',
     'SGST (₹)',
@@ -102,12 +103,97 @@ test('the GST summary adds up sold orders by place of supply and rate', async ()
   ]);
   // The cancelled order and the one placed before GST are left out.
   assert.deepEqual(lines, [
-    ['Karnataka', '29', '0', '1', '698.00', '0.00', '0.00', '0.00', '0.00'],
-    ['Karnataka', '29', '18', '1', '7626.27', '686.36', '686.37', '0.00', '1372.73'],
-    ['Kerala', '32', '18', '1', '7626.27', '0.00', '0.00', '1372.73', '1372.73'],
+    ['Karnataka', '29', '0', '1', '0', '698.00', '0.00', '0.00', '0.00', '0.00'],
+    ['Karnataka', '29', '18', '1', '0', '7626.27', '686.36', '686.37', '0.00', '1372.73'],
+    ['Kerala', '32', '18', '1', '0', '7626.27', '0.00', '0.00', '1372.73', '1372.73'],
   ]);
 
   // The status choice doesn't narrow the summary (it's always sales); a bad report name is refused.
   assert.deepEqual(csvRows(await exportFile('&report=gst&status=cancelled')).slice(1), lines);
   assert.match((await exportFile('&report=tax')).body.error, /Choose a report/);
+});
+
+// Stage 50: the phone of the Karnataka order comes back. Its credit note takes it off the summary for today.
+let ret;
+test('an approved return of an order placed with GST on gets a numbered credit note', async () => {
+  for (const order of [intra, before_]) {
+    for (const status of ['shipped', 'delivered']) {
+      assert.equal((await admin('POST', `/admin/orders/${order.id}/status`, { status })).status, 200);
+    }
+  }
+  const asked = await customer('POST', `/orders/${intra.id}/returns`, {
+    items: [{ index: 0, qty: 1 }],
+    reason: 'damaged',
+  });
+  assert.equal(asked.status, 201, JSON.stringify(asked.body));
+  assert.equal(asked.body.creditNote, null);
+  // None until approved.
+  assert.equal((await customer('GET', `/orders/${intra.id}/credit-notes/${asked.body.id}`)).status, 404);
+
+  const approved = await admin('POST', `/admin/returns/${asked.body.id}/approve`);
+  assert.equal(approved.status, 200, JSON.stringify(approved.body));
+  assert.equal(approved.body.creditNote.number, 'CN-1');
+  ret = approved.body;
+
+  const note = await customer('GET', `/orders/${intra.id}/credit-notes/${ret.id}`);
+  assert.equal(note.status, 200, JSON.stringify(note.body));
+  assert.equal(note.body.number, 'CN-1');
+  assert.equal(note.body.order.number, intra.number);
+  assert.equal(note.body.email, 'asha@example.com');
+  assert.equal(note.body.seller.gstin, GSTIN);
+  assert.equal(note.body.intraState, true);
+  // ₹8,999 refunded at 18%, as on the invoice: ₹7,626.27 + ₹686.36 CGST + ₹686.37 SGST.
+  assert.deepEqual(
+    note.body.lines.map(({ rate, qty, value, taxable, cgst, sgst, igst }) => ({
+      rate,
+      qty,
+      value,
+      taxable,
+      cgst,
+      sgst,
+      igst,
+    })),
+    [{ rate: 18, qty: 1, value: 899900, taxable: 762627, cgst: 68636, sgst: 68637, igst: 0 }],
+  );
+  assert.equal(note.body.totals.value, ret.refund);
+
+  // The admin sees it too, with the customer's email; another customer doesn't.
+  const forAdmin = await admin('GET', `/admin/orders/${intra.id}/credit-notes/${ret.id}`);
+  assert.equal(forAdmin.body.email, 'asha@example.com');
+  const stranger = t.browser();
+  await stranger('POST', '/auth/register', { name: 'Ravi K', email: 'ravi@example.com', password: 'password123' });
+  assert.equal((await stranger('GET', `/orders/${intra.id}/credit-notes/${ret.id}`)).status, 404);
+  assert.equal((await customer('GET', `/orders/${intra.id}/returns`)).body.returns[0].creditNote.number, 'CN-1');
+
+  // An order placed while GST was off gets no credit note, and doesn't use up a number.
+  const plain = await customer('POST', `/orders/${before_.id}/returns`, {
+    items: [{ index: 0, qty: 1 }],
+    reason: 'damaged',
+  });
+  const plainApproved = await admin('POST', `/admin/returns/${plain.body.id}/approve`);
+  assert.equal(plainApproved.body.creditNote, null);
+  assert.equal((await customer('GET', `/orders/${before_.id}/credit-notes/${plain.body.id}`)).status, 404);
+});
+
+test('the GST summary takes off credit notes issued in its dates', async () => {
+  const [header, ...lines] = csvRows(await exportFile('&report=gst'));
+  assert.equal(header[4], 'Credit notes');
+  assert.deepEqual(lines, [
+    ['Karnataka', '29', '0', '1', '0', '698.00', '0.00', '0.00', '0.00', '0.00'],
+    ['Karnataka', '29', '18', '1', '1', '0.00', '0.00', '0.00', '0.00', '0.00'],
+    ['Kerala', '32', '18', '1', '0', '7626.27', '0.00', '0.00', '1372.73', '1372.73'],
+  ]);
+
+  // A credit note counts in the dates it was issued, not the order's: moved to tomorrow, today's summary is gross
+  // again and tomorrow's has only the credit note.
+  const tomorrow = new Date(Date.now() + 330 * 60_000 + 86_400_000).toISOString().slice(0, 10);
+  await t.db
+    .collection('returns')
+    .updateOne({ 'creditNote.seq': 1 }, { $set: { 'creditNote.date': new Date(Date.now() + 86_400_000) } });
+  const todays = csvRows(await exportFile('&report=gst')).slice(1);
+  assert.deepEqual(todays[1], ['Karnataka', '29', '18', '1', '0', '7626.27', '686.36', '686.37', '0.00', '1372.73']);
+  const next = await admin('GET', `/admin/orders/export?from=${tomorrow}&to=${tomorrow}&report=gst`);
+  assert.deepEqual(csvRows(next).slice(1), [
+    ['Karnataka', '29', '18', '0', '1', '-7626.27', '-686.36', '-686.37', '0.00', '-1372.73'],
+  ]);
 });
