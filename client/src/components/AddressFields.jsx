@@ -1,3 +1,5 @@
+import { INDIAN_STATES } from '../states.js';
+
 // The delivery address inputs, shared by checkout and the account page. Uncontrolled: read them with FormData.
 // `saved` (the account's address) fills them in; without one, the name defaults to `defaultName`.
 const FIELDS = [
@@ -21,7 +23,8 @@ const FIELDS = [
     wide: true,
   },
   { name: 'city', label: 'City', autoComplete: 'address-level2', maxLength: 60 },
-  { name: 'state', label: 'State', autoComplete: 'address-level1', maxLength: 60 },
+  // Typed, with the states and union territories as suggestions; the server takes only those (and fixes the case).
+  { name: 'state', label: 'State', autoComplete: 'address-level1', maxLength: 60, list: 'indian-states' },
   {
     name: 'pincode',
     label: 'PIN code',
@@ -47,6 +50,11 @@ export default function AddressFields({ saved, defaultName = '' }) {
           />
         </label>
       ))}
+      <datalist id="indian-states">
+        {INDIAN_STATES.map((s) => (
+          <option key={s} value={s} />
+        ))}
+      </datalist>
     </div>
   );
 }

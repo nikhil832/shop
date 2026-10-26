@@ -7,9 +7,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                                         | Why                                                                                     | To start             |
-| --- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | -------------------- |
-| 1   | **GST on invoices**: your GSTIN, a tax rate per category, and the tax shown in each invoice line (prices stay tax-inclusive) | Needed for proper invoices once the store is GST-registered; needs your GSTIN and rates | "start GST invoices" |
+| #   | Idea | Why | To start |
+| --- | ---- | --- | -------- |
 
 ## Set aside
 
@@ -59,3 +58,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Products from a spreadsheet: CSV export, upload with a preview of every change, saved all at once                                   | Stage 35 (`git log --grep "Stage 35"`) |
 | Activity log: every admin change (and the admin command-line scripts) with who, when and what changed, kept a year                  | Stage 36 (`git log --grep "Stage 36"`) |
 | Questions on products: customers ask, admins answer, answers on the product page and emailed                                        | Stage 37 (`git log --grep "Stage 37"`) |
+| GST invoices: store GSTIN and rates per category in Admin → GST, tax invoices with CGST/SGST or IGST for orders placed while on     | Stage 38 (`git log --grep "Stage 38"`) |

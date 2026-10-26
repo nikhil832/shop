@@ -2,6 +2,9 @@ const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR',
 
 // Prices are integers in paise.
 export const formatPrice = (paise) => inr.format(paise / 100);
+// With paise ("₹686.36"), for tax invoices: their lines must add up to the paisa.
+const inr2 = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 });
+export const formatAmount = (paise) => inr2.format(paise / 100);
 
 export const discountPercent = (price, mrp) => (mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0);
 

@@ -9,6 +9,7 @@ import { checkoutParams, PAYMENT_WINDOW_MS, refundPayment, syncPayment } from '.
 import { findVariant, imageFor, variantDescription, variantTitle } from '../variants.js';
 import { toProductCard } from './catalog.js';
 import { deliveryFor } from './delivery.js';
+import { findState, gstForOrders, gstInvoice } from '../gst.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
 export const FREE_DELIVERY_MIN = 49900;
@@ -74,7 +75,21 @@ export const address = z.object({
   line1: z.string().trim().min(1, 'Enter the address').max(120),
   line2: z.string().trim().max(120).default(''),
   city: z.string().trim().min(1, 'Enter the city').max(60),
-  state: z.string().trim().min(1, 'Enter the state').max(60),
+  // A state or union territory from the list, stored by its proper name ("tamilnadu" → "Tamil Nadu"): GST invoices
+  // compare it with the store's state.
+  state: z
+    .string()
+    .trim()
+    .min(1, 'Enter the state')
+    .max(60)
+    .transform((s, ctx) => {
+      const found = findState(s);
+      if (!found) {
+        ctx.addIssue({ code: 'custom', message: 'Choose a state or union territory from the list' });
+        return z.NEVER;
+      }
+      return found.name;
+    }),
   pincode: z
     .string()
     .trim()
@@ -123,6 +138,8 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   deliveredAt: doc.deliveredAt ?? null,
   cancelledAt: doc.cancelledAt ?? null,
   cancelledBy: doc.cancelledBy ?? null,
+  // The GST lines of its tax invoice, for orders placed with GST on (gst.js); null otherwise.
+  gstInvoice: gstInvoice(doc),
 });
 
 // Cancels the order matching `filter` if its status is one of `from`, and puts its stock back, in one transaction.
@@ -282,6 +299,8 @@ export function ordersRouter(ctx) {
       await session.withTransaction(async () => {
         const now = new Date();
         const items = [];
+        // With GST on, each item remembers its rate and HSN code, and the order the store's details (gst.js).
+        const gst = await gstForOrders(db, session);
         for (const { productId, variantId, qty } of body.items) {
           const _id = new ObjectId(productId);
           const vid = variantId && new ObjectId(variantId);
@@ -323,6 +342,7 @@ export function ordersRouter(ctx) {
             image: imageFor(doc, variant),
             price: (variant ?? doc).price,
             qty,
+            ...(gst && { gstRate: gst.forCategory(doc.categoryId).rate, hsn: gst.forCategory(doc.categoryId).hsn }),
           });
         }
         const before = orderTotals(items.reduce((sum, i) => sum + i.price * i.qty, 0));
@@ -358,6 +378,8 @@ export function ordersRouter(ctx) {
           // What was applied, kept with the order like its prices (the coupon itself may change later).
           ...(coupon && { coupon: { code: coupon.code, type: coupon.type } }),
           address: body.address,
+          // Delivery goes with the goods, so it's taxed at the order's highest rate.
+          ...(gst && { gst: { ...gst.store, deliveryRate: Math.max(...items.map((i) => i.gstRate)) } }),
           // Online orders hold their stock while the customer pays; expireUnpaidOrders releases it if they don't.
           payment: online ? { method: 'razorpay', status: 'pending' } : { method: 'cod' },
           status: online ? 'awaiting_payment' : 'placed',

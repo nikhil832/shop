@@ -12,6 +12,7 @@ import { ordersRouter } from './routes/orders.js';
 import { paymentsRouter } from './routes/payments.js';
 import { adminRouter } from './routes/admin.js';
 import { activityRouter } from './activity.js';
+import { gstSettingsRouter } from './routes/gstSettings.js';
 import { imagesRouter } from './routes/images.js';
 import { reviewsRouter } from './routes/reviews.js';
 import { questionsRouter } from './routes/questions.js';
@@ -52,6 +53,7 @@ export function createApp(ctx) {
   api.use(dashboardRouter(ctx));
   api.use(deliveryRouter(ctx));
   api.use(activityRouter(ctx));
+  api.use(gstSettingsRouter(ctx));
   // Before adminRouter, whose /admin/orders/:id and /admin/products/:id would take "export" or "import" for an id.
   api.use(orderExportRouter(ctx));
   api.use(productImportRouter(ctx));

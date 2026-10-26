@@ -30,6 +30,7 @@ import AdminProduct from './pages/admin/AdminProduct.jsx';
 import AdminImport from './pages/admin/AdminImport.jsx';
 import AdminActivity from './pages/admin/AdminActivity.jsx';
 import AdminQuestions from './pages/admin/AdminQuestions.jsx';
+import AdminGst from './pages/admin/AdminGst.jsx';
 import AdminProducts from './pages/admin/AdminProducts.jsx';
 import AdminReviews from './pages/admin/AdminReviews.jsx';
 import AdminCoupons from './pages/admin/AdminCoupons.jsx';
@@ -72,6 +73,7 @@ createRoot(document.getElementById('root')).render(
               <Route path="coupons" element={<AdminCoupons />} />
               <Route path="returns" element={<AdminReturns />} />
               <Route path="delivery" element={<AdminDelivery />} />
+              <Route path="gst" element={<AdminGst />} />
               <Route path="activity" element={<AdminActivity />} />
             </Route>
             <Route path="*" element={<NotFound />} />
