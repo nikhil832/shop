@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { lineKey } from '../cart.js';
-import { Link, Navigate, useLocation, useParams } from 'react-router';
+import { addLines, cartQuery, lineKey } from '../cart.js';
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import OrderSummary from '../components/OrderSummary.jsx';
@@ -17,6 +17,35 @@ import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
 import { StatusBadge } from './Orders.jsx';
+
+// Why a past order's line can't go back in the cart, from its cart quote (GET /cart); null when it can.
+function notAddable(line) {
+  if (!line.product || line.problem === 'No longer available') return 'no longer sold';
+  if (line.problem === 'Out of stock') return 'out of stock';
+  // A product that has sizes or colours since it was bought: the quote asks to choose one.
+  if (!line.stock) return line.problem.toLowerCase();
+  return null;
+}
+
+// Puts the order's items that can still be bought back in the cart, as many as were bought (or as are left), at
+// today's prices. Returns { added, skipped: [{ title, reason }] }.
+async function buyAgain(order) {
+  const quote = await request(`/cart?items=${cartQuery(order.items)}`);
+  const titleOf = new Map(order.items.map((i) => [lineKey(i), i.title]));
+  const lines = [];
+  const skipped = [];
+  for (const line of quote.items) {
+    const reason = notAddable(line);
+    if (reason) skipped.push({ title: titleOf.get(lineKey(line)), reason });
+    else {
+      const { productId, variantId } = line;
+      lines.push({ productId, ...(variantId && { variantId }), qty: Math.min(line.qty, line.stock) });
+    }
+  }
+  const full = lines.length ? addLines(lines) : [];
+  skipped.push(...full.map((l) => ({ title: titleOf.get(lineKey(l)), reason: 'your cart is full' })));
+  return { added: lines.length - full.length, skipped };
+}
 
 // The courier and tracking number of a shipped order, with a link to the courier's tracking page when there is one.
 export function ShipmentDetails({ shipment }) {
@@ -46,6 +75,7 @@ export default function Order() {
   const { id } = useParams();
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const { data, error } = useFetch(user ? `/orders/${encodeURIComponent(id)}` : null);
   // Returns: for delivered orders, what can be returned and what already is.
   const { data: returnInfo } = useFetch(
@@ -86,6 +116,16 @@ export default function Order() {
     run(async () => {
       const reopened = await request(`/orders/${order.id}/pay`, { method: 'POST' });
       return payOrder(reopened, reopened.checkout);
+    });
+  const reorder = () =>
+    run(async () => {
+      const result = await buyAgain(order);
+      if (!result.added) {
+        throw new Error(
+          `None of these items can be added now: ${result.skipped.map((s) => `${s.title} (${s.reason})`).join(', ')}.`,
+        );
+      }
+      navigate('/cart', { state: { boughtAgain: { number: orderNumber(order), ...result } } });
     });
   const checkPayment = () => run(() => request(`/orders/${order.id}/payment/check`, { method: 'POST' }));
 
@@ -232,6 +272,11 @@ export default function Order() {
             <Link to={`/orders/${order.id}/invoice`} className="btn">
               Invoice
             </Link>
+          )}
+          {order.status !== 'awaiting_payment' && (
+            <button type="button" className="btn" onClick={reorder} disabled={action.busy}>
+              Buy again
+            </button>
           )}
           {action.error && (
             <p className="error" role="alert">

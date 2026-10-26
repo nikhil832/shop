@@ -9,12 +9,11 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 | #   | Idea                                                                                                                                        | Why                                                                                                   | To start                |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------- |
-| 1   | **Buy again**: one button on a past order puts its items (still sold, at today's prices) back in the cart                                   | Quick reorders for books, kitchen items and the like                                                  | "start buy again"       |
-| 2   | **Credit notes for returns**: a GST credit note for each approved return, printable like the invoice, and taken off the GST summary         | The GST summary can't subtract returns today; this completes the GST paperwork                        | "start credit notes"    |
-| 3   | **Error reports from the browser**: when a page fails to load or crashes for a visitor, the store records it, and admins see them in a list | Problems customers hit (like the ones fixed this week) show up before anyone complains                | "start error reports"   |
-| 4   | **New-device login alerts for admins**: an email when an admin account logs in from a new browser or network                                | Admin accounts can refund money and see addresses; an unexpected login is worth knowing about at once | "start login alerts"    |
-| 5   | **Address book**: customers keep several addresses (home, office, parents) and pick one at checkout                                         | Today one address is saved, and each order to a different place replaces it                           | "start address book"    |
-| 6   | **Frequently bought together**: on a product page, what other customers bought in the same orders                                           | Uses real orders instead of category alone, which suggests better add-ons                             | "start bought together" |
+| 1   | **Credit notes for returns**: a GST credit note for each approved return, printable like the invoice, and taken off the GST summary         | The GST summary can't subtract returns today; this completes the GST paperwork                        | "start credit notes"    |
+| 2   | **Error reports from the browser**: when a page fails to load or crashes for a visitor, the store records it, and admins see them in a list | Problems customers hit (like the ones fixed this week) show up before anyone complains                | "start error reports"   |
+| 3   | **New-device login alerts for admins**: an email when an admin account logs in from a new browser or network                                | Admin accounts can refund money and see addresses; an unexpected login is worth knowing about at once | "start login alerts"    |
+| 4   | **Address book**: customers keep several addresses (home, office, parents) and pick one at checkout                                         | Today one address is saved, and each order to a different place replaces it                           | "start address book"    |
+| 5   | **Frequently bought together**: on a product page, what other customers bought in the same orders                                           | Uses real orders instead of category alone, which suggests better add-ons                             | "start bought together" |
 
 ## Set aside
 
@@ -88,3 +87,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Accessibility check (axe, WCAG 2.1 AA) on every page in the browser tests, and the contrast and link fixes it found                 | Stage 46 (`git log --grep "Stage 46"`) |
 | Storage meter on the dashboard, with emails at 80% and 95% full                                                                     | Stage 47 (`git log --grep "Stage 47"`) |
 | "Did you mean…?" for searches that find nothing                                                                                     | Stage 48 (`git log --grep "Stage 48"`) |
+| Buy again: a past order's items back in the cart at today's prices, saying what couldn't be added                                   | Stage 49 (`git log --grep "Stage 49"`) |

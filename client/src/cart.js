@@ -83,6 +83,21 @@ export function addToCart(productId, stock, variantId) {
   return true;
 }
 
+// Puts several lines in at once ("Buy again"): a line already in the cart keeps the larger quantity. Returns the lines
+// that didn't fit because the cart already holds the maximum number of different lines.
+export function addLines(lines) {
+  const next = [...items];
+  const left = [];
+  for (const line of lines) {
+    const at = next.findIndex((i) => lineKey(i) === lineKey(line));
+    if (at >= 0) next[at] = { ...next[at], qty: Math.max(next[at].qty, line.qty) };
+    else if (next.length < MAX_CART_ITEMS) next.push(line);
+    else left.push(line);
+  }
+  update(next);
+  return left;
+}
+
 export function setQty(key, qty) {
   update(items.map((i) => (lineKey(i) === key ? { ...i, qty } : i)));
 }

@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import OrderSummary from '../components/OrderSummary.jsx';
 import PriceTag from '../components/PriceTag.jsx';
 import { MAX_QTY, cartCount, cartQuery, lineKey, removeFromCart, setQty, useCart } from '../cart.js';
@@ -62,9 +62,22 @@ function CartLine({ line, qty }) {
   );
 }
 
+// After "Buy again" on an order page: what went into the cart and what couldn't.
+function BoughtAgain({ number, added, skipped }) {
+  return (
+    <div className="notice" role="status">
+      <p>
+        Added {added} {added === 1 ? 'item' : 'items'} from order #{number} at today&rsquo;s prices.
+      </p>
+      {skipped.length > 0 && <p>Not added: {skipped.map((s) => `${s.title} (${s.reason})`).join(', ')}.</p>}
+    </div>
+  );
+}
+
 export default function Cart() {
   const items = useCart();
   const navigate = useNavigate();
+  const boughtAgain = useLocation().state?.boughtAgain;
   const { data: quote, error, loading } = useFetch(items.length ? `/cart?items=${cartQuery(items)}` : null);
 
   if (!items.length) {
@@ -85,32 +98,35 @@ export default function Cart() {
   const lines = quote.items.filter((line) => qtyOf.has(lineKey(line)));
 
   return (
-    <div className="cart-page">
-      <section className={`panel ${loading ? 'stale' : ''}`}>
-        <h1>Cart ({cartCount(items)})</h1>
-        <ul className="cart-lines">
-          {lines.map((line) => (
-            <CartLine key={lineKey(line)} line={line} qty={qtyOf.get(lineKey(line))} />
-          ))}
-        </ul>
-      </section>
-      <OrderSummary
-        count={cartCount(quote.items)}
-        subtotal={quote.subtotal}
-        delivery={quote.delivery}
-        total={quote.total}
-        freeDeliveryMin={quote.freeDeliveryMin}
-      >
-        {!quote.canCheckout && <p className="error small">Fix the items marked above to continue.</p>}
-        <button
-          type="button"
-          className="btn primary"
-          disabled={loading || !quote.canCheckout}
-          onClick={() => navigate('/checkout')}
+    <>
+      {boughtAgain && <BoughtAgain {...boughtAgain} />}
+      <div className="cart-page">
+        <section className={`panel ${loading ? 'stale' : ''}`}>
+          <h1>Cart ({cartCount(items)})</h1>
+          <ul className="cart-lines">
+            {lines.map((line) => (
+              <CartLine key={lineKey(line)} line={line} qty={qtyOf.get(lineKey(line))} />
+            ))}
+          </ul>
+        </section>
+        <OrderSummary
+          count={cartCount(quote.items)}
+          subtotal={quote.subtotal}
+          delivery={quote.delivery}
+          total={quote.total}
+          freeDeliveryMin={quote.freeDeliveryMin}
         >
-          Checkout
-        </button>
-      </OrderSummary>
-    </div>
+          {!quote.canCheckout && <p className="error small">Fix the items marked above to continue.</p>}
+          <button
+            type="button"
+            className="btn primary"
+            disabled={loading || !quote.canCheckout}
+            onClick={() => navigate('/checkout')}
+          >
+            Checkout
+          </button>
+        </OrderSummary>
+      </div>
+    </>
   );
 }
