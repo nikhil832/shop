@@ -7,8 +7,16 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea | Why | To start |
-| --- | ---- | --- | -------- |
+| #   | Idea                                                                                                                                                | Why                                                                                                                        | To start                    |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| 1   | **Faster first visit**: load the admin panel, invoices and two-step setup only when they're opened, not on every page                               | Every customer now downloads the whole admin panel too (one 437 KB file); phones on slow data wait for code they never use | "start faster loading"      |
+| 2   | **Price-drop emails**: tell customers when a product on their wishlist gets cheaper                                                                 | Brings people back at the moment they're most likely to buy; uses the wishlist they already keep                           | "start price-drop emails"   |
+| 3   | **Cart saved to the account**: a logged-in customer's cart follows them between phone and laptop, with one reminder email for a cart left for a day | Today the cart lives only in one browser, so carts started on a phone are lost on the laptop                               | "start saved carts"         |
+| 4   | **Packing slips and shipping in bulk**: print slips for several orders at once and mark them shipped together                                       | Saves time on busy days: today each order is opened and shipped one by one                                                 | "start packing slips"       |
+| 5   | **Private notes on orders**: notes only admins see ("customer called, deliver after 6 pm")                                                          | Keeps what was agreed with a customer in one place, also for other admins                                                  | "start order notes"         |
+| 6   | **Photos in reviews**: buyers add up to 3 photos to their review                                                                                    | Real photos make reviews more convincing than the generated product pictures                                               | "start review photos"       |
+| 7   | **GST in the order export**: taxable value, CGST, SGST and IGST columns in the CSV                                                                  | What an accountant needs for GST returns, now that invoices have it                                                        | "start GST export"          |
+| 8   | **Accessibility check in the tests**: an automatic check (axe) of the main pages on every push                                                      | Catches problems for people using screen readers or keyboards before they reach the live site                              | "start accessibility check" |
 
 ## Set aside
 
