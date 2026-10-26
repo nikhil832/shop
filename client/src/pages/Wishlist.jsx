@@ -92,6 +92,14 @@ export default function Wishlist() {
           </span>
         )}
       </h1>
+      {items?.length > 0 && (
+        <p className="muted small">
+          {user.priceDropEmails
+            ? "We'll email you when anything here gets 5% cheaper or more. "
+            : 'Price-drop emails are off. '}
+          <Link to="/account">{user.priceDropEmails ? 'Change this' : 'Turn them on'}</Link> on your account page.
+        </p>
+      )}
       {error && <p className="error">{error.message}</p>}
       {!items && !error && <p className="muted">Loading…</p>}
       {items?.length === 0 && (

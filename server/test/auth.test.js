@@ -15,7 +15,15 @@ test('registers, stays logged in with the cookie, and logs out', async () => {
 
   const res = await call('POST', '/auth/register', account);
   assert.equal(res.status, 201);
-  assert.deepEqual(Object.keys(res.body.user).sort(), ['address', 'email', 'id', 'name', 'role', 'twoStep']);
+  assert.deepEqual(Object.keys(res.body.user).sort(), [
+    'address',
+    'email',
+    'id',
+    'name',
+    'priceDropEmails',
+    'role',
+    'twoStep',
+  ]);
   assert.equal(res.body.user.email, 'asha@example.com');
   assert.equal(res.body.user.role, 'user');
   assert.match(res.setCookie, /^sid=[\w-]{43}; Max-Age=2592000; Path=\/; Expires=.+; HttpOnly; SameSite=Lax$/);

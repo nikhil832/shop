@@ -188,6 +188,46 @@ ${button('View the product', url)}
   return { subject, text, html };
 }
 
+// Products on a customer's wishlist got cheaper: `items` are [{ product, from, to }] (paise; `from` is the price they
+// last saw). One email for all of them.
+export function priceDropEmail(user, items, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = user.name.split(/\s+/)[0];
+  const only = items.length === 1 ? items[0] : null;
+  const subject = only
+    ? `Price drop: ${only.product.title} is now ${rupees(only.to)}`
+    : `Price drops on ${items.length} items on your wishlist`;
+  const percent = (i) => Math.round(((i.from - i.to) / i.from) * 100);
+  const lines = items.map((i) => ({
+    title: i.product.title,
+    url: `${publicUrl}/p/${i.product.slug}`,
+    text: `${rupees(i.from)} → ${i.product.variants?.some((v) => v.price !== i.product.price) ? 'from ' : ''}${rupees(i.to)} (${percent(i)}% less)`,
+  }));
+  const wishlistUrl = `${publicUrl}/wishlist`;
+  const accountUrl = `${publicUrl}/account`;
+  const intro = only ? 'Something on your wishlist is cheaper now:' : 'Some things on your wishlist are cheaper now:';
+  const text = [
+    `Hi ${firstName},`,
+    intro,
+    lines.map((l) => `${l.title}: ${l.text}\n${l.url}`).join('\n\n'),
+    `Your wishlist: ${wishlistUrl}`,
+    `Prices can change again, and we email at most once per drop. To stop these emails, untick them on your account page: ${accountUrl}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const cell = 'padding:8px 0;border-bottom:1px solid #e5e7eb';
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p>${escapeHtml(intro)}</p>
+<table style="width:100%;border-collapse:collapse;margin:8px 0 16px">
+${lines.map((l) => `<tr><td style="${cell}"><a href="${escapeHtml(l.url)}" style="color:#1d4ed8">${escapeHtml(l.title)}</a></td><td style="${cell};text-align:right;white-space:nowrap">${escapeHtml(l.text)}</td></tr>`).join('\n')}
+</table>
+${button('See your wishlist', wishlistUrl)}
+<p style="font-size:13px;color:#6b7280">To stop these emails, untick them on <a href="${escapeHtml(accountUrl)}">your account page</a>.</p>`,
+    "You're getting this email because these products are on your wishlist.",
+  );
+  return { subject, text, html };
+}
+
 // The asker's question has its first answer. `question` is the stored document, `product` { title, slug }.
 export function questionAnsweredEmail(user, question, product, publicUrl = DEFAULT_PUBLIC_URL) {
   const subject = `Your question about ${product.title} was answered`;

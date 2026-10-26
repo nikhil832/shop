@@ -23,6 +23,7 @@ import { address } from './orders.js';
 // The logged-in customer's own details. A new email only takes effect once confirmed by a link sent to it.
 const detailsBody = z.object({ name: z.string().trim().min(1, 'Enter your name').max(80) });
 const addressBody = z.object({ address });
+const emailPreferencesBody = z.object({ priceDropEmails: z.boolean() });
 const passwordBody = z.object({
   currentPassword: z.string().min(1, 'Enter your current password').max(128),
   newPassword,
@@ -58,6 +59,12 @@ export function accountRouter(ctx) {
   router.patch('/account', async (req, res) => {
     const { name } = parse(detailsBody, req.body);
     res.json({ user: await update(req, { $set: { name } }) });
+  });
+
+  // Which optional emails the customer gets: price drops on their wishlist (order emails always go).
+  router.put('/account/email-preferences', async (req, res) => {
+    const { priceDropEmails } = parse(emailPreferencesBody, req.body);
+    res.json({ user: await update(req, { $set: { priceDropEmails } }) });
   });
 
   // The address checkout fills in (placing an order also saves the one used).

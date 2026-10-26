@@ -672,6 +672,12 @@ a:focus-visible {
   font-weight: 600;
   font-size: 0.9rem;
 }
+.account-section label.check {
+  flex-direction: row;
+  align-items: center;
+  font-weight: 400;
+  font-size: 0.95rem;
+}
 .auth-form input,
 .account-section input,
 .address-grid input {

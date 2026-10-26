@@ -39,6 +39,7 @@ export default function Account() {
   const [address, saveAddress] = useSave();
   const [password, savePassword] = useSave();
   const [emailChange, saveEmailChange] = useSave();
+  const [updates, saveUpdates] = useSave();
   // Bumped to reload the pending email change after asking for one or cancelling it.
   const [emailVersion, setEmailVersion] = useState(0);
   const { data: pending } = useFetch(user ? '/account/email' : null, emailVersion);
@@ -54,6 +55,16 @@ export default function Account() {
     e.preventDefault();
     const { name } = fields(e);
     saveDetails(async () => setUser((await request('/account', { method: 'PATCH', body: { name } })).user), 'Saved');
+  }
+
+  // Saved as soon as it's ticked or unticked.
+  function changePriceDrops(e) {
+    const priceDropEmails = e.target.checked;
+    saveUpdates(
+      async () =>
+        setUser((await request('/account/email-preferences', { method: 'PUT', body: { priceDropEmails } })).user),
+      priceDropEmails ? 'Price-drop emails are on.' : 'Price-drop emails are off.',
+    );
   }
 
   function submitAddress(e) {
@@ -149,6 +160,16 @@ export default function Account() {
           We email a link to the new address; your email changes once you open it. Your old address is told.
         </p>
       </form>
+
+      <section className="panel account-section" aria-labelledby="updates-heading">
+        <h2 id="updates-heading">Email updates</h2>
+        <label className="check">
+          <input type="checkbox" checked={user.priceDropEmails} disabled={updates.busy} onChange={changePriceDrops} />
+          Tell me when something on my wishlist gets 5% cheaper or more
+        </label>
+        <Feedback state={updates} />
+        <p className="muted small">Emails about your orders always come.</p>
+      </section>
 
       <form className="panel account-section" onSubmit={submitAddress} aria-labelledby="address-heading">
         <h2 id="address-heading">Saved address</h2>
