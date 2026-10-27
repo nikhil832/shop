@@ -121,3 +121,35 @@ test('photo descriptions: Claude suggests one, the admin saves it, and the produ
   await page.goto(`/p/${product.slug}`);
   await expect(page.getByRole('img', { name: 'Clear glass vase with a blue rim, from the side' })).toBeVisible();
 });
+
+test('"What customers say": admins switch it for the store; the product page shows it, labelled as AI', async ({
+  page,
+}) => {
+  expect((await page.request.post('/api/auth/login', { data: ADMIN })).ok()).toBe(true);
+  await page.goto('/admin/reviews');
+  const box = page.getByLabel('Show “What customers say” on product pages');
+  await expect(box).toBeChecked();
+  await box.uncheck();
+  await page.reload();
+  await expect(box).not.toBeChecked();
+  await box.check();
+  await page.reload();
+  await expect(box).toBeChecked();
+
+  // Summaries are written minutes after reviews settle (API tests cover that); here the page is given one.
+  await page.route('**/api/products/aura-electric-kettle-1-5l/reviews?*', async (route) => {
+    const res = await route.fetch();
+    const json = await res.json();
+    json.summary = {
+      text: 'Most reviewers like how fast it boils; a few find the lid stiff.',
+      count: 4,
+      at: '2026-10-27',
+    };
+    await route.fulfill({ response: res, json });
+  });
+  await page.goto('/p/aura-electric-kettle-1-5l');
+  const reviews = page.getByRole('region', { name: 'Ratings & reviews' });
+  await expect(reviews.getByRole('heading', { name: 'What customers say' })).toBeVisible();
+  await expect(reviews.getByText('Most reviewers like how fast it boils')).toBeVisible();
+  await expect(reviews.getByText('Summarised by AI from 4 written reviews.')).toBeVisible();
+});

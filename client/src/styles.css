@@ -2691,3 +2691,21 @@ textarea {
   width: 100%;
   font-weight: 400;
 }
+/* "What customers say": an AI summary above the reviews */
+.review-ai-summary {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.review-ai-summary h3,
+.review-ai-summary p {
+  margin: 0;
+}
+.review-ai-summary h3 {
+  font-size: 1rem;
+}

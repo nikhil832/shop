@@ -19,22 +19,9 @@ they'll be added here.
   sweep runs on time. A switch on Render, no code change.
 - **Partial search matches**: every search word must match something, so "wireless earbuds" finds nothing. Showing
   products that match only some words would also bring in weak results; left out on purpose.
-- **AI features with the Claude API** (each call costs a little; set aside on 2026-10-26; the product writer was built after all as stage 51 answer drafts as stage 56, error explanations as stage 57, the weekly note as stage 58 and photo descriptions as stage
-  59, and these can use
+- **AI features with the Claude API** (each call costs a little; set aside on 2026-10-26; the product writer was built after all as stage 51 answer drafts as stage 56, error explanations as stage 57, the weekly note as stage 58, photo descriptions as stage 59 and
+  review summaries as stage 60, and these can use
   its API key). Each well under ₹1 a call with Claude Haiku 5.5:
-  - **Review summary**: "What customers say" on products with enough reviews, rewritten only when they change. To
-    start: "start review summary".
-  - **Review summary**: "What customers say" on products with enough reviews, rewritten only when they change. To
-    start: "start review summary".
-  - **Photo descriptions**: suggested alt text for uploaded product photos. To start: "start alt text".
-  - **Plain-words search**: when a search finds nothing, turn "running shoes under 2000" into filters; per visitor,
-    so it needs an hourly limit. To start: "start smart search".
-  - **Photo descriptions**: suggested alt text for uploaded product photos. To start: "start alt text".
-  - **Plain-words search**: when a search finds nothing, turn "running shoes under 2000" into filters; per visitor,
-    so it needs an hourly limit. To start: "start smart search".
-  - **Weekly sales note**: one short email to admins each Monday with last week in plain words (what sold, what's
-    running low, anything unusual), written from the dashboard's numbers. One call a week. To start: "start weekly
-    note".
   - **Review and question screening**: new reviews and questions checked for abuse, spam or personal details (phone
     numbers, addresses) and flagged for an admin to look at; nothing is hidden automatically. One call per review or
     question. To start: "start screening".
@@ -101,3 +88,4 @@ they'll be added here.
 | Explain this error: Claude explains a browser error report in plain words and where to look                                                   | Stage 57 (`git log --grep "Stage 57"`) |
 | Weekly note: each Monday, Claude writes admins a note about last week from its figures (figures included)                                     | Stage 58 (`git log --grep "Stage 58"`) |
 | Photo descriptions for screen readers, typed or suggested by Claude from the photo                                                            | Stage 59 (`git log --grep "Stage 59"`) |
+| What customers say: an AI summary of a product's reviews, rewritten when they change                                                          | Stage 60 (`git log --grep "Stage 60"`) |

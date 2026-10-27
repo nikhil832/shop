@@ -244,6 +244,14 @@ export default function Reviews({ product, onChange }) {
         )}
       </div>
 
+      {data?.summary && (
+        // "What customers say" (stage 60): written by AI from the visible reviews, and labelled so.
+        <div className="review-ai-summary">
+          <h3>What customers say</h3>
+          <p>{data.summary.text}</p>
+          <p className="muted small">Summarised by AI from {data.summary.count} written reviews. Read them below.</p>
+        </div>
+      )}
       {error && <p className="error">{error.message}</p>}
       {data &&
         (data.viewer ? (

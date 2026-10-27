@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireUser } from '../auth.js';
 import { ObjectId } from 'mongodb';
 import { HttpError, parse } from '../http.js';
+import { publicSummary } from '../reviewSummaries.js';
 import { UPLOAD_URL } from './images.js';
 
 const REVIEW_PAGE = 10;
@@ -49,6 +50,8 @@ export function changeRating(db, productId, { sum, count }, session) {
     [
       {
         $set: {
+          // For "What customers say" (reviewSummaries.js): rewritten once the reviews have settled.
+          reviewsChangedAt: '$$NOW',
           ratingBase: { $ifNull: ['$ratingBase', '$rating'] },
           reviewStats: {
             sum: { $add: [{ $ifNull: ['$reviewStats.sum', 0] }, sum] },
@@ -121,7 +124,7 @@ export function reviewsRouter({ db, client }) {
     const { page } = parse(listQuery, req.query);
     const { _id: productId } = await findProduct(req.params.slug);
     const filter = { productId, hidden: false };
-    const [docs, total, viewer] = await Promise.all([
+    const [docs, total, viewer, summary] = await Promise.all([
       reviews
         .find(filter)
         .sort({ createdAt: -1, _id: -1 })
@@ -131,12 +134,15 @@ export function reviewsRouter({ db, client }) {
       reviews.countDocuments(filter),
       req.user &&
         Promise.all([reviews.findOne({ productId, userId: req.user._id }), hasReceived(req.user._id, productId)]),
+      publicSummary(db, productId),
     ]);
     res.json({
       items: docs.map(toReview),
       total,
       page,
       pageSize: REVIEW_PAGE,
+      // "What customers say", written by Claude from the visible reviews; null when there isn't one.
+      summary,
       // For a logged-in visitor: their own review (even if hidden) and whether they may write one.
       viewer: viewer ? { review: viewer[0] && toReview(viewer[0]), canReview: viewer[1] } : null,
     });

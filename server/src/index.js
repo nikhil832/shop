@@ -14,6 +14,7 @@ import { sendCartReminders } from './routes/savedCart.js';
 import { deleteUnusedImages } from './routes/images.js';
 import { sendLowStockEmail } from './lowStockEmail.js';
 import { sendWeeklyNote } from './weeklyNote.js';
+import { updateReviewSummaries } from './reviewSummaries.js';
 import { loadConfig } from './config.js';
 import { previewRouter } from './preview.js';
 import { checkStorage } from './storage.js';
@@ -34,8 +35,8 @@ const app = createApp(ctx);
 
 // Every minute: release the stock of online orders whose 30-minute payment window has passed, then email customers
 // waiting for products that are back in stock (which that release can cause), those whose wishlist got cheaper and
-// those who left a cart a day ago, once a morning the admins' list of products running out, and on Mondays their weekly
-// note.
+// those who left a cart a day ago, once a morning the admins' list of products running out, on Mondays their weekly
+// note, and rewrite "What customers say" for products whose reviews changed.
 const sweeper = setInterval(async () => {
   await expireUnpaidOrders(ctx).catch((err) => console.error(err));
   await sendBackInStockAlerts(ctx).catch((err) => console.error(err));
@@ -43,6 +44,7 @@ const sweeper = setInterval(async () => {
   await sendCartReminders(ctx).catch((err) => console.error(err));
   await sendLowStockEmail(ctx).catch((err) => console.error(err));
   await sendWeeklyNote(ctx).catch((err) => console.error(err));
+  await updateReviewSummaries(ctx).catch((err) => console.error(err));
 }, 60_000);
 
 // At startup (the free plan sleeps, so hourly runs may not come) and then every hour: delete uploaded photos that no
