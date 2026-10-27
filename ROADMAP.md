@@ -19,10 +19,13 @@ they'll be added here.
   sweep runs on time. A switch on Render, no code change.
 - **Partial search matches**: every search word must match something, so "wireless earbuds" finds nothing. Showing
   products that match only some words would also bring in weak results; left out on purpose.
-- **AI features with the Claude API** (each call costs a little; set aside on 2026-10-26; the product writer was built after all as stage 51 answer drafts as stage 56 and error explanations as stage 57, and these can use
+- **AI features with the Claude API** (each call costs a little; set aside on 2026-10-26; the product writer was built after all as stage 51 answer drafts as stage 56, error explanations as stage 57 and the weekly note as stage 58, and these can use
   its API key). Each well under ₹1 a call with Claude Haiku 5.5:
   - **Review summary**: "What customers say" on products with enough reviews, rewritten only when they change. To
     start: "start review summary".
+  - **Photo descriptions**: suggested alt text for uploaded product photos. To start: "start alt text".
+  - **Plain-words search**: when a search finds nothing, turn "running shoes under 2000" into filters; per visitor,
+    so it needs an hourly limit. To start: "start smart search".
   - **Photo descriptions**: suggested alt text for uploaded product photos. To start: "start alt text".
   - **Plain-words search**: when a search finds nothing, turn "running shoes under 2000" into filters; per visitor,
     so it needs an hourly limit. To start: "start smart search".
@@ -93,3 +96,4 @@ they'll be added here.
 | Frequently bought together on product pages, from real orders (at least two customers)                                                        | Stage 55 (`git log --grep "Stage 55"`) |
 | AI answer drafts: "Draft an answer" on customers' questions, from the product's details, for the admin to check                               | Stage 56 (`git log --grep "Stage 56"`) |
 | Explain this error: Claude explains a browser error report in plain words and where to look                                                   | Stage 57 (`git log --grep "Stage 57"`) |
+| Weekly note: each Monday, Claude writes admins a note about last week from its figures (figures included)                                     | Stage 58 (`git log --grep "Stage 58"`) |

@@ -3,10 +3,10 @@ import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
 import { HttpError } from './http.js';
 
-// The admin's writing assistant (routes/aiWriter.js), through Claude's API with the official SDK: "Write for me" in the
-// product form, "Draft an answer" for customers' questions and "Explain this error" for browser error reports. On only
-// with ANTHROPIC_API_KEY (config.ai); every call costs a little, so it runs only when an admin clicks, and an admin
-// always checks a draft before anything is saved.
+// The admin's writing assistant, through Claude's API with the official SDK: "Write for me" in the product form and
+// "Draft an answer" for customers' questions (routes/aiWriter.js), "Explain this error" for browser error reports and
+// the admins' weekly note. On only with ANTHROPIC_API_KEY (config.ai); every call costs a little, so it runs only when
+// an admin clicks (or once a week for the note), and an admin always checks a draft before anything is saved.
 export const DEFAULT_AI_MODEL = 'claude-opus-5-5';
 export const MAX_HIGHLIGHTS = 8;
 
@@ -120,6 +120,17 @@ function explainPrompt(report, places) {
 // Links never reach the admin from an explanation: the report it explains could have been written by anyone.
 const withoutLinks = (text) => text.replace(/\b(?:https?:\/\/|www\.)\S+/gi, '[link removed]');
 
+const noteSchema = z.object({ paragraphs: z.array(z.string()) });
+
+const NOTE_SYSTEM = `You write a short weekly note for the owner of Bazaar, a small online store in India, about \
+last week (Monday to Sunday), from the figures given.
+
+- paragraphs: 2 to 4 short paragraphs in plain, friendly British/Indian English: how the week went against the week \
+before, what sold, and what needs attention now (orders to ship, products running low, questions waiting, error \
+reports). A quiet week is fine to call quiet.
+- Quote figures exactly as given, rupees with the ₹ sign. Never calculate new numbers, percentages or forecasts, and \
+never guess reasons the figures don't show. No greeting or sign-off, no emoji, no exclamation marks, no lists.`;
+
 // What the admin sees when a request fails: the cases they can fix themselves, else Anthropic's reason or "try again".
 function failureMessage(err, reason, model) {
   if (err.status === 401) return 'The Anthropic API key was refused. Check ANTHROPIC_API_KEY on the server.';
@@ -194,6 +205,23 @@ export function aiClient(config) {
         failure: "The writing assistant couldn't write this one. Please write it yourself.",
       });
       return tidy(draft);
+    },
+
+    // `facts`: [label, value] lines for the week `from`–`to` (ISO days). Returns the note's paragraphs.
+    async writeWeeklyNote({ from, to, facts }) {
+      const note = await ask({
+        system: NOTE_SYSTEM,
+        content: [
+          { type: 'text', text: [`Week: ${from} to ${to}`, ...facts.map(([l, v]) => `${l}: ${v}`)].join('\n') },
+        ],
+        schema: noteSchema,
+        failure: "The writing assistant couldn't write this week's note.",
+      });
+      return note.paragraphs
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .slice(0, 4)
+        .map((p) => p.slice(0, 1200));
     },
 
     // `report`: an errorReports document; `places`: [name, file] for the code names in it. Returns

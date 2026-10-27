@@ -64,3 +64,20 @@ test('"Draft an answer" fills in a reply to a question for the admin to check an
   await other.getByRole('button', { name: 'Draft an answer' }).click();
   await expect(other.getByText('The product’s details don’t settle this')).toBeVisible();
 });
+
+test('the weekly note: switched off and on from the dashboard, and sent to the admin on request', async ({ page }) => {
+  expect((await page.request.post('/api/auth/login', { data: ADMIN })).ok()).toBe(true);
+  await page.goto('/admin');
+  const panel = page.getByRole('region', { name: 'Weekly note' });
+  const box = panel.getByLabel('Each Monday, email admins a note about last week');
+  await expect(box).toBeChecked();
+  await box.uncheck();
+  await page.reload();
+  await expect(box).not.toBeChecked();
+  await box.check();
+  await page.reload();
+  await expect(box).toBeChecked();
+
+  await panel.getByRole('button', { name: 'Send me one now' }).click();
+  await expect(panel.getByText('Sent to your email: last week’s note.')).toBeVisible();
+});

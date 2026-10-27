@@ -467,6 +467,43 @@ ${button('Open low stock', url)}`,
   return { subject, text, html };
 }
 
+// The admins' weekly note (weeklyNote.js): Claude's paragraphs about last week (or null when they couldn't be written)
+// and the figures they came from, as [label, value] lines. The subject is built from the figures, never by Claude.
+export function weeklyNoteEmail(figures, facts, paragraphs, publicUrl = DEFAULT_PUBLIC_URL) {
+  const day = (iso) =>
+    new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const week = `${day(figures.from)} to ${day(figures.to)}`;
+  const subject = `Your week at Bazaar: ${rupees(figures.revenue)} from ${figures.orders} order${figures.orders === 1 ? '' : 's'} (${week})`;
+  const url = `${publicUrl}/admin?days=7`;
+  const intro = paragraphs?.length
+    ? paragraphs
+    : ["This week's note couldn't be written, so here are the figures on their own."];
+  const figuresNote = paragraphs?.length
+    ? 'Written by Claude from the figures below, which come straight from the store: check anything that matters against them.'
+    : '';
+
+  const text = [
+    ...intro,
+    ...(figuresNote ? [figuresNote] : []),
+    facts.map(([label, value]) => `${label}: ${value}`).join('\n'),
+    `Open the dashboard: ${url}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+
+  const cell = 'padding:6px 0;border-bottom:1px solid #e5e7eb;vertical-align:top';
+  const html = layout(
+    subject,
+    `${intro.map((p) => `<p>${escapeHtml(p)}</p>`).join('\n')}
+${figuresNote ? `<p style="font-size:13px;color:#6b7280">${escapeHtml(figuresNote)}</p>` : ''}
+<table style="width:100%;border-collapse:collapse;margin:16px 0">
+${facts.map(([label, value]) => `<tr><td style="${cell};padding-right:12px;color:#6b7280;white-space:nowrap">${escapeHtml(label)}</td><td style="${cell}">${escapeHtml(value)}</td></tr>`).join('\n')}
+</table>
+${button('Open the dashboard', url)}`,
+    "You're getting this email each Monday because you're an admin of the store. Switch it off on the dashboard.",
+  );
+  return { subject, text, html };
+}
+
 // Who hears about store events (new orders, return requests): ADMIN_EMAIL if set, otherwise every admin account.
 export async function adminRecipients(ctx) {
   const configured = ctx.config.mail?.adminEmails ?? [];

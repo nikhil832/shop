@@ -2659,3 +2659,12 @@ textarea {
 .status.urgent {
   margin-left: 8px;
 }
+.weekly-note {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.weekly-note h2,
+.weekly-note p {
+  margin: 0;
+}

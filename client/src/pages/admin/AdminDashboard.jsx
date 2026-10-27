@@ -237,6 +237,65 @@ function RevenueChart({ daily }) {
   );
 }
 
+// The weekly note (stage 58): on Mondays, Claude writes the admins a note about last week from its figures. Shown only
+// when the server has an API key. The switch is for every admin; "Send me one now" emails last week's to this admin.
+function WeeklyNote() {
+  const { data } = useFetch('/admin/weekly-note');
+  const [state, setState] = useState({ on: null, busy: false, error: null, sent: false });
+  if (!data?.available) return null;
+  const on = state.on ?? data.enabled;
+
+  async function run(action, next) {
+    setState({ on: next.on ?? on, busy: true, error: null, sent: false });
+    try {
+      await action();
+      setState({ on: next.on ?? on, busy: false, error: null, sent: Boolean(next.sent) });
+    } catch (err) {
+      setState({ on, busy: false, error: err.message, sent: false });
+    }
+  }
+
+  return (
+    <section className="panel weekly-note" aria-labelledby="weekly-note-heading">
+      <h2 id="weekly-note-heading">Weekly note</h2>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={on}
+          disabled={state.busy}
+          onChange={(e) => {
+            const enabled = e.target.checked;
+            run(() => request('/admin/weekly-note', { method: 'PUT', body: { enabled } }), { on: enabled });
+          }}
+        />
+        Each Monday, email admins a note about last week
+      </label>
+      <p className="muted small">
+        Claude writes a few paragraphs from last week&apos;s sales, best sellers and what needs attention; the figures
+        come with it, so you can check them.
+      </p>
+      <div>
+        <button
+          type="button"
+          className="btn small"
+          disabled={state.busy}
+          onClick={() => run(() => request('/admin/weekly-note/send', { method: 'POST' }), { sent: true })}
+        >
+          {state.busy ? 'Working…' : 'Send me one now'}
+        </button>
+      </div>
+      <p className="small" aria-live="polite">
+        {state.sent && 'Sent to your email: last week’s note.'}
+      </p>
+      {state.error && (
+        <p className="error small" role="alert">
+          {state.error}
+        </p>
+      )}
+    </section>
+  );
+}
+
 // The morning low-stock email, on or off for every admin. Saved as soon as it's ticked; back as it was if that fails.
 function LowStockEmailSwitch({ enabled }) {
   const [state, setState] = useState({ on: enabled, busy: false, error: null });
@@ -441,6 +500,7 @@ export default function AdminDashboard() {
 
           <ExportOrders key={days} from={data.daily[0].date} to={data.daily.at(-1).date} />
           <StorageMeter storage={data.storage} />
+          <WeeklyNote />
         </div>
       )}
     </div>
