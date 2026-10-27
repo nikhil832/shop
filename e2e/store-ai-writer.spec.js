@@ -160,7 +160,9 @@ test('screening: a flagged question shows why under Flagged, and "Looks fine" cl
   await customer.post('/api/auth/register', {
     data: { name: 'Kiran S', email: `flag-${stamp}@example.com`, password: 'password123' },
   });
-  const text = `Call me on 9876543210 about this (${stamp})`;
+  // No long numbers (the stamp is written in letters too): the demo server's own screening, which flags 10-digit
+  // numbers, also runs every minute and must not flag this question for real.
+  const text = `Is the handle heat-proof? (${stamp.toString(36)})`;
   const asked = await (
     await customer.post('/api/products/aura-electric-kettle-1-5l/questions', { data: { text } })
   ).json();
@@ -192,5 +194,5 @@ test('screening: a flagged question shows why under Flagged, and "Looks fine" cl
   await expect(card.getByText('Flagged: Personal details')).toBeVisible();
   await expect(card.getByText('It has a phone number.')).toBeVisible();
   await card.getByRole('button', { name: 'Looks fine (clear the flag)' }).click();
-  await expect(page.getByText('Flagged: Personal details')).toHaveCount(0);
+  await expect(card).toHaveCount(0); // gone from the Flagged list
 });
