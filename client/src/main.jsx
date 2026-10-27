@@ -44,6 +44,7 @@ function lazyPage(load) {
   const Lazy = lazy(() =>
     fetchPage().catch((err) => {
       if (reloadOnce()) return new Promise(() => {}); // the page is reloading
+      err.pageLoad = true; // reported as a page that didn't load, not a crash (Layout.jsx)
       throw err;
     }),
   );

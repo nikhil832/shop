@@ -22,6 +22,7 @@ export const ACTIVITY_AREAS = [
   'delivery',
   'settings',
   'accounts',
+  'errors',
 ];
 export const ACTIVITY_DAYS = 365;
 const MAX_CHANGES = 100;

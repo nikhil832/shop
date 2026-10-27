@@ -5,6 +5,7 @@ import { parse } from '../http.js';
 import { LOW_STOCK } from './admin.js';
 import { logActivity } from '../activity.js';
 import { UNANSWERED } from './questions.js';
+import { OPEN_REPORTS } from './errorReports.js';
 import { storageUse } from '../storage.js';
 
 // The `settings` document of the morning low-stock email (lowStockEmail.js): { day, at, enabled }.
@@ -83,101 +84,111 @@ export function dashboardRouter({ db, config }) {
     const previousFrom = new Date(from.getTime() - days * DAY);
     const current = { createdAt: { $gte: from }, status: { $in: SOLD } };
 
-    const [[stats], [refundStats], toShip, lowStock, lowStockCount, emailSettings, questionsToAnswer, storage] =
-      await Promise.all([
-        orders
-          .aggregate([
-            { $match: { createdAt: { $gte: previousFrom } } },
-            {
-              $facet: {
-                current: [{ $match: current }, { $group: totalsGroup }],
-                previous: [
-                  { $match: { createdAt: { $lt: from }, status: { $in: SOLD } } },
-                  { $group: { _id: null, revenue: { $sum: '$total' }, orders: { $sum: 1 } } },
-                ],
-                cancelled: [{ $match: { createdAt: { $gte: from }, status: 'cancelled' } }, { $count: 'n' }],
-                daily: [
-                  { $match: current },
-                  {
-                    $group: {
-                      _id: { $dateToString: { date: '$createdAt', format: '%Y-%m-%d', timezone: TIME_ZONE } },
-                      revenue: { $sum: '$total' },
-                      orders: { $sum: 1 },
-                    },
+    const [
+      [stats],
+      [refundStats],
+      toShip,
+      lowStock,
+      lowStockCount,
+      emailSettings,
+      questionsToAnswer,
+      openErrors,
+      storage,
+    ] = await Promise.all([
+      orders
+        .aggregate([
+          { $match: { createdAt: { $gte: previousFrom } } },
+          {
+            $facet: {
+              current: [{ $match: current }, { $group: totalsGroup }],
+              previous: [
+                { $match: { createdAt: { $lt: from }, status: { $in: SOLD } } },
+                { $group: { _id: null, revenue: { $sum: '$total' }, orders: { $sum: 1 } } },
+              ],
+              cancelled: [{ $match: { createdAt: { $gte: from }, status: 'cancelled' } }, { $count: 'n' }],
+              daily: [
+                { $match: current },
+                {
+                  $group: {
+                    _id: { $dateToString: { date: '$createdAt', format: '%Y-%m-%d', timezone: TIME_ZONE } },
+                    revenue: { $sum: '$total' },
+                    orders: { $sum: 1 },
                   },
-                ],
-                bestSellers: [
-                  { $match: current },
-                  { $unwind: '$items' },
-                  {
-                    $group: {
-                      _id: '$items.productId',
-                      title: { $last: '$items.title' },
-                      qty: { $sum: '$items.qty' },
-                      sales: { $sum: { $multiply: ['$items.price', '$items.qty'] } },
-                    },
+                },
+              ],
+              bestSellers: [
+                { $match: current },
+                { $unwind: '$items' },
+                {
+                  $group: {
+                    _id: '$items.productId',
+                    title: { $last: '$items.title' },
+                    qty: { $sum: '$items.qty' },
+                    sales: { $sum: { $multiply: ['$items.price', '$items.qty'] } },
                   },
-                ],
-              },
+                },
+              ],
             },
-          ])
-          .toArray(),
-        // Refunds from returns of the orders in both periods, by the order's day, and the items they gave back.
-        returns
-          .aggregate([
-            { $match: { status: { $in: REFUNDED_RETURNS } } },
-            {
-              $lookup: {
-                from: 'orders',
-                localField: 'orderId',
-                foreignField: '_id',
-                as: 'order',
-                pipeline: [{ $project: { createdAt: 1, status: 1 } }],
-              },
+          },
+        ])
+        .toArray(),
+      // Refunds from returns of the orders in both periods, by the order's day, and the items they gave back.
+      returns
+        .aggregate([
+          { $match: { status: { $in: REFUNDED_RETURNS } } },
+          {
+            $lookup: {
+              from: 'orders',
+              localField: 'orderId',
+              foreignField: '_id',
+              as: 'order',
+              pipeline: [{ $project: { createdAt: 1, status: 1 } }],
             },
-            { $unwind: '$order' },
-            { $match: { 'order.createdAt': { $gte: previousFrom }, 'order.status': { $in: SOLD } } },
-            {
-              $facet: {
-                current: [
-                  { $match: { 'order.createdAt': { $gte: from } } },
-                  { $group: { _id: null, refunds: { $sum: '$refund' }, items: { $sum: { $sum: '$items.qty' } } } },
-                ],
-                previous: [
-                  { $match: { 'order.createdAt': { $lt: from } } },
-                  { $group: { _id: null, refunds: { $sum: '$refund' } } },
-                ],
-                daily: [
-                  { $match: { 'order.createdAt': { $gte: from } } },
-                  {
-                    $group: {
-                      _id: { $dateToString: { date: '$order.createdAt', format: '%Y-%m-%d', timezone: TIME_ZONE } },
-                      refunds: { $sum: '$refund' },
-                    },
+          },
+          { $unwind: '$order' },
+          { $match: { 'order.createdAt': { $gte: previousFrom }, 'order.status': { $in: SOLD } } },
+          {
+            $facet: {
+              current: [
+                { $match: { 'order.createdAt': { $gte: from } } },
+                { $group: { _id: null, refunds: { $sum: '$refund' }, items: { $sum: { $sum: '$items.qty' } } } },
+              ],
+              previous: [
+                { $match: { 'order.createdAt': { $lt: from } } },
+                { $group: { _id: null, refunds: { $sum: '$refund' } } },
+              ],
+              daily: [
+                { $match: { 'order.createdAt': { $gte: from } } },
+                {
+                  $group: {
+                    _id: { $dateToString: { date: '$order.createdAt', format: '%Y-%m-%d', timezone: TIME_ZONE } },
+                    refunds: { $sum: '$refund' },
                   },
-                ],
-                byProduct: [
-                  { $match: { 'order.createdAt': { $gte: from } } },
-                  { $unwind: '$items' },
-                  {
-                    $group: {
-                      _id: '$items.productId',
-                      qty: { $sum: '$items.qty' },
-                      value: { $sum: { $multiply: ['$items.price', '$items.qty'] } },
-                    },
+                },
+              ],
+              byProduct: [
+                { $match: { 'order.createdAt': { $gte: from } } },
+                { $unwind: '$items' },
+                {
+                  $group: {
+                    _id: '$items.productId',
+                    qty: { $sum: '$items.qty' },
+                    value: { $sum: { $multiply: ['$items.price', '$items.qty'] } },
                   },
-                ],
-              },
+                },
+              ],
             },
-          ])
-          .toArray(),
-        orders.countDocuments({ status: 'placed' }),
-        lowStockProducts(db, LOW_STOCK_LIST),
-        products.countDocuments({ active: true, ...LOW }),
-        db.collection('settings').findOne({ _id: LOW_STOCK_EMAIL }),
-        db.collection('questions').countDocuments(UNANSWERED),
-        storageUse(db, config),
-      ]);
+          },
+        ])
+        .toArray(),
+      orders.countDocuments({ status: 'placed' }),
+      lowStockProducts(db, LOW_STOCK_LIST),
+      products.countDocuments({ active: true, ...LOW }),
+      db.collection('settings').findOne({ _id: LOW_STOCK_EMAIL }),
+      db.collection('questions').countDocuments(UNANSWERED),
+      db.collection('errorReports').countDocuments(OPEN_REPORTS),
+      storageUse(db, config),
+    ]);
 
     const totals = stats.current[0] ?? { revenue: 0, orders: 0, discount: 0, itemsSold: 0 };
     const previous = stats.previous[0] ?? { revenue: 0, orders: 0 };
@@ -252,6 +263,8 @@ export function dashboardRouter({ db, config }) {
       lowStockEmail: emailSettings?.enabled !== false,
       // Customers' questions on products waiting for an answer.
       questionsToAnswer,
+      // Problems visitors' browsers reported that nobody has marked fixed (errorReports.js).
+      openErrors,
       // How full the database is (storage.js).
       storage,
     });

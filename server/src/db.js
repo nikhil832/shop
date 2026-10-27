@@ -1,5 +1,6 @@
 import { MongoClient } from 'mongodb';
 import { ACTIVITY_DAYS } from './activity.js';
+import { REPORT_DAYS } from './routes/errorReports.js';
 
 // Connects and makes sure indexes exist. Returns the client (for sessions/transactions and closing) and the db.
 export async function connectDb(uri, dbName) {
@@ -41,6 +42,12 @@ const INDEXES = {
     [{ at: 1 }, { expireAfterSeconds: ACTIVITY_DAYS * 86_400 }],
     [{ area: 1, at: -1 }],
     [{ 'by.id': 1, at: -1 }],
+  ],
+  // Browser error reports: one per problem, listed by latest report, deleted REPORT_DAYS after it.
+  errorReports: [
+    [{ key: 1 }, { unique: true }],
+    [{ fixedAt: 1, lastAt: -1 }],
+    [{ lastAt: 1 }, { expireAfterSeconds: REPORT_DAYS * 86_400 }],
   ],
   categories: [[{ slug: 1 }, { unique: true }]],
   products: [[{ slug: 1 }, { unique: true }], [{ categoryId: 1, price: 1 }], [{ brand: 1 }]],

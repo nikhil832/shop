@@ -85,6 +85,7 @@ const ADMIN_PAGES = (o, p) => [
   '/admin/delivery',
   '/admin/gst',
   '/admin/activity',
+  '/admin/errors',
 ];
 
 test('every page passes the accessibility check (light theme)', async ({ browser }) => {

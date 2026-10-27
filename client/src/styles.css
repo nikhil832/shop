@@ -2551,3 +2551,22 @@ textarea {
 .write-for-me .error {
   flex-basis: 100%;
 }
+
+/* Admin: error reports from browsers. Stacks scroll inside their box instead of widening the page on phones. */
+.error-report .error-message {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.error-report code {
+  overflow-wrap: anywhere;
+}
+.error-stack {
+  margin: 6px 0;
+  padding: 10px;
+  max-height: 260px;
+  overflow: auto;
+  font-size: 0.8rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}

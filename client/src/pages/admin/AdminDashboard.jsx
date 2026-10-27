@@ -384,6 +384,13 @@ export default function AdminDashboard() {
                   </Link>
                 </p>
               )}
+              {data.openErrors > 0 && (
+                <p>
+                  <Link to="/admin/errors">
+                    {data.openErrors} {data.openErrors === 1 ? 'error' : 'errors'} reported from browsers
+                  </Link>
+                </p>
+              )}
               <h3>Low stock</h3>
               {data.lowStock.length === 0 ? (
                 <p className="muted">Every product in the store has more than 5 left.</p>

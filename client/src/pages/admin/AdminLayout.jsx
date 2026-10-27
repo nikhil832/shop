@@ -33,6 +33,7 @@ export default function AdminLayout() {
         <NavLink to="/admin/delivery">Delivery</NavLink>
         <NavLink to="/admin/gst">GST</NavLink>
         <NavLink to="/admin/activity">Activity</NavLink>
+        <NavLink to="/admin/errors">Errors</NavLink>
       </nav>
       {!user.twoStep && (
         // Not on printed invoices and packing slips.

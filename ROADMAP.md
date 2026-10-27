@@ -7,12 +7,11 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                                                        | Why                                                                                                   | To start                |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------- |
-| 1   | **Error reports from the browser**: when a page fails to load or crashes for a visitor, the store records it, and admins see them in a list | Problems customers hit (like the ones fixed this week) show up before anyone complains                | "start error reports"   |
-| 2   | **New-device login alerts for admins**: an email when an admin account logs in from a new browser or network                                | Admin accounts can refund money and see addresses; an unexpected login is worth knowing about at once | "start login alerts"    |
-| 3   | **Address book**: customers keep several addresses (home, office, parents) and pick one at checkout                                         | Today one address is saved, and each order to a different place replaces it                           | "start address book"    |
-| 4   | **Frequently bought together**: on a product page, what other customers bought in the same orders                                           | Uses real orders instead of category alone, which suggests better add-ons                             | "start bought together" |
+| #   | Idea                                                                                                         | Why                                                                                                   | To start                |
+| --- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ----------------------- |
+| 1   | **New-device login alerts for admins**: an email when an admin account logs in from a new browser or network | Admin accounts can refund money and see addresses; an unexpected login is worth knowing about at once | "start login alerts"    |
+| 2   | **Address book**: customers keep several addresses (home, office, parents) and pick one at checkout          | Today one address is saved, and each order to a different place replaces it                           | "start address book"    |
+| 3   | **Frequently bought together**: on a product page, what other customers bought in the same orders            | Uses real orders instead of category alone, which suggests better add-ons                             | "start bought together" |
 
 ## Set aside
 
@@ -87,3 +86,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Buy again: a past order's items back in the cart at today's prices, saying what couldn't be added                                   | Stage 49 (`git log --grep "Stage 49"`) |
 | Credit notes for returns (GST), printable, and taken off the GST summary                                                            | Stage 50 (`git log --grep "Stage 50"`) |
 | Write for me: Claude drafts a product's description and highlights in the admin form (needs an Anthropic API key; paid per use)     | Stage 51 (`git log --grep "Stage 51"`) |
+| Error reports: pages that didn't load or crashed in visitors' browsers, listed for admins by problem, with fixed/reopen             | Stage 52 (`git log --grep "Stage 52"`) |

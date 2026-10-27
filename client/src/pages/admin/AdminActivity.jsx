@@ -15,6 +15,7 @@ const AREAS = {
   delivery: 'Delivery',
   settings: 'Settings',
   accounts: 'Accounts',
+  errors: 'Errors',
 };
 
 const personName = (p) => (p ? p.name : 'Command line');
