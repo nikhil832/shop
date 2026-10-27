@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { Navigate } from 'react-router';
+import { useEffect, useState } from 'react';
+import { Navigate, useLocation } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import AccountNav from '../components/AccountNav.jsx';
 import AddressFields from '../components/AddressFields.jsx';
 import TwoStepSection from '../components/TwoStepSection.jsx';
+import { MAX_ADDRESSES, addressLine } from '../format.js';
 import { useFetch } from '../useFetch.js';
 
 // Each section saves on its own: { busy, error, done } where `done` is the confirmation to show.
@@ -33,18 +34,142 @@ function Feedback({ state }) {
   return state.done && <p role="status">{state.done}</p>;
 }
 
+// The address book: each saved address with Edit, Make default and Remove, and a form to add one. One form is open
+// at a time (`editing`: an address id, 'new' or null); the inputs are uncontrolled, filled from the address.
+function AddressBook({ user, setUser }) {
+  const [state, save] = useSave();
+  const [editing, setEditing] = useState(null);
+  const full = user.addresses.length >= MAX_ADDRESSES;
+
+  function submit(e) {
+    e.preventDefault();
+    const { label, ...address } = Object.fromEntries(new FormData(e.currentTarget));
+    const isNew = editing === 'new';
+    save(
+      async () => {
+        const res = await request(isNew ? '/account/addresses' : `/account/addresses/${editing}`, {
+          method: isNew ? 'POST' : 'PUT',
+          body: { address, label },
+        });
+        setUser(res.user);
+        setEditing(null);
+      },
+      isNew ? 'Address added' : 'Address saved',
+    );
+  }
+  const act = (path, method, done) => save(async () => setUser((await request(path, { method })).user), done);
+  const name = (a) => a.label || a.name;
+
+  const editor = (a) => (
+    <form className="address-editor" onSubmit={submit} aria-label={a ? `Edit ${name(a)}` : 'New address'}>
+      <label>
+        Label (optional)
+        <input name="label" maxLength={30} defaultValue={a?.label ?? ''} placeholder="Home, Office…" />
+      </label>
+      <AddressFields saved={a} defaultName={user.name} />
+      <div className="account-actions">
+        <button type="submit" className="btn primary" disabled={state.busy}>
+          Save address
+        </button>
+        <button type="button" className="btn" onClick={() => setEditing(null)}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+
+  return (
+    <section className="panel account-section" id="addresses" aria-labelledby="address-heading">
+      <h2 id="address-heading">Addresses</h2>
+      <p className="muted small">
+        Checkout offers these, the default first. A new address you order to is added here unless you untick &ldquo;Save
+        it&rdquo;.
+      </p>
+      {user.addresses.length === 0 && editing !== 'new' && <p className="muted">No saved addresses yet.</p>}
+      {user.addresses.length > 0 && (
+        <ul className="address-list">
+          {user.addresses.map((a, i) => (
+            <li key={a.id} className="address-card">
+              {editing === a.id ? (
+                editor(a)
+              ) : (
+                <>
+                  <p>
+                    <strong>{name(a)}</strong>
+                    {i === 0 && <span className="status">Default</span>}
+                  </p>
+                  <p className="muted small">
+                    {a.label && `${a.name}, `}
+                    {addressLine(a)} · {a.phone}
+                  </p>
+                  <div className="account-actions">
+                    <button
+                      type="button"
+                      className="btn small"
+                      aria-label={`Edit ${name(a)}`}
+                      onClick={() => setEditing(a.id)}
+                    >
+                      Edit
+                    </button>
+                    {i > 0 && (
+                      <button
+                        type="button"
+                        className="btn small"
+                        aria-label={`Make default: ${name(a)}`}
+                        disabled={state.busy}
+                        onClick={() => act(`/account/addresses/${a.id}/default`, 'POST', 'Default address changed')}
+                      >
+                        Make default
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="btn small"
+                      aria-label={`Remove ${name(a)}`}
+                      disabled={state.busy}
+                      onClick={() => act(`/account/addresses/${a.id}`, 'DELETE', 'Address removed')}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {editing === 'new' && editor(null)}
+      {editing !== 'new' &&
+        (full ? (
+          <p className="muted small">
+            That&apos;s {MAX_ADDRESSES} addresses, the most kept: remove one to add another.
+          </p>
+        ) : (
+          <button type="button" className="btn" onClick={() => setEditing('new')}>
+            Add an address
+          </button>
+        ))}
+      <Feedback state={state} />
+    </section>
+  );
+}
+
 export default function Account() {
   const { user, setUser } = useAuth();
   const [details, saveDetails] = useSave();
-  const [address, saveAddress] = useSave();
   const [password, savePassword] = useSave();
   const [emailChange, saveEmailChange] = useSave();
   const [updates, saveUpdates] = useSave();
   // Bumped to reload the pending email change after asking for one or cancelling it.
   const [emailVersion, setEmailVersion] = useState(0);
   const { data: pending } = useFetch(user ? '/account/email' : null, emailVersion);
-  // Bumped to remount the address inputs after removing it (they are uncontrolled).
-  const [addressVersion, setAddressVersion] = useState(0);
+  // Links to a section (/account#addresses from checkout, #two-step from the admin panel) scroll to it once the page,
+  // loaded on first use, has the user.
+  const { hash } = useLocation();
+  const ready = Boolean(user);
+  useEffect(() => {
+    if (ready && hash) document.getElementById(hash.slice(1))?.scrollIntoView();
+  }, [ready, hash]);
 
   if (user === undefined) return <p className="muted">Loading…</p>;
   if (!user) return <Navigate to="/login?next=/account" replace />;
@@ -67,22 +192,6 @@ export default function Account() {
         `${label} ${on ? 'on' : 'off'}.`,
       );
     };
-  }
-
-  function submitAddress(e) {
-    e.preventDefault();
-    const body = { address: fields(e) };
-    saveAddress(
-      async () => setUser((await request('/account/address', { method: 'PUT', body })).user),
-      'Saved. Checkout will fill this in.',
-    );
-  }
-
-  function removeAddress() {
-    saveAddress(async () => {
-      setUser((await request('/account/address', { method: 'DELETE' })).user);
-      setAddressVersion((v) => v + 1);
-    }, 'Address removed');
   }
 
   function submitPassword(e) {
@@ -187,22 +296,7 @@ export default function Account() {
         <p className="muted small">Emails about your orders always come.</p>
       </section>
 
-      <form className="panel account-section" onSubmit={submitAddress} aria-labelledby="address-heading">
-        <h2 id="address-heading">Saved address</h2>
-        <p className="muted small">Checkout fills this in. Placing an order also saves the address you used.</p>
-        <AddressFields key={addressVersion} saved={user.address} defaultName={user.name} />
-        <Feedback state={address} />
-        <div className="account-actions">
-          <button type="submit" className="btn primary" disabled={address.busy}>
-            Save address
-          </button>
-          {user.address && (
-            <button type="button" className="btn" onClick={removeAddress} disabled={address.busy}>
-              Remove
-            </button>
-          )}
-        </div>
-      </form>
+      <AddressBook user={user} setUser={setUser} />
 
       <form className="panel account-section" onSubmit={submitPassword} aria-labelledby="password-heading">
         <h2 id="password-heading">Change password</h2>

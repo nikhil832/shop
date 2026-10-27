@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 const uniqueEmail = () => `account-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`;
 
-test('the account page changes the name, saved address and password', async ({ page }) => {
+test('the account page changes the name and password', async ({ page }) => {
   const email = uniqueEmail();
   await page.goto('/register');
   await page.getByLabel('Name').fill('Asha Rao');
@@ -20,18 +20,6 @@ test('the account page changes the name, saved address and password', async ({ p
   await details.getByRole('button', { name: 'Save' }).click();
   await expect(details.getByRole('status')).toHaveText('Saved');
   await expect(page.getByRole('banner').getByRole('link', { name: 'Meera' })).toBeVisible();
-
-  // Address: saved, then filled in at checkout's form after a reload.
-  const address = page.getByRole('form', { name: 'Saved address' });
-  await address.getByLabel('Mobile number').fill('9876543210');
-  await address.getByLabel('Address (house, street, area)').fill('12 MG Road');
-  await address.getByLabel('City').fill('Bengaluru');
-  await address.getByLabel('State').fill('Karnataka');
-  await address.getByLabel('PIN code').fill('560001');
-  await address.getByRole('button', { name: 'Save address' }).click();
-  await expect(address.getByRole('status')).toHaveText('Saved. Checkout will fill this in.');
-  await page.reload();
-  await expect(page.getByRole('form', { name: 'Saved address' }).getByLabel('City')).toHaveValue('Bengaluru');
 
   // Password: the current one is required and can't be reused.
   const password = page.getByRole('form', { name: 'Change password' });
@@ -104,4 +92,66 @@ test('a long email address wraps instead of widening the account pages on a phon
     await expect(page.getByText(email).first()).toBeVisible();
     expect(await page.locator('html').evaluate((html) => html.scrollWidth), path).toBeLessThanOrEqual(390);
   }
+});
+
+test('the address book: add, label, edit, make default, remove, and choose at checkout', async ({ page }) => {
+  const email = uniqueEmail();
+  expect(
+    (
+      await page.request.post('/api/auth/register', { data: { name: 'Asha Rao', email, password: 'password123' } })
+    ).ok(),
+  ).toBe(true);
+  await page.goto('/account#addresses');
+  const book = page.getByRole('region', { name: 'Addresses' });
+  await expect(book.getByText('No saved addresses yet.')).toBeVisible();
+
+  async function add(label, line1, pincode) {
+    await book.getByRole('button', { name: 'Add an address' }).click();
+    const form = book.getByRole('form', { name: 'New address' });
+    await form.getByLabel('Label (optional)').fill(label);
+    await form.getByLabel('Mobile number').fill('9876543210');
+    await form.getByLabel('Address (house, street, area)').fill(line1);
+    await form.getByLabel('City').fill('Bengaluru');
+    await form.getByLabel('State').fill('karnataka');
+    await form.getByLabel('PIN code').fill(pincode);
+    await form.getByRole('button', { name: 'Save address' }).click();
+    await expect(book.getByRole('status')).toHaveText('Address added');
+  }
+  await add('Home', '12 MG Road', '560001');
+  await add('Office', 'Prestige Tower', '560025');
+  const cards = book.getByRole('listitem');
+  await expect(cards).toHaveCount(2);
+  await expect(cards.first()).toContainText('HomeDefault');
+  await expect(cards.first()).toContainText('Asha Rao, 12 MG Road, Bengaluru, Karnataka 560001 · 9876543210');
+
+  // Edit the office, then make it the default: it moves to the top.
+  await book.getByRole('button', { name: 'Edit Office' }).click();
+  const edit = book.getByRole('form', { name: 'Edit Office' });
+  await expect(edit.getByLabel('PIN code')).toHaveValue('560025');
+  await edit.getByLabel('Address (house, street, area)').fill('5th floor, Prestige Tower');
+  await edit.getByRole('button', { name: 'Save address' }).click();
+  await expect(book.getByRole('status')).toHaveText('Address saved');
+  await book.getByRole('button', { name: 'Make default: Office' }).click();
+  await expect(book.getByRole('status')).toHaveText('Default address changed');
+  await expect(cards.first()).toContainText('OfficeDefault');
+  await expect(cards.first()).toContainText('5th floor, Prestige Tower');
+
+  // Checkout offers both, the default chosen; a new address shows the form with "Save it" ticked.
+  await page.goto('/p/the-quiet-engineer-paperback');
+  await page.getByRole('button', { name: 'Add to cart' }).click();
+  await page.goto('/checkout');
+  const where = page.getByRole('group', { name: 'Delivery address' });
+  await expect(where.getByRole('radio', { name: /^Office/ })).toBeChecked();
+  await expect(where.getByLabel('Mobile number')).toHaveCount(0);
+  await where.getByRole('radio', { name: 'A new address' }).check();
+  await expect(where.getByLabel('Save it to my addresses')).toBeChecked();
+  await where.getByRole('radio', { name: /^Home/ }).check();
+  await expect(where.getByLabel('Mobile number')).toHaveCount(0);
+
+  // Remove the default: the other becomes the default.
+  await page.goto('/account#addresses');
+  await book.getByRole('button', { name: 'Remove Office' }).click();
+  await expect(book.getByRole('status')).toHaveText('Address removed');
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first()).toContainText('HomeDefault');
 });

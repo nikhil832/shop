@@ -2,6 +2,7 @@ import { isIP, isIPv4, isIPv6 } from 'node:net';
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { HttpError } from './http.js';
+import { toAddress } from './addressBook.js';
 
 const scryptAsync = promisify(scrypt);
 const KEY_LENGTH = 64;
@@ -177,7 +178,9 @@ export const toUser = (doc) => ({
   name: doc.name,
   email: doc.email,
   role: doc.role,
-  address: doc.address ?? null,
+  // The address book, default first; `address` is the default (or null), for checkout and the delivery check.
+  addresses: (doc.addresses ?? []).map(toAddress),
+  address: doc.addresses?.length ? toAddress(doc.addresses[0]) : null,
   twoStep: Boolean(doc.totp?.enabledAt),
   // Emails when something on the wishlist gets cheaper; on unless switched off.
   priceDropEmails: doc.priceDropEmails !== false,

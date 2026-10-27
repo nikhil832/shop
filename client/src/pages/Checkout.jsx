@@ -5,7 +5,7 @@ import { useAuth } from '../auth.jsx';
 import { cartCount, cartQuery, clearCart, lineKey, useCart } from '../cart.js';
 import AddressFields from '../components/AddressFields.jsx';
 import OrderSummary from '../components/OrderSummary.jsx';
-import { formatPrice } from '../format.js';
+import { MAX_ADDRESSES, addressFields, addressLine, formatPrice } from '../format.js';
 import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
 
@@ -53,6 +53,79 @@ function CouponBox({ applied, error, inputRef, onApply, onRemove }) {
   );
 }
 
+// Where to deliver: one of the saved addresses (the default first and chosen), or a new one, which is saved to the
+// address book unless "Save it" is unticked. The radios and the checkbox have names the submit handler takes out.
+function DeliveryAddress({ user }) {
+  const [choice, setChoice] = useState(user.addresses[0]?.id ?? 'new');
+  const full = user.addresses.length >= MAX_ADDRESSES;
+  const newFields = (
+    <>
+      <AddressFields defaultName={user.name} />
+      {full ? (
+        <p className="muted small">
+          Your address book is full ({MAX_ADDRESSES}), so this one isn&apos;t saved.{' '}
+          <Link to="/account#addresses">Manage addresses</Link>
+        </p>
+      ) : (
+        <label className="check">
+          <input type="checkbox" name="saveAddress" defaultChecked />
+          Save it to my addresses
+        </label>
+      )}
+    </>
+  );
+  if (!user.addresses.length) {
+    return (
+      <section className="panel">
+        <h1>Delivery address</h1>
+        {newFields}
+      </section>
+    );
+  }
+  return (
+    <fieldset className="panel address-choices">
+      <legend>
+        <h1>Delivery address</h1>
+      </legend>
+      {user.addresses.map((a, i) => (
+        <label key={a.id} className="address-choice">
+          <input
+            type="radio"
+            name="addressChoice"
+            value={a.id}
+            checked={choice === a.id}
+            onChange={() => setChoice(a.id)}
+          />
+          <span>
+            <strong>{a.label || a.name}</strong>
+            {i === 0 && <span className="status">Default</span>}
+            <span className="muted small block">
+              {a.label && `${a.name}, `}
+              {addressLine(a)} · {a.phone}
+            </span>
+          </span>
+        </label>
+      ))}
+      <label className="address-choice">
+        <input
+          type="radio"
+          name="addressChoice"
+          value="new"
+          checked={choice === 'new'}
+          onChange={() => setChoice('new')}
+        />
+        <span>
+          <strong>A new address</strong>
+        </span>
+      </label>
+      {choice === 'new' && newFields}
+      <p className="small">
+        <Link to="/account#addresses">Manage addresses</Link>
+      </p>
+    </fieldset>
+  );
+}
+
 export default function Checkout() {
   const { user, setUser } = useAuth();
   const items = useCart();
@@ -81,13 +154,27 @@ export default function Checkout() {
 
   async function submit(e) {
     e.preventDefault();
-    const { paymentMethod = 'cod', ...address } = Object.fromEntries(new FormData(e.currentTarget));
+    const {
+      paymentMethod = 'cod',
+      addressChoice = 'new',
+      saveAddress,
+      ...typed
+    } = Object.fromEntries(new FormData(e.currentTarget));
+    const saved = user.addresses.find((a) => a.id === addressChoice);
+    const address = saved ? addressFields(saved) : typed;
     setState((s) => ({ ...s, busy: true, error: null }));
     let order;
     try {
       order = await request('/orders', {
         method: 'POST',
-        body: { items, address, expectedTotal: quote.total, paymentMethod, couponCode: quote.coupon?.code },
+        body: {
+          items,
+          address,
+          saveAddress: !saved && saveAddress === 'on',
+          expectedTotal: quote.total,
+          paymentMethod,
+          couponCode: quote.coupon?.code,
+        },
       });
     } catch (err) {
       if (err.status === 401) return setUser(null);
@@ -95,7 +182,12 @@ export default function Checkout() {
       return setState((s) => ({ busy: false, error: err.message, version: s.version + (err.status === 409 ? 1 : 0) }));
     }
     // The order exists now (with its stock reserved), so the cart is done with either way.
-    setUser({ ...user, address: order.address });
+    // A new address may have gone into the address book.
+    if (!saved)
+      request('/auth/me').then(
+        ({ user }) => user && setUser(user),
+        () => {},
+      );
     clearCart();
     const goToOrder = (state) => navigate(`/orders/${order.id}`, { replace: true, state });
     if (!order.checkout) return goToOrder({ placed: true });
@@ -111,11 +203,8 @@ export default function Checkout() {
   return (
     <form className="cart-page" onSubmit={submit}>
       <div className="checkout-main">
-        <section className="panel">
-          <h1>Delivery address</h1>
-          {/* Remounted per user so the saved address fills in. */}
-          <AddressFields key={user.id} saved={user.address} defaultName={user.name} />
-        </section>
+        {/* Remounted per user, so another account's choice doesn't carry over. */}
+        <DeliveryAddress key={user.id} user={user} />
 
         <fieldset className="panel payment-options">
           <legend>

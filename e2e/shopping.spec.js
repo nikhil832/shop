@@ -94,7 +94,7 @@ test('checkout asks to log in, places a COD order, and the order can be cancelle
   await expect(page.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
 });
 
-test('the address is remembered, and logging out and back in works', async ({ page }) => {
+test('the address is saved to the address book, and logging out and back in works', async ({ page }) => {
   const email = uniqueEmail();
   await page.goto('/register');
   await page.getByLabel('Name').fill('Ravi Kumar');
@@ -111,11 +111,12 @@ test('the address is remembered, and logging out and back in works', async ({ pa
   await page.getByRole('button', { name: 'Place order · ₹389' }).click();
   await expect(page.getByRole('status')).toContainText('Order placed!');
 
-  // Next checkout starts with the last address.
+  // The address went into the address book: the next checkout offers it, chosen.
   await addToCart(page, BOOK);
   await page.goto('/checkout');
-  await expect(page.getByLabel('Mobile number')).toHaveValue('9876543210');
-  await expect(page.getByLabel('PIN code')).toHaveValue('560001');
+  await expect(page.getByRole('radio', { name: /Ravi Kumar/ })).toBeChecked();
+  await expect(page.getByRole('radio', { name: /Ravi Kumar/ })).toHaveAccessibleName(/12 MG Road.*560001/);
+  await expect(page.getByLabel('Mobile number')).toHaveCount(0);
 
   await page.getByRole('link', { name: 'Ravi' }).click();
   await page.getByRole('button', { name: 'Log out' }).click();

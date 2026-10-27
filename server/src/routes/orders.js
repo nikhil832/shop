@@ -10,6 +10,7 @@ import { findVariant, imageFor, variantDescription, variantTitle } from '../vari
 import { toProductCard } from './catalog.js';
 import { deliveryFor } from './delivery.js';
 import { findState, gstForOrders, gstInvoice } from '../gst.js';
+import { rememberAddress } from '../addressBook.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
 export const FREE_DELIVERY_MIN = 49900;
@@ -102,6 +103,8 @@ const orderBody = z.object({
   expectedTotal: z.number().int().min(0),
   paymentMethod: z.enum(['cod', 'razorpay']).default('cod'),
   couponCode: z.string().trim().max(40).optional(),
+  // A new address goes into the customer's address book unless they unticked "Save it" (a saved one is never changed).
+  saveAddress: z.boolean().default(true),
 });
 
 const withoutRefundError = (payment, admin) => {
@@ -397,7 +400,7 @@ export function ordersRouter(ctx) {
           updatedAt: now,
         };
         await orders.insertOne(order, { session });
-        await users.updateOne({ _id: req.user._id }, { $set: { address: body.address } }, { session });
+        if (body.saveAddress) await rememberAddress(users, req.user._id, body.address, { session });
       });
     } finally {
       await session.endSession();

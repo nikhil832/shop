@@ -149,12 +149,13 @@ async function placeOrder(slug, state = 'Karnataka') {
 
 test('addresses need a real state, stored by its proper name', async () => {
   const address = (state) => ({ name: 'Asha', phone: '9876543210', line1: 'x', city: 'y', state, pincode: '600001' });
-  const bad = await customer('PUT', '/account/address', { address: address('Narnia') });
+  const bad = await customer('POST', '/account/addresses', { address: address('Narnia') });
   assert.equal(bad.status, 400);
   assert.match(bad.body.error, /Choose a state or union territory/);
-  const ok = await customer('PUT', '/account/address', { address: address('tamilnadu') });
-  assert.equal(ok.status, 200);
-  assert.equal((await t.db.collection('users').findOne({ email: 'asha@example.com' })).address.state, 'Tamil Nadu');
+  const ok = await customer('POST', '/account/addresses', { address: address('tamilnadu') });
+  assert.equal(ok.status, 201);
+  const { addresses } = await t.db.collection('users').findOne({ email: 'asha@example.com' });
+  assert.equal(addresses.at(-1).state, 'Tamil Nadu');
 });
 
 test('GST is off by default: invoices as before', async () => {

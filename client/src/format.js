@@ -61,3 +61,18 @@ export function returnStatusLabel(ret, { admin = false } = {}) {
     declined: 'Declined',
   }[ret.status];
 }
+
+// A saved address on one line: "12 MG Road, Near the metro, Bengaluru, Karnataka 560001".
+export const addressLine = (a) => [a.line1, a.line2, a.city, `${a.state} ${a.pincode}`].filter(Boolean).join(', ');
+// The address fields alone, as orders take them (without the address book's id and label).
+export const addressFields = ({ name, phone, line1, line2, city, state, pincode }) => ({
+  name,
+  phone,
+  line1,
+  line2,
+  city,
+  state,
+  pincode,
+});
+// How many addresses the book keeps (MAX_ADDRESSES on the server).
+export const MAX_ADDRESSES = 10;

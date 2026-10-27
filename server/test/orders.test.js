@@ -118,7 +118,10 @@ test('places a COD order: snapshots prices, takes stock and remembers the addres
 
   assert.equal(await stockOf(BOOK), before.book - 2);
   assert.equal(await stockOf(PHONE), before.phone - 1);
-  assert.deepEqual((await call('GET', '/auth/me')).body.user.address, { ...address, line2: '' });
+  // The address goes into the (empty) address book, so it's the default now.
+  const { id, label, ...saved } = (await call('GET', '/auth/me')).body.user.address;
+  assert.ok(id);
+  assert.deepEqual({ label, ...saved }, { label: '', ...address, line2: '' });
 
   // A later price change doesn't touch the order.
   await products.updateOne({ slug: BOOK }, { $set: { price: 39900 } });

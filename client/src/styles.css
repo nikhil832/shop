@@ -2570,3 +2570,68 @@ textarea {
   border: 1px solid var(--border);
   border-radius: 6px;
 }
+
+/* Address book: saved addresses at checkout (radio cards) and on the account page */
+.address-choices {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.address-choices legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 4px;
+}
+.address-choices legend h1 {
+  margin: 0;
+}
+.address-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.address-choice:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.address-choice input {
+  margin-top: 4px;
+}
+.address-choice .status,
+.address-card .status {
+  margin-left: 8px;
+}
+.address-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.address-card {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.address-card p {
+  margin: 0 0 4px;
+}
+.address-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* Linked sections (/account#addresses) stop below the sticky header, which is two rows tall on phones. */
+.account-section {
+  scroll-margin-top: 120px;
+}

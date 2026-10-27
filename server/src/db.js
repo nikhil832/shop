@@ -1,4 +1,5 @@
 import { MongoClient } from 'mongodb';
+import { migrateAddresses } from './addressBook.js';
 import { ACTIVITY_DAYS } from './activity.js';
 import { REPORT_DAYS } from './routes/errorReports.js';
 import { DEVICE_FORGET_DAYS } from './loginAlerts.js';
@@ -9,6 +10,7 @@ export async function connectDb(uri, dbName) {
   await client.connect();
   const db = client.db(dbName);
   await ensureIndexes(db);
+  await migrateAddresses(db);
   return { client, db };
 }
 

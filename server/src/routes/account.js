@@ -13,7 +13,8 @@ import {
 } from '../auth.js';
 import { randomBytes } from 'node:crypto';
 import { confirmEmailChangeEmail, EMAIL_CHANGE_HOURS, emailChangedEmail } from '../emails.js';
-import { HttpError, parse } from '../http.js';
+import { HttpError, parse, parseObjectId } from '../http.js';
+import { MAX_ADDRESSES, hasAddress, newAddress } from '../addressBook.js';
 import { email, newPassword, SAME_PASSWORD } from './auth.js';
 import { newRecoveryCodes, newSecret, otpauthUri, verifyCode } from '../totp.js';
 import { checkSecondStep, hasTwoStep, recoveryHashes } from '../twoStep.js';
@@ -22,7 +23,7 @@ import { address } from './orders.js';
 
 // The logged-in customer's own details. A new email only takes effect once confirmed by a link sent to it.
 const detailsBody = z.object({ name: z.string().trim().min(1, 'Enter your name').max(80) });
-const addressBody = z.object({ address });
+const addressBody = z.object({ address, label: z.string().trim().max(30, 'At most 30 characters').default('') });
 const emailPreferencesBody = z
   .object({ priceDropEmails: z.boolean().optional(), cartReminderEmails: z.boolean().optional() })
   .refine((b) => Object.keys(b).length > 0, 'Say which emails to switch');
@@ -70,14 +71,74 @@ export function accountRouter(ctx) {
     res.json({ user: await update(req, { $set: choices }) });
   });
 
-  // The address checkout fills in (placing an order also saves the one used).
-  router.put('/account/address', async (req, res) => {
+  // The address book (addressBook.js): up to MAX_ADDRESSES, the first is the default. Each change is one update with
+  // its checks in the filter, so two tabs can't go past the limit.
+  router.post('/account/addresses', async (req, res) => {
     const body = parse(addressBody, req.body);
-    res.json({ user: await update(req, { $set: { address: body.address } }) });
+    const after = await users.findOneAndUpdate(
+      { _id: req.user._id, [`addresses.${MAX_ADDRESSES - 1}`]: { $exists: false }, $nor: [hasAddress(body.address)] },
+      { $push: { addresses: newAddress(body.address, body.label) } },
+      { returnDocument: 'after' },
+    );
+    if (!after) {
+      const user = await users.findOne({ _id: req.user._id, ...hasAddress(body.address) }, { projection: { _id: 1 } });
+      throw new HttpError(
+        409,
+        user ? 'This address is already saved' : `You can keep up to ${MAX_ADDRESSES} addresses`,
+      );
+    }
+    res.status(201).json({ user: toUser(after) });
   });
 
-  router.delete('/account/address', async (req, res) => {
-    res.json({ user: await update(req, { $unset: { address: '' } }) });
+  router.put('/account/addresses/:id', async (req, res) => {
+    const _id = parseObjectId(req.params.id, 'address id');
+    const body = parse(addressBody, req.body);
+    const entry = Object.fromEntries(
+      Object.entries(newAddress(body.address, body.label)).map(([k, v]) => [`addresses.$.${k}`, v]),
+    );
+    delete entry['addresses.$._id'];
+    const after = await users.findOneAndUpdate(
+      { _id: req.user._id, 'addresses._id': _id },
+      { $set: entry },
+      { returnDocument: 'after' },
+    );
+    if (!after) throw new HttpError(404, 'Address not found');
+    res.json({ user: toUser(after) });
+  });
+
+  // Removing the default makes the next one the default.
+  router.delete('/account/addresses/:id', async (req, res) => {
+    const _id = parseObjectId(req.params.id, 'address id');
+    const after = await users.findOneAndUpdate(
+      { _id: req.user._id, 'addresses._id': _id },
+      { $pull: { addresses: { _id } } },
+      { returnDocument: 'after' },
+    );
+    if (!after) throw new HttpError(404, 'Address not found');
+    res.json({ user: toUser(after) });
+  });
+
+  // Makes an address the default by moving it to the front.
+  router.post('/account/addresses/:id/default', async (req, res) => {
+    const _id = parseObjectId(req.params.id, 'address id');
+    const after = await users.findOneAndUpdate(
+      { _id: req.user._id, 'addresses._id': _id },
+      [
+        {
+          $set: {
+            addresses: {
+              $concatArrays: [
+                { $filter: { input: '$addresses', cond: { $eq: ['$$this._id', _id] } } },
+                { $filter: { input: '$addresses', cond: { $ne: ['$$this._id', _id] } } },
+              ],
+            },
+          },
+        },
+      ],
+      { returnDocument: 'after' },
+    );
+    if (!after) throw new HttpError(404, 'Address not found');
+    res.json({ user: toUser(after) });
   });
 
   // Needs the current password (wrong ones count towards the same lock as logging in, so a stolen session can't be

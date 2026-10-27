@@ -6,16 +6,6 @@ let t;
 before(async () => (t = await startTestServer()));
 after(() => t.stop());
 
-const address = {
-  name: 'Asha Rao',
-  phone: '9876543210',
-  line1: '12 MG Road',
-  line2: '',
-  city: 'Bengaluru',
-  state: 'Karnataka',
-  pincode: '560001',
-};
-
 let n = 0;
 async function register(password = 'password123') {
   const email = `account${++n}@example.com`;
@@ -28,8 +18,10 @@ async function register(password = 'password123') {
 test('account routes need a login', async () => {
   for (const [method, path] of [
     ['PATCH', '/account'],
-    ['PUT', '/account/address'],
-    ['DELETE', '/account/address'],
+    ['POST', '/account/addresses'],
+    ['PUT', '/account/addresses/000000000000000000000000'],
+    ['DELETE', '/account/addresses/000000000000000000000000'],
+    ['POST', '/account/addresses/000000000000000000000000/default'],
     ['POST', '/account/password'],
   ]) {
     assert.equal((await t.call(method, path, {})).status, 401, `${method} ${path}`);
@@ -45,20 +37,6 @@ test('changes the name, but never the email or role', async () => {
   assert.equal(res.body.user.role, 'user');
   assert.equal((await call('GET', '/auth/me')).body.user.name, 'Asha Rao Kumar');
   assert.equal((await call('PATCH', '/account', { name: ' ' })).body.error, 'name: Enter your name');
-});
-
-test('saves, validates and removes the saved address', async () => {
-  const call = await register();
-  const saved = await call('PUT', '/account/address', { address });
-  assert.equal(saved.status, 200);
-  assert.deepEqual(saved.body.user.address, address);
-
-  const bad = await call('PUT', '/account/address', { address: { ...address, pincode: '012345' } });
-  assert.equal(bad.status, 400);
-  assert.equal(bad.body.error, 'address.pincode: Enter a 6-digit PIN code');
-
-  const removed = await call('DELETE', '/account/address');
-  assert.equal(removed.body.user.address, null);
 });
 
 test('changing the password needs the current one, refuses reusing it, and logs out other devices', async () => {
