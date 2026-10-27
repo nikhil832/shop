@@ -196,3 +196,22 @@ test('screening: a flagged question shows why under Flagged, and "Looks fine" cl
   await card.getByRole('button', { name: 'Looks fine (clear the flag)' }).click();
   await expect(card).toHaveCount(0); // gone from the Flagged list
 });
+
+test('plain-words search: a search that finds nothing offers filters Claude read from it', async ({ page }) => {
+  await page.goto('/search?q=running%20shoes%20under%203000');
+  await expect(page.getByRole('heading', { name: 'No products found' })).toBeVisible();
+  const offer = page.getByRole('link', { name: 'running shoes, in Fashion, up to ₹3,000' });
+  await expect(offer).toBeVisible();
+  await expect(page.getByText('(1 product)')).toBeVisible();
+  await offer.click();
+  await expect(page).toHaveURL(/q=running(\+|%20)shoes/);
+  await expect(page).toHaveURL(/category=fashion/);
+  await expect(page).toHaveURL(/maxPrice=3000/);
+  await expect(page.getByRole('link', { name: /Stride Running Shoes/ }).first()).toBeVisible();
+
+  // Under ₹2,000 there are none, so nothing is offered.
+  await page.goto('/search?q=running%20shoes%20under%202000');
+  await expect(page.getByRole('heading', { name: 'No products found' })).toBeVisible();
+  await expect(page.getByText('Try a different search')).toBeVisible();
+  await expect(page.getByText('Looking for')).toHaveCount(0);
+});

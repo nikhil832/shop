@@ -296,6 +296,44 @@ function WeeklyNote() {
   );
 }
 
+// Plain-words search (stage 62): on or off for the store, with today's use against the daily cap. Shown only when the
+// server has an API key.
+function PlainWordsSearch() {
+  const { data } = useFetch('/admin/smart-search');
+  const [state, setState] = useState({ on: null, busy: false, error: null });
+  if (!data?.available) return null;
+  const on = state.on ?? data.enabled;
+
+  async function change(enabled) {
+    setState({ on: enabled, busy: true, error: null });
+    try {
+      await request('/admin/smart-search', { method: 'PUT', body: { enabled } });
+      setState({ on: enabled, busy: false, error: null });
+    } catch (err) {
+      setState({ on: !enabled, busy: false, error: err.message });
+    }
+  }
+
+  return (
+    <section className="panel plain-words" aria-labelledby="plain-words-heading">
+      <h2 id="plain-words-heading">Plain-words search</h2>
+      <label className="check">
+        <input type="checkbox" checked={on} disabled={state.busy} onChange={(e) => change(e.target.checked)} />
+        When a search finds nothing, let Claude read it into filters
+      </label>
+      <p className="muted small">
+        &ldquo;Running shoes under 3000&rdquo; becomes shoes in Fashion up to ₹3,000, offered as a link. Each new search
+        is one call (repeats are remembered for a week), at most {data.dailyCap} a day. Used today: {data.usedToday}.
+      </p>
+      {state.error && (
+        <p className="error small" role="alert">
+          {state.error}
+        </p>
+      )}
+    </section>
+  );
+}
+
 // The morning low-stock email, on or off for every admin. Saved as soon as it's ticked; back as it was if that fails.
 function LowStockEmailSwitch({ enabled }) {
   const [state, setState] = useState({ on: enabled, busy: false, error: null });
@@ -515,6 +553,7 @@ export default function AdminDashboard() {
           <ExportOrders key={days} from={data.daily[0].date} to={data.daily.at(-1).date} />
           <StorageMeter storage={data.storage} />
           <WeeklyNote />
+          <PlainWordsSearch />
         </div>
       )}
     </div>

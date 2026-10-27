@@ -14,8 +14,8 @@ export async function startFakeAnthropic(port = 0) {
     const prompt = body.messages[0].content.find((c) => c.type === 'text').text;
     const title = /^Title: (.*)$/m.exec(prompt)?.[1] ?? 'this product';
     const stop = state.next === 'refusal' ? 'refusal' : 'end_turn';
-    // A screening check, a review summary, a photo description, a weekly note, an error explanation, an answer draft, or
-    // a product draft.
+    // A search reading, a screening check, a review summary, a photo description, a weekly note, an error explanation,
+    // an answer draft, or a product draft.
     const product = /^Product: (.*)$/m.exec(prompt)?.[1];
     const kind = /^Kind: (.*)$/m.exec(prompt)?.[1];
     // An explanation names the first file it was given, and repeats a link from the report (the server removes it).
@@ -49,25 +49,52 @@ export async function startFakeAnthropic(port = 0) {
       reasons,
       note: reasons.length ? `  Check it: ${reasons.join(' and ')}.  ` : '',
     };
-    const draft = screened
-      ? screened
-      : summarised
-        ? summarised
-        : described
-          ? described
-          : note
-            ? note
-            : explained
-              ? explained
-              : product
-                ? {
-                    answer: `  Yes: ${product} comes with what the description lists.  `,
-                    fromDetails: !/warranty/i.test(prompt.split("Customer's question:")[1] ?? ''),
-                  }
-                : {
-                    description: `${title} is a dependable pick for everyday use.\n\nMade to last, and easy to look after.`,
-                    highlights: ['Easy to use', 'Built to last.', '  Great value  '],
-                  };
+    // A plain-words search: "under N" is a top price, a listed brand or category name is used, the rest are the
+    // words; "hello" isn't a search at all.
+    const typed = /^The shopper typed: (.*)$/m.exec(prompt)?.[1];
+    let reading = null;
+    if (typed !== undefined) {
+      let rest = typed.toLowerCase();
+      const under = /\bunder (?:rs\.? ?|₹)?(\d+)/.exec(rest);
+      rest = rest.replace(/\bunder (?:rs\.? ?|₹)?\d+/, '');
+      const categories = [...prompt.matchAll(/([a-z-]+): ([^;\n]+)/g)].filter(([, slug]) => slug !== 'Brands');
+      const brands = (/^Brands: (.*)$/m.exec(prompt)?.[1] ?? '').split(', ');
+      const inStock = /\bin stock\b/.test(rest);
+      rest = rest.replace(/\bin stock\b/, '');
+      const brand = brands.find((b) => rest.includes(b.toLowerCase()));
+      if (brand) rest = rest.replace(brand.toLowerCase(), '');
+      const category = categories.find(([, , name]) => rest.includes(name.trim().toLowerCase()))?.[1] ?? null;
+      reading = {
+        understood: !/^hello/.test(rest.trim()),
+        words: rest.replace(/\s+/g, ' ').trim(),
+        category: /shoe/.test(rest) ? 'fashion' : category,
+        brands: brand ? [brand, 'NoSuchBrand'] : [],
+        minPrice: null,
+        maxPrice: under ? Number(under[1]) : null,
+        inStock,
+      };
+    }
+    const draft = reading
+      ? reading
+      : screened
+        ? screened
+        : summarised
+          ? summarised
+          : described
+            ? described
+            : note
+              ? note
+              : explained
+                ? explained
+                : product
+                  ? {
+                      answer: `  Yes: ${product} comes with what the description lists.  `,
+                      fromDetails: !/warranty/i.test(prompt.split("Customer's question:")[1] ?? ''),
+                    }
+                  : {
+                      description: `${title} is a dependable pick for everyday use.\n\nMade to last, and easy to look after.`,
+                      highlights: ['Easy to use', 'Built to last.', '  Great value  '],
+                    };
     return {
       id: `msg_fake_${state.calls.length}`,
       type: 'message',

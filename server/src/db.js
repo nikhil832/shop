@@ -3,6 +3,7 @@ import { migrateAddresses } from './addressBook.js';
 import { ACTIVITY_DAYS } from './activity.js';
 import { REPORT_DAYS } from './routes/errorReports.js';
 import { DEVICE_FORGET_DAYS } from './loginAlerts.js';
+import { CACHE_DAYS } from './smartSearch.js';
 
 // Connects and makes sure indexes exist. Returns the client (for sessions/transactions and closing) and the db.
 export async function connectDb(uri, dbName) {
@@ -57,6 +58,8 @@ const INDEXES = {
     [{ userId: 1, deviceHash: 1 }, { unique: true }],
     [{ lastAt: 1 }, { expireAfterSeconds: DEVICE_FORGET_DAYS * 86_400 }],
   ],
+  // Plain-words search readings, remembered for a week.
+  searchInterpretations: [[{ at: 1 }, { expireAfterSeconds: CACHE_DAYS * 86_400 }]],
   categories: [[{ slug: 1 }, { unique: true }]],
   products: [[{ slug: 1 }, { unique: true }], [{ categoryId: 1, price: 1 }], [{ brand: 1 }]],
   users: [[{ email: 1 }, { unique: true }]],

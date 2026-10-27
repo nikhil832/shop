@@ -163,7 +163,7 @@ export function correctSearch(q, words) {
 }
 const compareRanks = (a, b) => a.reduce((r, x, i) => r || x - b[i], 0);
 
-async function searchStages(categories, q) {
+export async function searchStages(categories, q) {
   const terms = searchTerms(q);
   const allCategories = await categories.find({}, { projection: { name: 1, slug: 1, sortOrder: 1 } }).toArray();
   const categoryIds = (regex) => allCategories.filter((c) => new RegExp(regex, 'i').test(c.name)).map((c) => c._id);

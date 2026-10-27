@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { query } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
+import { formatPrice } from '../format.js';
 import { useFetch } from '../useFetch.js';
 
 // The same search page with `q` corrected, its filters kept, from the first page.
@@ -10,6 +11,36 @@ function suggestionParams(params, q) {
   next.set('q', q);
   next.delete('page');
   return next.toString();
+}
+
+// Plain-words search (stage 62): when a search finds nothing and there's no typo to fix, the server may read the words
+// into filters ("running shoes under 3000" → shoes in Fashion, up to ₹3,000), offered here as a link when that search
+// finds something. Nothing while it's asked, or when there's nothing better.
+function PlainWordsSearch({ q, categories }) {
+  const { data } = useFetch(`/search/understand${query({ q })}`);
+  const s = data?.search;
+  if (!s) return null;
+  const rupees = (r) => formatPrice(Number(r) * 100);
+  const category = categories?.find((c) => c.slug === s.category)?.name;
+  const parts = [
+    s.q || category || 'products',
+    s.q && category && `in ${category}`,
+    s.brand && `by ${s.brand.split(',').join(' or ')}`,
+    s.minPrice && s.maxPrice
+      ? `${rupees(s.minPrice)} to ${rupees(s.maxPrice)}`
+      : s.maxPrice
+        ? `up to ${rupees(s.maxPrice)}`
+        : s.minPrice && `from ${rupees(s.minPrice)}`,
+    s.inStock && 'in stock',
+  ].filter(Boolean);
+  return (
+    <p className="did-you-mean">
+      Looking for <Link to={`/search${query(s)}`}>{parts.join(', ')}</Link>?{' '}
+      <span className="muted">
+        ({data.total} {data.total === 1 ? 'product' : 'products'})
+      </span>
+    </p>
+  );
 }
 
 export const SORTS = [
@@ -222,7 +253,10 @@ export default function Search() {
                 </span>
               </p>
             ) : (
-              <p className="muted">Try a different search or remove some filters.</p>
+              <>
+                {q && <PlainWordsSearch key={q} q={q} categories={categories} />}
+                <p className="muted">Try a different search or remove some filters.</p>
+              </>
             )}
           </div>
         )}

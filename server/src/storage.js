@@ -32,6 +32,7 @@ const NAMES = {
   loginAttempts: 'Login attempts',
   loginChallenges: 'Two-step logins',
   knownDevices: 'Admin browsers',
+  searchInterpretations: 'Plain-words searches',
   rateLimits: 'Rate limits',
   settings: 'Settings',
   counters: 'Order numbers',

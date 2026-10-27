@@ -2659,13 +2659,16 @@ textarea {
 .status.urgent {
   margin-left: 8px;
 }
-.weekly-note {
+.weekly-note,
+.plain-words {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 .weekly-note h2,
-.weekly-note p {
+.weekly-note p,
+.plain-words h2,
+.plain-words p {
   margin: 0;
 }
 /* A photo's description in the admin product form: the column widens past the 96px thumbnail. */
