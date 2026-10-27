@@ -4,7 +4,7 @@ import { Link, Navigate } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import AccountNav from '../components/AccountNav.jsx';
-import { ORDER_STATUS, formatDate, formatPrice, orderNumber } from '../format.js';
+import { ORDER_STATUS, formatDate, formatPrice, orderNumber, smallImage } from '../format.js';
 import { useFetch } from '../useFetch.js';
 import { forgetCart } from '../cart.js';
 
@@ -62,7 +62,9 @@ export default function Orders() {
               <div className="order-thumbs">
                 {o.items
                   .slice(0, 3)
-                  .map((i) => i.image && <img key={lineKey(i)} src={i.image} alt="" width="56" height="56" />)}
+                  .map(
+                    (i) => i.image && <img key={lineKey(i)} src={smallImage(i.image)} alt="" width="56" height="56" />,
+                  )}
               </div>
               <div className="order-card-body">
                 <span className="order-number">Order #{orderNumber(o)}</span>

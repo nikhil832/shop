@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
-import { formatDate, formatPrice } from '../format.js';
+import { formatDate, formatPrice, smallImage } from '../format.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
 
@@ -73,7 +73,7 @@ export default function ReturnRequest() {
       <ul className="return-items">
         {returnable.map((i) => (
           <li key={i.index}>
-            {i.image && <img src={i.image} alt="" width="56" height="56" />}
+            {i.image && <img src={smallImage(i.image)} alt="" width="56" height="56" />}
             <span className="return-title">
               {i.title}
               <span className="muted small block">{formatPrice(i.price)} each</span>

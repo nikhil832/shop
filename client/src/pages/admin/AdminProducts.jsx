@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router';
 import { query, request } from '../../api.js';
-import { formatPrice } from '../../format.js';
+import { formatPrice, smallImage } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
+import { uploadSmallVersion } from '../../photos.js';
 import Pager from '../../components/Pager.jsx';
 
 const STATUSES = [
@@ -46,6 +47,48 @@ function StockForm({ product, onSaved }) {
   );
 }
 
+// Photos uploaded before stage 68 have no small version: this makes them in the browser, one at a time, from the full
+// photos. Shown only while there are some.
+function SmallVersions() {
+  const { data } = useFetch('/admin/images/without-small');
+  const [state, setState] = useState({ busy: false, done: 0, failed: 0, finished: false });
+  if (!data?.urls.length || state.finished) {
+    return state.finished ? (
+      <p className="notice" role="status">
+        Made {state.done} small {state.done === 1 ? 'version' : 'versions'}
+        {state.failed > 0 && ` (${state.failed} couldn't be made)`}. Cards and lists now load faster.
+      </p>
+    ) : null;
+  }
+
+  async function makeAll() {
+    let done = 0;
+    let failed = 0;
+    setState({ busy: true, done, failed, finished: false });
+    for (const url of data.urls) {
+      try {
+        const blob = await (await fetch(url)).blob();
+        if (await uploadSmallVersion(url.split('/').pop(), blob)) done += 1;
+        else failed += 1;
+      } catch {
+        failed += 1;
+      }
+      setState({ busy: true, done, failed, finished: false });
+    }
+    setState({ busy: false, done, failed, finished: true });
+  }
+
+  return (
+    <p className="notice">
+      {data.urls.length} product {data.urls.length === 1 ? 'photo has' : 'photos have'} no small version yet, so cards
+      and lists load the full photo.{' '}
+      <button type="button" className="btn small" onClick={makeAll} disabled={state.busy}>
+        {state.busy ? `Making… ${state.done + state.failed} of ${data.urls.length}` : 'Make small versions'}
+      </button>
+    </p>
+  );
+}
+
 export default function AdminProducts() {
   const location = useLocation();
   const [params, setParams] = useSearchParams();
@@ -85,6 +128,7 @@ export default function AdminProducts() {
           </Link>
         </div>
       </div>
+      <SmallVersions />
       {location.state?.saved && (
         <p className="notice" role="status">
           Saved “{location.state.saved}”.
@@ -149,7 +193,7 @@ export default function AdminProducts() {
                 <tr key={p.id} className={p.active ? '' : 'inactive'}>
                   <td>
                     <div className="product-cell">
-                      <img src={p.images[0]} alt="" width="44" height="44" />
+                      <img src={smallImage(p.images[0])} alt="" width="44" height="44" />
                       <span>
                         <Link to={`/admin/products/${p.id}`}>{p.title}</Link>
                         <span className="muted small block">{p.brand}</span>

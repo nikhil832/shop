@@ -12,6 +12,7 @@ import {
   orderNumber,
   paymentLabel,
   returnStatusLabel,
+  smallImage,
 } from '../format.js';
 import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
@@ -189,7 +190,7 @@ export default function Order() {
                 <li key={lineKey(i)} className="cart-line">
                   {/* The picture repeats the name's link next to it: a shortcut for the mouse, skipped by keyboards and screen readers. */}
                   <Link to={`/p/${i.slug}`} className="cart-thumb" tabIndex={-1} aria-hidden="true">
-                    {i.image && <img src={i.image} alt="" width="96" height="96" />}
+                    {i.image && <img src={smallImage(i.image)} alt="" width="96" height="96" />}
                   </Link>
                   <div className="cart-line-body">
                     <span className="brand">{i.brand}</span>

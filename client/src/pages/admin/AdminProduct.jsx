@@ -1,12 +1,14 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { request, upload } from '../../api.js';
-import { formatDate, toPaise, toRupees } from '../../format.js';
+import { request } from '../../api.js';
+import { uploadProductPhoto } from '../../photos.js';
+import { formatDate, toPaise, toRupees, smallImage } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 import NotFound from '../NotFound.jsx';
 
 const MAX_IMAGES = 5;
-const MAX_BYTES = 1024 * 1024;
+// Photos are shrunk in the browser before uploading (photos.js), so phones' full-size photos are fine.
+const MAX_BYTES = 25 * 1024 * 1024;
 const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 // A description of an uploaded photo for people using screen readers (stage 59), with "Suggest", where Claude looks at
@@ -60,12 +62,12 @@ function Images({ images, onChange, alts, onAlts, getTitle }) {
     e.currentTarget.value = '';
     const room = MAX_IMAGES - images.length;
     const bad = files.find((f) => !TYPES.includes(f.type) || f.size > MAX_BYTES);
-    if (bad) return setState({ busy: false, error: `${bad.name}: use a JPEG, PNG or WebP of at most 1 MB` });
+    if (bad) return setState({ busy: false, error: `${bad.name}: use a JPEG, PNG or WebP photo of at most 25 MB` });
     if (files.length > room) return setState({ busy: false, error: `You can add ${room} more image(s)` });
     setState({ busy: true, error: null });
     try {
       const urls = [];
-      for (const file of files) urls.push((await upload('/admin/images', file)).url);
+      for (const file of files) urls.push(await uploadProductPhoto(file));
       onChange([...images, ...urls]);
       setState({ busy: false, error: null });
     } catch (err) {
@@ -86,7 +88,7 @@ function Images({ images, onChange, alts, onAlts, getTitle }) {
       <ul>
         {images.map((src, i) => (
           <li key={src}>
-            <img src={src} alt={`Image ${i + 1}`} width="96" height="96" />
+            <img src={smallImage(src)} alt={`Image ${i + 1}`} width="96" height="96" />
             {i === 0 ? (
               <span className="muted small">Main image</span>
             ) : (
@@ -117,7 +119,8 @@ function Images({ images, onChange, alts, onAlts, getTitle }) {
         </label>
       )}
       <span className="muted small">
-        JPEG, PNG or WebP, up to 1 MB each, at most {MAX_IMAGES}. With none, a placeholder is generated.
+        JPEG, PNG or WebP, at most {MAX_IMAGES}; big photos are made smaller before uploading. With none, a placeholder
+        is generated.
       </span>
       {state.error && (
         <p className="error small" role="alert">
@@ -281,7 +284,7 @@ function Variants({ names, onNames, rows, photos, onChange }) {
                             onChange={() => togglePhoto(r, src)}
                             aria-label={`Photo ${n + 1} for variant ${i + 1}`}
                           />
-                          <img src={src} alt="" width="40" height="40" />
+                          <img src={smallImage(src)} alt="" width="40" height="40" />
                         </label>
                       ))}
                     </div>

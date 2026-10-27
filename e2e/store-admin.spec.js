@@ -96,7 +96,11 @@ test('admin adds a product with a photo, edits stock, and hides it', async ({ pa
   await page.getByLabel('Stock', { exact: true }).fill('7');
   await page.getByLabel('Highlights (one per line, up to 8)').fill('Warm light\nUSB-C');
   await page.locator('input[type=file]').setInputFiles({ name: 'lamp.png', mimeType: 'image/png', buffer: PNG });
-  await expect(page.getByRole('img', { name: 'Image 1' })).toHaveAttribute('src', /^\/api\/images\/[0-9a-f]{24}$/);
+  // Shrunk in the browser, with a small version shown here (photos.js).
+  await expect(page.getByRole('img', { name: 'Image 1' })).toHaveAttribute(
+    'src',
+    /^\/api\/images\/[0-9a-f]{24}\?size=small$/,
+  );
   await page.getByRole('button', { name: 'Add product' }).click();
 
   await expect(page.getByRole('status')).toHaveText(`Saved “${title}”.`);

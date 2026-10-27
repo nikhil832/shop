@@ -7,9 +7,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                                         | Why                                                                                                                       | To start               |
-| --- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| 1   | **Lighter product photos**: admin uploads shrunk in the browser like review photos, plus small thumbnails for cards and rows | Photos up to 1 MB are sent even where they show at 180 px, which slows pages on phones and fills the free database sooner | "start lighter photos" |
+Nothing queued: every idea listed so far is built or set aside. Ask for new ideas ("what should we build next?") and
+they'll be added here.
 
 ## Set aside
 
@@ -91,3 +90,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Download or delete my account: a JSON download of the customer's data, and closing the account (orders kept anonymised)                       | Stage 65 (`git log --grep "Stage 65"`) |
 | Staff accounts: packer and support roles below admin, given on Admin → Staff                                                                  | Stage 66 (`git log --grep "Stage 66"`) |
 | Scheduled sales: a percentage off a category or chosen products between two times, prices back by themselves                                  | Stage 67 (`git log --grep "Stage 67"`) |
+| Lighter product photos: shrunk in the browser at upload, with small versions for cards and lists                                              | Stage 68 (`git log --grep "Stage 68"`) |

@@ -11,7 +11,7 @@ import DeliveryCheck from '../components/DeliveryCheck.jsx';
 import ProductRow from '../components/ProductRow.jsx';
 import RecentlyViewed from '../components/RecentlyViewed.jsx';
 import { rememberViewed } from '../recent.js';
-import { saleEndsIn } from '../format.js';
+import { saleEndsIn, smallImage } from '../format.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
 
@@ -34,7 +34,7 @@ function Gallery({ images, title, alts = {} }) {
               aria-label={`Show image ${i + 1}`}
               aria-pressed={i === selected}
             >
-              <img src={src} alt="" width="64" height="64" />
+              <img src={smallImage(src)} alt="" width="64" height="64" />
             </button>
           ))}
         </div>

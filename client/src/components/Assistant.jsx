@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { request } from '../api.js';
-import { formatPrice } from '../format.js';
+import { formatPrice, smallImage } from '../format.js';
 
 // The shopping assistant's chat panel (stage 63). Each question sends the conversation so far (text only) and gets a
 // reply with product cards whose prices and stock come from the store, not from the AI. `messages` are
@@ -74,7 +74,7 @@ export default function Assistant({ messages, setMessages, limits, onClose }) {
                 {m.products.map((p) => (
                   <li key={p.id}>
                     <Link to={`/p/${p.slug}`}>
-                      {p.image && <img src={p.image} alt="" width="48" height="48" />}
+                      {p.image && <img src={smallImage(p.image)} alt="" width="48" height="48" />}
                       <span>
                         {p.title}
                         <span className="block small">

@@ -96,3 +96,7 @@ export function saleEndsIn(endsAt, now = Date.now()) {
   if (hours >= 2) return `Sale ends in ${hours} hours`;
   return 'Sale ends soon';
 }
+
+// The small version of an uploaded product photo (stage 68), for cards, carts and lists; drawings stay as they are.
+// The server sends the photo itself when it has no small version.
+export const smallImage = (src) => (src?.startsWith('/api/images/') ? `${src}?size=small` : src);

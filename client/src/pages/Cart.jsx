@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import OrderSummary from '../components/OrderSummary.jsx';
 import PriceTag from '../components/PriceTag.jsx';
 import { MAX_QTY, cartCount, cartQuery, lineKey, removeFromCart, setQty, useCart } from '../cart.js';
-import { formatPrice } from '../format.js';
+import { formatPrice, smallImage } from '../format.js';
 import { useFetch } from '../useFetch.js';
 
 // `qty` comes from the cart itself, so the select changes at once while the new quote loads.
@@ -27,7 +27,9 @@ function CartLine({ line, qty }) {
     <li className="cart-line">
       {/* The picture repeats the name's link next to it: a shortcut for the mouse, skipped by keyboards and screen readers. */}
       <Link to={`/p/${product.slug}`} className="cart-thumb" tabIndex={-1} aria-hidden="true">
-        {(line.image ?? product.image) && <img src={line.image ?? product.image} alt="" width="96" height="96" />}
+        {(line.image ?? product.image) && (
+          <img src={smallImage(line.image ?? product.image)} alt="" width="96" height="96" />
+        )}
       </Link>
       <div className="cart-line-body">
         <span className="brand">{product.brand}</span>

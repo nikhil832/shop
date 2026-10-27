@@ -6,6 +6,8 @@ import { takeHourlySlot } from '../rateLimit.js';
 import { HttpError, parseObjectId } from '../http.js';
 
 export const MAX_IMAGE_BYTES = 1024 * 1024;
+// A product photo's small version (stage 68), made in the admin's browser at upload: for cards, carts and lists.
+export const MAX_SMALL_BYTES = 200 * 1024;
 
 // The file must really be the type it claims, checked by its first bytes.
 const SIGNATURES = {
@@ -75,11 +77,17 @@ export async function missingImages({ db }, urls) {
 export async function deleteUnusedImages({ db }, { now = new Date() } = {}) {
   const images = db.collection('images');
   const old = await images
-    .find({ createdAt: { $lt: new Date(now.getTime() - UNUSED_IMAGE_GRACE_MS) } }, { projection: { size: 1 } })
+    .find(
+      { createdAt: { $lt: new Date(now.getTime() - UNUSED_IMAGE_GRACE_MS) } },
+      { projection: { size: 1, kind: 1, of: 1 } },
+    )
     .toArray();
   if (!old.length) return { deleted: 0, bytes: 0 };
   const used = await imagesInUse(db);
-  const unused = old.filter((img) => !used.has(img._id.toString()));
+  // A small version (stage 68) is in use while the photo it was made from is.
+  const unused = old.filter(
+    (img) => !used.has(img._id.toString()) && !(img.kind === 'small' && used.has(img.of.toString())),
+  );
   if (!unused.length) return { deleted: 0, bytes: 0 };
   const { deletedCount } = await images.deleteMany({ _id: { $in: unused.map((img) => img._id) } });
   const bytes = unused.reduce((sum, img) => sum + (img.size ?? 0), 0);
@@ -92,13 +100,18 @@ export function imagesRouter({ db }) {
   const images = db.collection('images');
   const router = express.Router();
 
+  // `?size=small` gives the photo's small version (stage 68) when it has one, else the photo itself.
   router.get('/images/:id', async (req, res) => {
-    const doc = await images.findOne({ _id: parseObjectId(req.params.id, 'image id') });
+    let doc = await images.findOne({ _id: parseObjectId(req.params.id, 'image id') });
     if (!doc) throw new HttpError(404, 'Image not found');
-    // An image never changes once uploaded (edits upload a new one), so browsers may cache it forever.
+    const wantsSmall = req.query.size === 'small';
+    const small = wantsSmall && doc.smallId && (await images.findOne({ _id: doc.smallId }));
+    if (small) doc = small;
+    // An image never changes once uploaded (edits upload a new one), so browsers may cache it forever; except a
+    // small one asked for before it exists, which may come later (for photos from before stage 68).
     res.set({
       'Content-Type': doc.contentType,
-      'Cache-Control': 'public, max-age=31536000, immutable',
+      'Cache-Control': wantsSmall && !small ? 'public, max-age=86400' : 'public, max-age=31536000, immutable',
       'X-Content-Type-Options': 'nosniff',
     });
     res.send(Buffer.from(doc.data.buffer.subarray(0, doc.data.position)));
@@ -125,6 +138,54 @@ export function imagesRouter({ db }) {
       res.status(201).json({ id: insertedId.toString(), url: imageUrl(insertedId) });
     },
   );
+
+  // The small version of an uploaded photo, made in the admin's browser (stage 68): at most MAX_SMALL_BYTES. Replaces
+  // any earlier one.
+  router.post(
+    '/admin/images/:id/small',
+    requireAdmin,
+    express.raw({ type: Object.keys(SIGNATURES), limit: MAX_SMALL_BYTES }),
+    async (req, res) => {
+      const _id = parseObjectId(req.params.id, 'image id');
+      const type = req.get('Content-Type')?.split(';')[0].trim().toLowerCase();
+      if (!Buffer.isBuffer(req.body) || !SIGNATURES[type]?.(req.body)) {
+        throw new HttpError(400, 'Upload a JPEG, PNG or WebP image');
+      }
+      const photo = await images.findOne({ _id, kind: { $ne: 'small' } }, { projection: { smallId: 1 } });
+      if (!photo) throw new HttpError(404, 'Image not found');
+      const { insertedId } = await images.insertOne({
+        data: new Binary(req.body),
+        contentType: type,
+        size: req.body.length,
+        kind: 'small',
+        of: _id,
+        uploadedBy: req.user._id,
+        createdAt: new Date(),
+      });
+      await images.updateOne({ _id }, { $set: { smallId: insertedId } });
+      if (photo.smallId) await images.deleteOne({ _id: photo.smallId });
+      res.status(201).json({ url: `${imageUrl(_id)}?size=small` });
+    },
+  );
+
+  // Product photos that have no small version yet (uploaded before stage 68), for the admin's one-off "make them".
+  router.get('/admin/images/without-small', requireAdmin, async (req, res) => {
+    const urls = (
+      await db
+        .collection('products')
+        .aggregate([
+          { $unwind: '$images' },
+          { $match: { images: { $regex: '^/api/images/' } } },
+          { $group: { _id: '$images' } },
+        ])
+        .toArray()
+    ).map((r) => r._id);
+    const ids = urls.map((u) => ObjectId.createFromHexString(u.match(UPLOAD_URL)[1]));
+    const missing = await images
+      .find({ _id: { $in: ids }, smallId: { $exists: false } }, { projection: { _id: 1 } })
+      .toArray();
+    res.json({ urls: missing.map((img) => imageUrl(img._id)) });
+  });
 
   // A customer's photo for their review: JPEG or PNG, with where and when it was taken removed (imageMetadata.js). It
   // only appears once a review uses it (routes/reviews.js); unused ones go after a day like admin uploads.
