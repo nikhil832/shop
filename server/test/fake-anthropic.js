@@ -14,17 +14,27 @@ export async function startFakeAnthropic(port = 0) {
     const prompt = body.messages[0].content.find((c) => c.type === 'text').text;
     const title = /^Title: (.*)$/m.exec(prompt)?.[1] ?? 'this product';
     const stop = state.next === 'refusal' ? 'refusal' : 'end_turn';
-    // An answer draft when asked about a customer's question, otherwise a product draft.
+    // An error explanation for an error report, an answer draft for a customer's question, otherwise a product draft.
     const product = /^Product: (.*)$/m.exec(prompt)?.[1];
-    const draft = product
-      ? {
-          answer: `  Yes: ${product} comes with what the description lists.  `,
-          fromDetails: !/warranty/i.test(prompt.split("Customer's question:")[1] ?? ''),
-        }
-      : {
-          description: `${title} is a dependable pick for everyday use.\n\nMade to last, and easy to look after.`,
-          highlights: ['Easy to use', 'Built to last.', '  Great value  '],
-        };
+    const kind = /^Kind: (.*)$/m.exec(prompt)?.[1];
+    // An explanation names the first file it was given, and repeats a link from the report (the server removes it).
+    const place = /^- \w+: (\S+)/m.exec(prompt)?.[1];
+    const explained = kind && {
+      explanation: `  The page ${kind === 'load' ? "didn't load" : 'crashed'}. See https://example.com/fix for more.  `,
+      whereToLook: place ? [`${place}: check the value before using it`] : [],
+      urgent: /checkout/.test(prompt),
+    };
+    const draft = explained
+      ? explained
+      : product
+        ? {
+            answer: `  Yes: ${product} comes with what the description lists.  `,
+            fromDetails: !/warranty/i.test(prompt.split("Customer's question:")[1] ?? ''),
+          }
+        : {
+            description: `${title} is a dependable pick for everyday use.\n\nMade to last, and easy to look after.`,
+            highlights: ['Easy to use', 'Built to last.', '  Great value  '],
+          };
     return {
       id: `msg_fake_${state.calls.length}`,
       type: 'message',

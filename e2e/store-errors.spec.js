@@ -34,3 +34,33 @@ test('a page that did not load is reported, and admins see it and mark it fixed'
   await admin.getByRole('button', { name: /^Fixed/ }).click();
   await expect(admin.getByRole('listitem').filter({ hasText: 'AdminRoutes' }).first()).toContainText('Marked fixed');
 });
+
+test('"Explain this error" says in plain words what a crash means and where to look', async ({ page, browser }) => {
+  // The demo server's writing assistant talks to the stand-in Claude API (server/test/fake-anthropic.js).
+  const message = `Cannot read properties of undefined (reading 'label') ${Date.now()}`;
+  const visitor = (await browser.newContext()).request;
+  const sent = await visitor.post('/api/error-reports', {
+    data: {
+      kind: 'crash',
+      message,
+      stack: `TypeError: ${message}\n    at DeliveryAddress (http://localhost/assets/index.js:1:2)`,
+      componentStack: '\n    at DeliveryAddress\n    at Checkout',
+      path: '/checkout',
+    },
+  });
+  expect(sent.status()).toBe(204);
+
+  expect((await page.request.post('/api/auth/login', { data: ADMIN })).ok()).toBe(true);
+  await page.goto('/admin/errors');
+  const card = page.getByRole('listitem').filter({ hasText: message });
+  await card.getByRole('button', { name: 'Explain this error' }).click();
+  await expect(card.getByText('What it means')).toBeVisible();
+  await expect(card.getByText('Can stop people buying')).toBeVisible();
+  await expect(card.getByText('The page crashed. See [link removed] for more.')).toBeVisible();
+  await expect(card.getByRole('listitem')).toHaveText('client/src/pages/Checkout.jsx: check the value before using it');
+
+  // Kept with the report: it's still there after a reload, and can be asked again.
+  await page.reload();
+  await expect(card.getByText('What it means')).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Explain again' })).toBeVisible();
+});

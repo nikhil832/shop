@@ -5,12 +5,14 @@ import { clientIp, hashToken, networkOf, requireAdmin } from '../auth.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
 import { logActivity } from '../activity.js';
 import { takeHourlySlot } from '../rateLimit.js';
+import { placesFor } from '../codeIndex.js';
+import { AI_DRAFTS_PER_HOUR } from './aiWriter.js';
 
 // Error reports from visitors' browsers (collection `errorReports`): when a page fails to load or crashes, the client
 // posts what happened, and admins see one entry per problem with how often it happened. Reports of the same problem
 // (kind, message and the top line of the stack) are counted on one document:
 // { key, kind: 'load' | 'crash', message, stack, componentStack, count, firstAt, lastAt, paths (≤10, newest last),
-//   browser (the latest user agent), fixedAt: Date | null }
+//   browser (the latest user agent), fixedAt: Date | null, explanation?: { explanation, whereToLook, urgent, at, model } }
 // A report after an admin marked the problem fixed opens it again. Entries go REPORT_DAYS after their last report.
 
 export const REPORT_DAYS = 90;
@@ -71,10 +73,11 @@ const toReport = (doc) => ({
   paths: doc.paths,
   browser: doc.browser,
   fixedAt: doc.fixedAt,
+  explanation: doc.explanation ?? null,
 });
 
 export function errorReportsRouter(ctx) {
-  const { db, config } = ctx;
+  const { db, config, ai } = ctx;
   const reports = db.collection('errorReports');
   const router = express.Router();
 
@@ -145,6 +148,32 @@ export function errorReportsRouter(ctx) {
       reports.countDocuments(filters.fixed),
     ]);
     res.json({ items: docs.map(toReport), total, page, pageSize: ADMIN_PAGE, counts: { open, fixed } });
+  });
+
+  // "Explain this error" (stage 57): Claude explains the problem in plain words and says where to look, from the report
+  // and where the names in it are defined. Kept on the report, so looking again costs nothing; asking again replaces
+  // it. Shares the writing assistant's hourly allowance.
+  router.post('/admin/error-reports/:id/explain', async (req, res) => {
+    const _id = parseObjectId(req.params.id, 'report id');
+    if (!ai) {
+      throw new HttpError(503, 'The writing assistant is off: the server has no ANTHROPIC_API_KEY.', { expose: true });
+    }
+    const report = await reports.findOne({ _id });
+    if (!report) throw new HttpError(404, 'Report not found');
+    if (!(await takeHourlySlot(db, `aiDraft:${req.user._id}`, AI_DRAFTS_PER_HOUR))) {
+      throw new HttpError(
+        429,
+        `You can ask the writing assistant ${AI_DRAFTS_PER_HOUR} times an hour. Try again later.`,
+      );
+    }
+    const result = await ai.explainError(report, await placesFor(report));
+    const after = await reports.findOneAndUpdate(
+      { _id },
+      { $set: { explanation: { ...result, at: new Date(), model: ai.model } } },
+      { returnDocument: 'after' },
+    );
+    if (!after) throw new HttpError(404, 'Report not found');
+    res.json(toReport(after));
   });
 
   // Marks a problem fixed, or open again. Only a real change is logged.

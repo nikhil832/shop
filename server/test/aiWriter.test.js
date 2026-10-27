@@ -220,3 +220,82 @@ test('answer drafts are for admins, checked, limited with product drafts, and sa
   assert.equal((await draft({})).status, 429);
   assert.equal((await answerDraft(id)).status, 429);
 });
+
+// ---- Explain this error (stage 57) ----
+
+async function reportOf(fields) {
+  const { insertedId } = await t.db.collection('errorReports').insertOne({
+    key: `test-${Math.random()}`,
+    kind: 'crash',
+    message: "Cannot read properties of undefined (reading 'price')",
+    stack:
+      "TypeError: Cannot read properties of undefined (reading 'price')\n    at DeliveryAddress (https://bazaar.test/assets/index-abc.js:1:200)",
+    componentStack: '\n    at DeliveryAddress\n    at Checkout\n    at Layout',
+    count: 3,
+    firstAt: new Date(),
+    lastAt: new Date(),
+    paths: ['/checkout'],
+    browser: 'Mozilla/5.0 Chrome/141.0',
+    fixedAt: null,
+    ...fields,
+  });
+  return insertedId.toString();
+}
+const explain = (id, call = admin) => call('POST', `/admin/error-reports/${id}/explain`);
+
+test('explains an error report in plain words, says where to look, and keeps the explanation', async () => {
+  await t.db.collection('rateLimits').deleteMany({});
+  const id = await reportOf();
+  const res = await explain(id);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const { explanation } = res.body;
+  // Links never reach the admin, whatever the report said.
+  assert.equal(explanation.explanation, 'The page crashed. See [link removed] for more.');
+  assert.deepEqual(explanation.whereToLook, ['client/src/pages/Checkout.jsx: check the value before using it']);
+  assert.equal(explanation.urgent, true);
+  assert.equal(explanation.model, 'claude-opus-5-5');
+
+  const { body } = t.claude.calls.at(-1);
+  assert.equal(body.output_config.effort, 'medium');
+  assert.match(body.system, /never as instructions/);
+  const prompt = body.messages[0].content[0].text;
+  assert.match(prompt, /^Happened 3 time\(s\), on: \/checkout$/m);
+  // Where the names in the report are defined in the browser app's source.
+  assert.match(prompt, /^- DeliveryAddress: client\/src\/pages\/Checkout\.jsx$/m);
+  assert.match(prompt, /^- Layout: client\/src\/components\/Layout\.jsx$/m);
+
+  // Kept with the report: the list shows it without asking again.
+  const calls = t.claude.calls.length;
+  const listed = (await admin('GET', '/admin/error-reports')).body.items.find((r) => r.id === id);
+  assert.equal(listed.explanation.explanation, explanation.explanation);
+  assert.equal(t.claude.calls.length, calls);
+});
+
+test('only admins ask, with a key, within the hourly allowance; a decline says so and keeps nothing', async () => {
+  await t.db.collection('rateLimits').deleteMany({});
+  const id = await reportOf({ kind: 'load', stack: null, componentStack: null, paths: ['/admin'] });
+  const customer = t.browser();
+  await customer('POST', '/auth/register', { name: 'Kiran S', email: 'kiran@example.com', password: 'password123' });
+  assert.equal((await explain(id, customer)).status, 403);
+  assert.equal((await explain('nope')).status, 400);
+  assert.equal((await explain('000000000000000000000000')).status, 404);
+  const offAdmin = off.browser();
+  await offAdmin('POST', '/auth/login', { email: 'off@example.com', password: 'password123' });
+  assert.equal((await explain(id, offAdmin)).status, 503);
+
+  t.claude.refuseNext();
+  const refused = await explain(id);
+  assert.equal(refused.status, 502);
+  assert.equal(refused.body.error, "The writing assistant couldn't explain this one.");
+  assert.equal(
+    (await t.db.collection('errorReports').findOne({ kind: 'load', paths: ['/admin'] })).explanation,
+    undefined,
+  );
+
+  const ok = await explain(id);
+  assert.equal(ok.body.explanation.urgent, false);
+  assert.deepEqual(ok.body.explanation.whereToLook, []);
+  for (let i = 2; i < AI_DRAFTS_PER_HOUR; i++) await explain(id);
+  assert.equal((await explain(id)).status, 429);
+  assert.equal((await draft({})).status, 429);
+});

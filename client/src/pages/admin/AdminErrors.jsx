@@ -12,8 +12,66 @@ const FILTERS = [
 const KINDS = { load: "Page didn't load", crash: 'Page crashed' };
 const when = (iso) => `${formatDate(iso)}, ${formatTime(iso)}`;
 
+// "Explain this error" (stage 57): Claude's plain-words reading of the report and where to look in the code, kept on
+// the report. Shown only when the server has an API key (`ai.enabled`); asking again replaces it.
+function Explanation({ report, ai, onChange }) {
+  const [state, setState] = useState({ busy: false, error: null });
+  const e = report.explanation;
+  if (!ai?.enabled && !e) return null;
+
+  async function explain() {
+    setState({ busy: true, error: null });
+    try {
+      await request(`/admin/error-reports/${report.id}/explain`, { method: 'POST' });
+      setState({ busy: false, error: null });
+      onChange();
+    } catch (err) {
+      setState({ busy: false, error: err.message });
+    }
+  }
+
+  return (
+    <div className="error-explanation" aria-live="polite">
+      {e && (
+        <>
+          <p>
+            <strong>What it means</strong>
+            {e.urgent && <span className="status urgent">Can stop people buying</span>}
+          </p>
+          <p>{e.explanation}</p>
+          {e.whereToLook.length > 0 && (
+            <>
+              <p className="small">
+                <strong>Where to look</strong>
+              </p>
+              <ul className="small">
+                {e.whereToLook.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
+            </>
+          )}
+          <p className="muted small">
+            Explained by Claude on {when(e.at)}. A best guess from the report, which anyone could have sent: check it.
+          </p>
+        </>
+      )}
+      {ai?.enabled && (
+        <button type="button" className="btn small" onClick={explain} disabled={state.busy}>
+          {state.busy ? 'Explaining…' : e ? 'Explain again' : 'Explain this error'}
+        </button>
+      )}
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // One problem: what went wrong, how often and where, the details for whoever fixes it, and fixed/reopen.
-function ReportCard({ report, onChange }) {
+function ReportCard({ report, ai, onChange }) {
   const [state, setState] = useState({ busy: false, error: null });
   const r = report;
 
@@ -63,6 +121,7 @@ function ReportCard({ report, onChange }) {
           )}
         </details>
       )}
+      <Explanation report={r} ai={ai} onChange={onChange} />
       {state.error && (
         <p className="error" role="alert">
           {state.error}
@@ -83,6 +142,8 @@ export default function AdminErrors() {
   const status = params.get('status') ?? 'open';
   const page = Math.max(1, Number(params.get('page')) || 1);
   const [version, setVersion] = useState(0);
+  // Whether the writing assistant is on (it needs an API key on the server).
+  const { data: ai } = useFetch('/admin/ai');
   const { data, error, loading } = useFetch(
     `/admin/error-reports${query({ status, page: page > 1 ? page : '' })}`,
     version,
@@ -130,7 +191,7 @@ export default function AdminErrors() {
       {data?.items.length > 0 && (
         <ul className={`question-list ${loading ? 'stale' : ''}`}>
           {data.items.map((r) => (
-            <ReportCard key={r.id} report={r} onChange={() => setVersion((v) => v + 1)} />
+            <ReportCard key={r.id} report={r} ai={ai} onChange={() => setVersion((v) => v + 1)} />
           ))}
         </ul>
       )}
