@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import { z } from 'zod';
 import { clientIp, networkOf } from '../auth.js';
 import { can, staffGuard } from '../staff.js';
+import { assertPriceUnchanged } from '../sales.js';
 import { HttpError, escapeRegex, parse, parseObjectId } from '../http.js';
 import { ICONS, image, slugify } from '../seed.js';
 import { refundPayment } from '../payments.js';
@@ -245,6 +246,8 @@ const toAdminProduct = (doc) => ({
   images: doc.images,
   imageAlts: imageAltsOf(doc),
   active: doc.active,
+  // On sale (sales.js): the form shows it and keeps the prices as they are.
+  sale: doc.sale ? { name: doc.sale.name, percent: doc.sale.percent, endsAt: doc.sale.endsAt } : null,
   variantName: doc.variants?.length ? doc.variantName : '',
   options: doc.variants?.length ? optionsOf(doc) : [],
   variants: (doc.variants ?? []).map(toVariant),
@@ -424,6 +427,8 @@ export function adminRouter(ctx) {
         update.variants = current.variants.map((v) => ({ ...v, images: (v.images ?? []).filter((u) => own.has(u)) }));
       }
     }
+    // A product on sale keeps its prices until the sale ends (sales.js puts the regular ones back then).
+    assertPriceUnchanged(current, { price: update.price, mrp: update.mrp, variants: update.variants });
     if (body.images) await checkImages(body.images);
     if (body.categoryId) update.categoryId = (await findCategory(body.categoryId))._id;
     if (body.images?.length === 0) {

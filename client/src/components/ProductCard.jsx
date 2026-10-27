@@ -8,7 +8,11 @@ export default function ProductCard({ product }) {
     <Link to={`/p/${product.slug}`} className={`card ${soldOut ? 'sold-out' : ''}`}>
       <div className="card-image">
         {product.image && <img src={product.image} alt="" loading="lazy" width="300" height="300" />}
-        {soldOut && <span className="ribbon">Out of stock</span>}
+        {soldOut ? (
+          <span className="ribbon">Out of stock</span>
+        ) : (
+          product.sale && <span className="ribbon sale">Sale</span>
+        )}
       </div>
       <div className="card-body">
         <span className="brand">{product.brand}</span>

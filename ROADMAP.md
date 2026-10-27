@@ -7,10 +7,9 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                                                                               | Why                                                                                                                       | To start                |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| 1   | **Scheduled sales**: a sale price for chosen products (or a category) from a start to an end time, shown as "Sale ends in 2 days", going back by itself afterwards | Running an offer now means editing every price by hand, twice, at the right moment                                        | "start scheduled sales" |
-| 2   | **Lighter product photos**: admin uploads shrunk in the browser like review photos, plus small thumbnails for cards and rows                                       | Photos up to 1 MB are sent even where they show at 180 px, which slows pages on phones and fills the free database sooner | "start lighter photos"  |
+| #   | Idea                                                                                                                         | Why                                                                                                                       | To start               |
+| --- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| 1   | **Lighter product photos**: admin uploads shrunk in the browser like review photos, plus small thumbnails for cards and rows | Photos up to 1 MB are sent even where they show at 180 px, which slows pages on phones and fills the free database sooner | "start lighter photos" |
 
 ## Set aside
 
@@ -91,3 +90,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Help requests: "Contact us" and "Get help with this order", answered from an Admin → Help inbox by email                                      | Stage 64 (`git log --grep "Stage 64"`) |
 | Download or delete my account: a JSON download of the customer's data, and closing the account (orders kept anonymised)                       | Stage 65 (`git log --grep "Stage 65"`) |
 | Staff accounts: packer and support roles below admin, given on Admin → Staff                                                                  | Stage 66 (`git log --grep "Stage 66"`) |
+| Scheduled sales: a percentage off a category or chosen products between two times, prices back by themselves                                  | Stage 67 (`git log --grep "Stage 67"`) |

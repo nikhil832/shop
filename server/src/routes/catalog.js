@@ -213,6 +213,8 @@ export const toProductCard = (doc) => ({
   // Variants: the option's name ("Size"), or null; `priceFrom` when they don't all cost the same ("from ₹X").
   variantName: doc.variants?.length ? doc.variantName : null,
   priceFrom: Boolean(doc.variants?.some((v) => v.price !== doc.price)),
+  // In a running sale (sales.js): its name and end, for the "Sale" tag and "Sale ends in…".
+  sale: doc.sale ? { name: doc.sale.name, percent: doc.sale.percent, endsAt: doc.sale.endsAt } : null,
 });
 
 export function catalogRouter({ db }) {

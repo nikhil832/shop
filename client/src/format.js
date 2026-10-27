@@ -86,3 +86,13 @@ export const HELP_TOPICS = {
   other: 'Something else',
 };
 export const HELP_STATUS = { waiting: 'Waiting for us', answered: 'Answered', closed: 'Closed' };
+
+// "Sale ends in 2 days" / "in 5 hours" / "soon", for a sale's `endsAt` (stage 67).
+export function saleEndsIn(endsAt, now = Date.now()) {
+  const ms = new Date(endsAt) - now;
+  const days = Math.floor(ms / 86_400_000);
+  if (days >= 2) return `Sale ends in ${days} days`;
+  const hours = Math.floor(ms / 3_600_000);
+  if (hours >= 2) return `Sale ends in ${hours} hours`;
+  return 'Sale ends soon';
+}

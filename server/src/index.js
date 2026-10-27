@@ -16,6 +16,7 @@ import { sendLowStockEmail } from './lowStockEmail.js';
 import { sendWeeklyNote } from './weeklyNote.js';
 import { updateReviewSummaries } from './reviewSummaries.js';
 import { screenPosts } from './screening.js';
+import { runSales } from './sales.js';
 import { loadConfig } from './config.js';
 import { previewRouter } from './preview.js';
 import { checkStorage } from './storage.js';
@@ -34,11 +35,14 @@ const ctx = {
 };
 const app = createApp(ctx);
 
-// Every minute: release the stock of online orders whose 30-minute payment window has passed, then email customers
-// waiting for products that are back in stock (which that release can cause), those whose wishlist got cheaper and
-// those who left a cart a day ago, once a morning the admins' list of products running out, on Mondays their weekly
-// note, rewrite "What customers say" for products whose reviews changed, and screen new reviews and questions.
+// Every minute: start and end scheduled sales, release the stock of online orders whose 30-minute payment window has
+// passed, then email customers waiting for products that are back in stock (which that release can cause), those whose
+// wishlist got cheaper and those who left a cart a day ago, once a morning the admins' list of products running out,
+// on Mondays their weekly note, rewrite "What customers say" for products whose reviews changed, and screen new
+// reviews and questions.
 const sweeper = setInterval(async () => {
+  // First, so a sale starting or ending now is in the prices the emails below read.
+  await runSales(ctx).catch((err) => console.error(err));
   await expireUnpaidOrders(ctx).catch((err) => console.error(err));
   await sendBackInStockAlerts(ctx).catch((err) => console.error(err));
   await sendPriceDropEmails(ctx).catch((err) => console.error(err));

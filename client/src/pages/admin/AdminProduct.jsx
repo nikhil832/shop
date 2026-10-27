@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { request, upload } from '../../api.js';
-import { toPaise, toRupees } from '../../format.js';
+import { formatDate, toPaise, toRupees } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 import NotFound from '../NotFound.jsx';
 
@@ -451,6 +451,13 @@ function ProductForm({ product, categories }) {
           </Link>
         )}
       </div>
+      {product?.sale && (
+        <p className="notice" role="note">
+          In the &ldquo;{product.sale.name}&rdquo; sale ({product.sale.percent}% off) until{' '}
+          {formatDate(product.sale.endsAt)}: its prices are the sale prices and can&apos;t be changed until it ends.
+          Stock and everything else can.
+        </p>
+      )}
       <div className="address-grid">
         <label className="wide">
           Title

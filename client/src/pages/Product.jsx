@@ -11,6 +11,7 @@ import DeliveryCheck from '../components/DeliveryCheck.jsx';
 import ProductRow from '../components/ProductRow.jsx';
 import RecentlyViewed from '../components/RecentlyViewed.jsx';
 import { rememberViewed } from '../recent.js';
+import { saleEndsIn } from '../format.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
 
@@ -205,6 +206,11 @@ export default function Product() {
           <h1>{product.title}</h1>
           <Rating rating={product.rating} />
           <PriceTag price={shown.price} mrp={shown.mrp} large from={!variant && product.priceFrom} />
+          {product.sale && (
+            <p className="sale-note">
+              <strong>{product.sale.name}</strong> · {saleEndsIn(product.sale.endsAt)}
+            </p>
+          )}
           <span className="muted small">Inclusive of all taxes</span>
           {product.variants.length > 0 && product.stock > 0 && (
             <VariantPicker product={product} chosen={chosen} onChoose={choose} />

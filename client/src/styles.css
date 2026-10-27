@@ -2914,3 +2914,65 @@ textarea {
   font-weight: 600;
   font-size: 0.9rem;
 }
+/* Scheduled sales: the card's tag and the product page's countdown */
+.ribbon.sale {
+  background: #b91c1c;
+  color: #ffffff;
+}
+.sale-note {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+.sale-note strong {
+  color: #b91c1c;
+}
+@media (prefers-color-scheme: dark) {
+  .sale-note strong {
+    color: #fca5a5;
+  }
+}
+/* Admin → Sales */
+.sale-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 18px;
+}
+.sale-form > label,
+.sale-picker label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.sale-scope {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.sale-results,
+.sale-chosen {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.92rem;
+}
+.sale-results li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.status.sale-ended,
+.status.sale-cancelled {
+  background: var(--bg);
+  color: var(--muted);
+}

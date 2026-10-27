@@ -137,6 +137,10 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 // { row (line in the file), slug, variant, title, action: new | update | same | error, changes: [{ field, from, to }],
 // error }. `writes` are the database changes for a save. `id` identifies the plan, so a save can check that the store
 // hasn't changed since the preview.
+// A product in a running sale keeps its prices until it ends (sales.js); stock and the rest can still change.
+const onSale = (product) =>
+  `"${product.title}" is in the "${product.sale.name}" sale until ${product.sale.endsAt.toISOString().slice(0, 10)}: change its prices after the sale`;
+
 async function makePlan(db, csv, session) {
   const table = parseCsv(csv);
   const [headings = [], ...lines] = table;
@@ -236,6 +240,7 @@ async function makePlan(db, csv, session) {
         row.variant = v.label;
         const next = { price: price || v.price, mrp: mrp || v.mrp, stock: stock ?? v.stock };
         if (next.mrp < next.price) throw new RowError('MRP must be at least the price');
+        if (product.sale && (next.price !== v.price || next.mrp !== v.mrp)) throw new RowError(onSale(product));
         for (const field of ['price', 'mrp', 'stock']) {
           if (next[field] !== v[field]) row.changes.push({ field, from: v[field], to: next[field] });
         }
@@ -251,6 +256,9 @@ async function makePlan(db, csv, session) {
         if (get('category')) next.categoryId = categoryOf(get('category'))._id;
         if (get('description')) next.description = text(get('description'), 5000, 'Description');
         if (get('highlights')) next.highlights = highlightsOf(get('highlights'));
+        if (product.sale && ((price && price !== product.price) || (mrp && mrp !== product.mrp))) {
+          throw new RowError(onSale(product));
+        }
         if (price) next.price = price;
         if (mrp) next.mrp = mrp;
         if (stock !== undefined) next.stock = stock;

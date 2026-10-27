@@ -37,6 +37,7 @@ test('lists products with paging and totals', async () => {
     'price',
     'priceFrom',
     'rating',
+    'sale',
     'slug',
     'stock',
     'title',

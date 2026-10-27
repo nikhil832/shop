@@ -62,8 +62,15 @@ const INDEXES = {
   searchInterpretations: [[{ at: 1 }, { expireAfterSeconds: CACHE_DAYS * 86_400 }]],
   // Help requests: a customer's own, the admin inbox by status, and an order's.
   helpRequests: [[{ userId: 1, updatedAt: -1 }], [{ status: 1, updatedAt: 1 }], [{ orderId: 1 }]],
+  // Scheduled sales: the sweep looks for ones to start and to end; products on sale by their sale.
+  sales: [[{ startedAt: 1, startsAt: 1 }], [{ endedAt: 1, endsAt: 1 }]],
   categories: [[{ slug: 1 }, { unique: true }]],
-  products: [[{ slug: 1 }, { unique: true }], [{ categoryId: 1, price: 1 }], [{ brand: 1 }]],
+  products: [
+    [{ slug: 1 }, { unique: true }],
+    [{ categoryId: 1, price: 1 }],
+    [{ brand: 1 }],
+    [{ 'sale.id': 1 }, { partialFilterExpression: { 'sale.id': { $exists: true } } }],
+  ],
   users: [[{ email: 1 }, { unique: true }]],
   // MongoDB deletes sessions once expiresAt has passed.
   sessions: [
