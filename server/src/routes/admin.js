@@ -7,6 +7,7 @@ import { ICONS, image, slugify } from '../seed.js';
 import { refundPayment } from '../payments.js';
 import { missingImages } from './images.js';
 import { imageAltsOf, storedAlts } from '../imageAlts.js';
+import { FLAGGED, toScreening } from '../screening.js';
 import { MAX_OPTIONS, optionsOf, optionsPhrase, toVariant, variantLabel, variantTotals } from '../variants.js';
 import { cancelOrder, ORDER_STATUSES, toOrder } from './orders.js';
 import { sendOrderEmail } from '../emails.js';
@@ -190,7 +191,7 @@ const noteBody = z.object({
 });
 
 const reviewQuery = z.object({
-  status: z.enum(['visible', 'hidden']).optional(),
+  status: z.enum(['visible', 'hidden', 'flagged']).optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
 const reviewVisibility = z.object({ hidden: z.boolean() });
@@ -790,6 +791,7 @@ export function adminRouter(ctx) {
     const person = new Map(people.map((u) => [u._id.toString(), { name: u.name, email: u.email }]));
     return docs.map((r) => ({
       ...toReview(r),
+      screening: toScreening(r),
       product: product.get(r.productId.toString()) ?? null,
       customer: person.get(r.userId.toString()) ?? null,
     }));
@@ -797,8 +799,9 @@ export function adminRouter(ctx) {
 
   router.get('/admin/reviews', async (req, res) => {
     const query = parse(reviewQuery, req.query);
-    const filter = query.status ? { hidden: query.status === 'hidden' } : {};
-    const [docs, total, counts] = await Promise.all([
+    // Flagged by screening (screening.js) and not dealt with yet: newest first like the rest.
+    const filter = query.status === 'flagged' ? FLAGGED : query.status ? { hidden: query.status === 'hidden' } : {};
+    const [docs, total, counts, flagged] = await Promise.all([
       reviews
         .find(filter)
         .sort({ createdAt: -1, _id: -1 })
@@ -807,6 +810,7 @@ export function adminRouter(ctx) {
         .toArray(),
       reviews.countDocuments(filter),
       reviews.aggregate([{ $group: { _id: '$hidden', n: { $sum: 1 } } }]).toArray(),
+      reviews.countDocuments(FLAGGED),
     ]);
     res.json({
       items: await reviewDetails(docs),
@@ -816,6 +820,7 @@ export function adminRouter(ctx) {
       counts: {
         visible: counts.find((c) => c._id === false)?.n ?? 0,
         hidden: counts.find((c) => c._id === true)?.n ?? 0,
+        flagged,
       },
     });
   });

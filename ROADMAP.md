@@ -19,12 +19,11 @@ they'll be added here.
   sweep runs on time. A switch on Render, no code change.
 - **Partial search matches**: every search word must match something, so "wireless earbuds" finds nothing. Showing
   products that match only some words would also bring in weak results; left out on purpose.
-- **AI features with the Claude API** (each call costs a little; set aside on 2026-10-26; the product writer was built after all as stage 51 answer drafts as stage 56, error explanations as stage 57, the weekly note as stage 58, photo descriptions as stage 59 and
-  review summaries as stage 60, and these can use
-  its API key). Each well under ₹1 a call with Claude Haiku 5.5:
-  - **Review and question screening**: new reviews and questions checked for abuse, spam or personal details (phone
-    numbers, addresses) and flagged for an admin to look at; nothing is hidden automatically. One call per review or
-    question. To start: "start screening".
+- **More AI features with the Claude API** (each call costs a little; set aside on 2026-10-26, then partly built:
+  the product writer as stage 51, answer drafts 56, error explanations 57, the weekly note 58, photo descriptions 59,
+  review summaries 60 and screening 61, all with the same API key). Still to do:
+  - **Plain-words search**: when a search finds nothing, turn "running shoes under 2000" into filters; per visitor,
+    so it needs an hourly limit. To start: "start smart search".
   - **Shopping assistant chat**: answers questions and suggests products. Every visitor's messages cost money, it's
     open to misuse and it can get prices or stock wrong, so it comes last.
 
@@ -89,3 +88,4 @@ they'll be added here.
 | Weekly note: each Monday, Claude writes admins a note about last week from its figures (figures included)                                     | Stage 58 (`git log --grep "Stage 58"`) |
 | Photo descriptions for screen readers, typed or suggested by Claude from the photo                                                            | Stage 59 (`git log --grep "Stage 59"`) |
 | What customers say: an AI summary of a product's reviews, rewritten when they change                                                          | Stage 60 (`git log --grep "Stage 60"`) |
+| Screening: new reviews and questions checked for abuse, spam and personal details, flagged for admins                                         | Stage 61 (`git log --grep "Stage 61"`) |

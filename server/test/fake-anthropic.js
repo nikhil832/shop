@@ -14,7 +14,8 @@ export async function startFakeAnthropic(port = 0) {
     const prompt = body.messages[0].content.find((c) => c.type === 'text').text;
     const title = /^Title: (.*)$/m.exec(prompt)?.[1] ?? 'this product';
     const stop = state.next === 'refusal' ? 'refusal' : 'end_turn';
-    // A review summary, a photo description, a weekly note, an error explanation, an answer draft, or a product draft.
+    // A screening check, a review summary, a photo description, a weekly note, an error explanation, an answer draft, or
+    // a product draft.
     const product = /^Product: (.*)$/m.exec(prompt)?.[1];
     const kind = /^Kind: (.*)$/m.exec(prompt)?.[1];
     // An explanation names the first file it was given, and repeats a link from the report (the server removes it).
@@ -38,23 +39,35 @@ export async function startFakeAnthropic(port = 0) {
     const summarised = reviewCount > 0 && {
       summary: `  Most of the ${reviewCount} reviewers like it; a few find it small.  `,
     };
-    const draft = summarised
-      ? summarised
-      : described
-        ? described
-        : note
-          ? note
-          : explained
-            ? explained
-            : product
-              ? {
-                  answer: `  Yes: ${product} comes with what the description lists.  `,
-                  fromDetails: !/warranty/i.test(prompt.split("Customer's question:")[1] ?? ''),
-                }
-              : {
-                  description: `${title} is a dependable pick for everyday use.\n\nMade to last, and easy to look after.`,
-                  highlights: ['Easy to use', 'Built to last.', '  Great value  '],
-                };
+    // A screening check: phone numbers are personal details, "buy now" is spam, anything else is fine.
+    const post = /^A customer's (?:review|question) of /.test(prompt) && prompt.split('\n\n').slice(1).join('\n\n');
+    const reasons = post
+      ? [...(/\d{10}/.test(post) ? ['personal_details'] : []), ...(/buy now/i.test(post) ? ['spam'] : [])]
+      : [];
+    const screened = post !== false && {
+      flagged: reasons.length > 0,
+      reasons,
+      note: reasons.length ? `  Check it: ${reasons.join(' and ')}.  ` : '',
+    };
+    const draft = screened
+      ? screened
+      : summarised
+        ? summarised
+        : described
+          ? described
+          : note
+            ? note
+            : explained
+              ? explained
+              : product
+                ? {
+                    answer: `  Yes: ${product} comes with what the description lists.  `,
+                    fromDetails: !/warranty/i.test(prompt.split("Customer's question:")[1] ?? ''),
+                  }
+                : {
+                    description: `${title} is a dependable pick for everyday use.\n\nMade to last, and easy to look after.`,
+                    highlights: ['Easy to use', 'Built to last.', '  Great value  '],
+                  };
     return {
       id: `msg_fake_${state.calls.length}`,
       type: 'message',

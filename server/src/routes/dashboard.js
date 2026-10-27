@@ -6,6 +6,7 @@ import { LOW_STOCK } from './admin.js';
 import { logActivity } from '../activity.js';
 import { UNANSWERED } from './questions.js';
 import { OPEN_REPORTS } from './errorReports.js';
+import { FLAGGED } from '../screening.js';
 import { storageUse } from '../storage.js';
 
 // The `settings` document of the morning low-stock email (lowStockEmail.js): { day, at, enabled }.
@@ -93,6 +94,8 @@ export function dashboardRouter({ db, config }) {
       emailSettings,
       questionsToAnswer,
       openErrors,
+      flaggedReviews,
+      flaggedQuestions,
       storage,
     ] = await Promise.all([
       orders
@@ -187,6 +190,8 @@ export function dashboardRouter({ db, config }) {
       db.collection('settings').findOne({ _id: LOW_STOCK_EMAIL }),
       db.collection('questions').countDocuments(UNANSWERED),
       db.collection('errorReports').countDocuments(OPEN_REPORTS),
+      db.collection('reviews').countDocuments(FLAGGED),
+      db.collection('questions').countDocuments(FLAGGED),
       storageUse(db, config),
     ]);
 
@@ -265,6 +270,8 @@ export function dashboardRouter({ db, config }) {
       questionsToAnswer,
       // Problems visitors' browsers reported that nobody has marked fixed (errorReports.js).
       openErrors,
+      // Reviews and questions screening flagged that no admin has dealt with (screening.js).
+      flagged: { reviews: flaggedReviews, questions: flaggedQuestions },
       // How full the database is (storage.js).
       storage,
     });

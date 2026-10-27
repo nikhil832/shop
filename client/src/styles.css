@@ -2709,3 +2709,18 @@ textarea {
 .review-ai-summary h3 {
   font-size: 1rem;
 }
+/* A review or question screening flagged, until an admin deals with it */
+.screening-flag {
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--warning);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.screening-flag p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

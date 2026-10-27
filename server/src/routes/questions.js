@@ -6,6 +6,7 @@ import { HttpError, parse, parseObjectId } from '../http.js';
 import { logActivity } from '../activity.js';
 import { takeHourlySlot } from '../rateLimit.js';
 import { shortName } from './reviews.js';
+import { FLAGGED, toScreening } from '../screening.js';
 
 // Questions on products (collection `questions`): logged-in customers ask, admins answer. Only answered questions are
 // shown on the product page; until then only the asker sees theirs ("waiting for an answer") and may delete it. The
@@ -25,7 +26,7 @@ const answerBody = z.object({
 });
 const listQuery = z.object({ page: z.coerce.number().int().min(1).max(1000).default(1) });
 const adminQuery = z.object({
-  status: z.enum(['unanswered', 'answered', 'hidden']).default('unanswered'),
+  status: z.enum(['unanswered', 'answered', 'hidden', 'flagged']).default('unanswered'),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
 const visibilityBody = z.object({ hidden: z.boolean() });
@@ -130,6 +131,7 @@ export function questionsRouter(ctx) {
     return docs.map((q) => ({
       ...toQuestion(q),
       hidden: q.hidden,
+      screening: toScreening(q),
       product: product.get(q.productId.toString()) ?? null,
       customer: person.get(q.userId.toString()) ?? null,
     }));
@@ -142,6 +144,8 @@ export function questionsRouter(ctx) {
       unanswered: UNANSWERED,
       answered: { answer: { $ne: null }, hidden: false },
       hidden: { hidden: true },
+      // Flagged by screening (screening.js) and not dealt with yet.
+      flagged: FLAGGED,
     };
     const sort = status === 'unanswered' ? { createdAt: 1, _id: 1 } : { createdAt: -1, _id: -1 };
     const [docs, total, ...counts] = await Promise.all([

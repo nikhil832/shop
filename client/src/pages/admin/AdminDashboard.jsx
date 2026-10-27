@@ -443,6 +443,20 @@ export default function AdminDashboard() {
                   </Link>
                 </p>
               )}
+              {data.flagged?.reviews > 0 && (
+                <p>
+                  <Link to="/admin/reviews?status=flagged">
+                    {data.flagged.reviews} {data.flagged.reviews === 1 ? 'review' : 'reviews'} flagged to check
+                  </Link>
+                </p>
+              )}
+              {data.flagged?.questions > 0 && (
+                <p>
+                  <Link to="/admin/questions?status=flagged">
+                    {data.flagged.questions} {data.flagged.questions === 1 ? 'question' : 'questions'} flagged to check
+                  </Link>
+                </p>
+              )}
               {data.openErrors > 0 && (
                 <p>
                   <Link to="/admin/errors">

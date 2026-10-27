@@ -75,7 +75,7 @@ test('admins list unanswered questions oldest first, with who asked', async () =
   assert.equal(res.body.items[0].text, 'Do these run large?');
   assert.deepEqual(res.body.items[0].customer, { name: 'Asha Rao', email: 'asha@example.com' });
   assert.equal(res.body.items[0].product.slug, SLUG);
-  assert.deepEqual(res.body.counts, { unanswered: 6, answered: 0, hidden: 0 });
+  assert.deepEqual(res.body.counts, { unanswered: 6, answered: 0, hidden: 0, flagged: 0 });
   assert.equal((await admin('GET', '/admin/dashboard')).body.questionsToAnswer, 6);
 });
 
@@ -123,7 +123,12 @@ test('hiding takes a question off the page and out of the waiting list', async (
   assert.equal(hide.status, 200);
   assert.equal(hide.body.hidden, true);
   assert.equal((await page()).body.total, 0);
-  assert.deepEqual((await admin('GET', '/admin/questions')).body.counts, { unanswered: 5, answered: 0, hidden: 1 });
+  assert.deepEqual((await admin('GET', '/admin/questions')).body.counts, {
+    unanswered: 5,
+    answered: 0,
+    hidden: 1,
+    flagged: 0,
+  });
   assert.equal((await admin('GET', '/admin/activity?area=questions')).body.items[0].action, 'Hid question');
 
   await admin('POST', `/admin/questions/${answered.id}/visibility`, { hidden: false });

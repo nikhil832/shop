@@ -153,3 +153,44 @@ test('"What customers say": admins switch it for the store; the product page sho
   await expect(reviews.getByText('Most reviewers like how fast it boils')).toBeVisible();
   await expect(reviews.getByText('Summarised by AI from 4 written reviews.')).toBeVisible();
 });
+
+test('screening: a flagged question shows why under Flagged, and "Looks fine" clears it', async ({ page, browser }) => {
+  const customer = (await (await browser.newContext()).newPage()).request;
+  const stamp = Date.now();
+  await customer.post('/api/auth/register', {
+    data: { name: 'Kiran S', email: `flag-${stamp}@example.com`, password: 'password123' },
+  });
+  const text = `Call me on 9876543210 about this (${stamp})`;
+  const asked = await (
+    await customer.post('/api/products/aura-electric-kettle-1-5l/questions', { data: { text } })
+  ).json();
+
+  // Screening runs from the minute sweep (API tests cover it); here the Flagged list is given the question, with the
+  // flag screening would add, until the admin clears it.
+  let flagged = true;
+  await page.route('**/api/admin/questions?*', async (route) => {
+    const res = await route.fetch();
+    const json = await res.json();
+    if (flagged) {
+      const screening = {
+        flagged: true,
+        reasons: ['personal_details'],
+        note: 'It has a phone number.',
+        cleared: false,
+      };
+      json.items = [{ ...asked, hidden: false, product: null, customer: null, screening }, ...json.items];
+    }
+    await route.fulfill({ response: res, json });
+  });
+  page.on('request', (r) => {
+    if (r.url().includes(`/api/admin/screening/question/${asked.id}/clear`)) flagged = false;
+  });
+
+  expect((await page.request.post('/api/auth/login', { data: ADMIN })).ok()).toBe(true);
+  await page.goto('/admin/questions?status=flagged');
+  const card = page.getByRole('listitem').filter({ hasText: text });
+  await expect(card.getByText('Flagged: Personal details')).toBeVisible();
+  await expect(card.getByText('It has a phone number.')).toBeVisible();
+  await card.getByRole('button', { name: 'Looks fine (clear the flag)' }).click();
+  await expect(page.getByText('Flagged: Personal details')).toHaveCount(0);
+});

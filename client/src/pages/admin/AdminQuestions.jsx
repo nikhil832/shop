@@ -4,11 +4,13 @@ import { query, request } from '../../api.js';
 import Pager from '../../components/Pager.jsx';
 import { formatDate } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
+import ScreeningFlag from '../../components/ScreeningFlag.jsx';
 
 const FILTERS = [
   ['unanswered', 'Waiting for an answer'],
   ['answered', 'Answered'],
   ['hidden', 'Hidden'],
+  ['flagged', 'Flagged'],
 ];
 
 // "Draft an answer" (stage 56): Claude drafts a reply from the product's details and earlier answers into the answer
@@ -80,6 +82,7 @@ function QuestionCard({ question, onChange, ai }) {
       <p className="review-body">
         <strong>Q:</strong> {q.text}
       </p>
+      <ScreeningFlag kind="question" post={q} onChange={onChange} />
       <form className="review-form" onSubmit={answer}>
         <label>
           {q.answer ? 'Answer' : 'Your answer'}
@@ -159,7 +162,13 @@ export default function AdminQuestions() {
 
       {error && <p className="error">{error.message}</p>}
       {data?.items.length === 0 && (
-        <p className="muted">{status === 'unanswered' ? 'No questions are waiting for an answer.' : 'None here.'}</p>
+        <p className="muted">
+          {status === 'unanswered'
+            ? 'No questions are waiting for an answer.'
+            : status === 'flagged'
+              ? 'Nothing flagged. Every checked question looks fine.'
+              : 'None here.'}
+        </p>
       )}
       {data?.items.length > 0 && (
         <ul className={`question-list ${loading ? 'stale' : ''}`}>

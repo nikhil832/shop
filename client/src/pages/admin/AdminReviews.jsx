@@ -4,6 +4,7 @@ import { query, request } from '../../api.js';
 import Pager from '../../components/Pager.jsx';
 import Stars from '../../components/Stars.jsx';
 import { ReviewPhotos } from '../../components/Reviews.jsx';
+import ScreeningFlag from '../../components/ScreeningFlag.jsx';
 import { formatDate } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 
@@ -11,6 +12,7 @@ const FILTERS = [
   ['', 'All'],
   ['visible', 'Visible'],
   ['hidden', 'Hidden'],
+  ['flagged', 'Flagged'],
 ];
 
 // "What customers say" on product pages (stage 60), on or off for the whole store. Shown only when the server has an
@@ -81,7 +83,9 @@ export default function AdminReviews() {
         <h1>Reviews</h1>
       </div>
       <p className="muted small">
-        Hiding a review removes it from the product page and its rating. Nothing is deleted.
+        Hiding a review removes it from the product page and its rating. Nothing is deleted. When the writing assistant
+        is on, new reviews are checked for abuse, spam and personal details, and doubtful ones are listed under Flagged
+        (never hidden for you).
       </p>
       <ReviewSummariesSwitch />
 
@@ -101,7 +105,11 @@ export default function AdminReviews() {
       </div>
 
       {(error || loadError) && <p className="error">{error ?? loadError.message}</p>}
-      {data?.items.length === 0 && <p className="muted">No reviews here yet.</p>}
+      {data?.items.length === 0 && (
+        <p className="muted">
+          {status === 'flagged' ? 'Nothing flagged. Every checked review looks fine.' : 'No reviews here yet.'}
+        </p>
+      )}
       {data?.items.length > 0 && (
         <div className={`table-wrap ${loading ? 'stale' : ''}`}>
           <table className="admin-table">
@@ -122,6 +130,7 @@ export default function AdminReviews() {
                     {r.title && <strong className="block">{r.title}</strong>}
                     {r.body && <span className="review-excerpt">{r.body}</span>}
                     <ReviewPhotos review={r} />
+                    <ScreeningFlag kind="review" post={r} onChange={() => setVersion((v) => v + 1)} />
                   </td>
                   <td>
                     {r.product ? <Link to={`/p/${r.product.slug}`}>{r.product.title}</Link> : 'Deleted product'}

@@ -24,6 +24,7 @@ import { savedCartRouter } from './routes/savedCart.js';
 import { errorReportsRouter } from './routes/errorReports.js';
 import { weeklyNoteRouter } from './weeklyNote.js';
 import { reviewSummariesRouter } from './reviewSummaries.js';
+import { screeningRouter } from './screening.js';
 
 // Builds the Express app around an injected database. ctx = { db, client, config, razorpay, mail } (razorpay is null
 // when online payments aren't configured; mail sends or logs order emails).
@@ -63,6 +64,7 @@ export function createApp(ctx) {
   api.use(errorReportsRouter(ctx));
   api.use(weeklyNoteRouter(ctx));
   api.use(reviewSummariesRouter(ctx));
+  api.use(screeningRouter(ctx));
   // Before adminRouter, whose /admin/orders/:id and /admin/products/:id would take "export" or "import" for an id.
   api.use(orderExportRouter(ctx));
   api.use(productImportRouter(ctx));
