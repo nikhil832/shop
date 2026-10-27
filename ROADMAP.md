@@ -19,11 +19,8 @@ they'll be added here.
   sweep runs on time. A switch on Render, no code change.
 - **Partial search matches**: every search word must match something, so "wireless earbuds" finds nothing. Showing
   products that match only some words would also bring in weak results; left out on purpose.
-- **More AI features with the Claude API** (each call costs a little; set aside on 2026-10-26, then partly built:
-  the product writer as stage 51, answer drafts 56, error explanations 57, the weekly note 58, photo descriptions 59,
-  review summaries 60, screening 61 and plain-words search 62, all with the same API key). Still to do:
-  - **Shopping assistant chat**: answers questions and suggests products. Every visitor's messages cost money, it's
-    open to misuse and it can get prices or stock wrong, so it comes last.
+- **AI features with the Claude API**: all the ideas from 2026-10-26 are built (stages 51 and 56–63), with the same
+  API key. New ones go in Next.
 
 ## Done
 
@@ -88,3 +85,4 @@ they'll be added here.
 | What customers say: an AI summary of a product's reviews, rewritten when they change                                                          | Stage 60 (`git log --grep "Stage 60"`) |
 | Screening: new reviews and questions checked for abuse, spam and personal details, flagged for admins                                         | Stage 61 (`git log --grep "Stage 61"`) |
 | Plain-words search: a search that finds nothing is read into filters by Claude and offered as a link                                          | Stage 62 (`git log --grep "Stage 62"`) |
+| Shopping assistant: "Ask Bazaar" chat that finds products with read-only catalog tools; off until switched on                                 | Stage 63 (`git log --grep "Stage 63"`) |

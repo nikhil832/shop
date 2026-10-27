@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { clientIp, hashToken, networkOf, requireAdmin } from './auth.js';
 import { logActivity } from './activity.js';
 import { parse } from './http.js';
-import { takeHourlySlot } from './rateLimit.js';
+import { takeDailyCall, takeHourlySlot, usedToday } from './rateLimit.js';
 import { searchStages } from './routes/catalog.js';
 
 // Plain-words search (stage 62): when a search finds nothing (and "Did you mean…?" has nothing either), the search page
@@ -19,37 +19,10 @@ export const PER_HOUR = 10;
 export const DAILY_CAP = 300;
 export const CACHE_DAYS = 7;
 const SETTINGS_ID = 'smartSearch';
-const IST_OFFSET = 330 * 60_000;
-const today = (now) => new Date(now.getTime() + IST_OFFSET).toISOString().slice(0, 10);
 
 const understandQuery = z.object({ q: z.string().trim().min(2).max(100) });
 const normalise = (q) => q.toLowerCase().replace(/\s+/g, ' ').trim();
 const cacheKey = (q) => createHash('sha256').update(normalise(q)).digest('base64url');
-
-// Takes one of today's calls for the whole store, atomically: the counter starts again on a new day.
-async function takeDailyCall(db, now) {
-  const day = today(now);
-  const doc = await db.collection('settings').findOneAndUpdate(
-    { _id: SETTINGS_ID },
-    [
-      {
-        $set: {
-          used: {
-            $cond: [
-              { $ne: ['$day', day] },
-              1,
-              { $cond: [{ $lt: ['$used', DAILY_CAP] }, { $add: ['$used', 1] }, '$used'] },
-            ],
-          },
-          taken: { $or: [{ $ne: ['$day', day] }, { $lt: ['$used', DAILY_CAP] }] },
-          day,
-        },
-      },
-    ],
-    { upsert: true, returnDocument: 'after' },
-  );
-  return doc.taken;
-}
 
 // Claude's reading, checked against the store: only its own category slugs and brand names, whole-rupee prices in
 // order, and words a search can use. Null when it adds nothing to the words typed.
@@ -74,12 +47,14 @@ export function checkReading(reading, q, { categories, brands }) {
   return search;
 }
 
-// How many shown products a reading finds, with the same rules as GET /products.
-async function countFor(db, search) {
+// The filter for shown products matching a search (URL-style values: `q` words, `category` slug, `brand` names
+// comma-separated, prices in rupees, `inStock`), with the same rules as GET /products. Null when the category doesn't
+// exist. Also used by the shopping assistant's product search.
+export async function searchFilter(db, search) {
   const filter = { active: true };
   if (search.category) {
     const category = await db.collection('categories').findOne({ slug: search.category }, { projection: { _id: 1 } });
-    if (!category) return 0;
+    if (!category) return null;
     filter.categoryId = category._id;
   }
   if (search.q) filter.$and = (await searchStages(db.collection('categories'), search.q)).filter;
@@ -90,7 +65,12 @@ async function countFor(db, search) {
   }
   if (search.inStock) filter.stock = { $gt: 0 };
   if (search.brand) filter.brand = { $in: search.brand.split(',') };
-  return db.collection('products').countDocuments(filter);
+  return filter;
+}
+
+async function countFor(db, search) {
+  const filter = await searchFilter(db, search);
+  return filter ? db.collection('products').countDocuments(filter) : 0;
 }
 
 const enabledIn = async (db) => (await db.collection('settings').findOne({ _id: SETTINGS_ID }))?.enabled !== false;
@@ -110,7 +90,7 @@ export function smartSearchRouter({ db, ai, config }) {
     if (!saved) {
       const network = networkOf(clientIp(req, config));
       if (!(await takeHourlySlot(db, `smartSearch:${hashToken(network)}`, PER_HOUR))) return none();
-      if (!(await takeDailyCall(db, new Date()))) return none();
+      if (!(await takeDailyCall(db, SETTINGS_ID, DAILY_CAP))) return none();
       const [categories, brands] = await Promise.all([
         db
           .collection('categories')
@@ -142,7 +122,7 @@ export function smartSearchRouter({ db, ai, config }) {
     res.json({
       available: Boolean(ai),
       enabled: saved?.enabled !== false,
-      usedToday: saved?.day === today(new Date()) ? saved.used : 0,
+      usedToday: usedToday(saved),
       dailyCap: DAILY_CAP,
     });
   });

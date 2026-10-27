@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from '@playwright/test';
 
 // The demo server's writing assistant talks to a stand-in Claude API (server/test/fake-anthropic.js, started by
@@ -214,4 +215,48 @@ test('plain-words search: a search that finds nothing offers filters Claude read
   await expect(page.getByRole('heading', { name: 'No products found' })).toBeVisible();
   await expect(page.getByText('Try a different search')).toBeVisible();
   await expect(page.getByText('Looking for')).toHaveCount(0);
+});
+
+test('the shopping assistant: off by default; switched on, it finds products and shows live cards', async ({
+  page,
+  browser,
+}) => {
+  const admin = (await browser.newContext()).request;
+  expect((await admin.post('/api/auth/login', { data: ADMIN })).ok()).toBe(true);
+  await page.goto('/');
+  await expect(page.getByText('Top rated')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Ask Bazaar' })).toHaveCount(0);
+
+  await admin.put('/api/admin/assistant', { data: { enabled: true } });
+  try {
+    await page.goto('/p/the-quiet-engineer-paperback');
+    await page.getByRole('button', { name: 'Ask Bazaar' }).click();
+    const panel = page.getByRole('region', { name: 'Ask Bazaar' });
+    await expect(panel.getByLabel('Your question')).toBeFocused();
+    await panel.getByLabel('Your question').fill('Running shoes?');
+    await panel.getByRole('button', { name: 'Send' }).click();
+    await expect(panel.getByText('Have a look at Stride Running Shoes, at ₹2,499.')).toBeVisible();
+    const card = panel.getByRole('link', { name: /Stride Running Shoes/ });
+    await expect(card).toContainText('₹2,499');
+
+    // Accessible with the panel open.
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+    expect(results.violations.map((v) => v.id)).toEqual([]);
+
+    // The conversation stays while moving around; Escape closes the panel and the button comes back.
+    await card.click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Stride Running Shoes');
+    await expect(panel.getByText('Running shoes?')).toBeVisible();
+    await panel.getByLabel('Your question').press('Escape');
+    await expect(panel).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Ask Bazaar' })).toBeFocused();
+
+    // Not in the admin panel (nor checkout or printable documents).
+    expect((await page.request.post('/api/auth/login', { data: ADMIN })).ok()).toBe(true);
+    await page.goto('/admin');
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Ask Bazaar' })).toHaveCount(0);
+  } finally {
+    await admin.put('/api/admin/assistant', { data: { enabled: false } });
+  }
 });

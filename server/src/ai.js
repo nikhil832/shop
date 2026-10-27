@@ -6,10 +6,10 @@ import { SCREEN_REASONS } from './screening.js';
 
 // The store's writing assistant, through Claude's API with the official SDK: "Write for me" and photo descriptions in
 // the product form and "Draft an answer" for customers' questions (routes/aiWriter.js), "Explain this error" for
-// browser error reports, the admins' weekly note, review summaries, screening reviews and questions, and plain-words
-// search. On only with ANTHROPIC_API_KEY (config.ai); every call costs a little, so it runs only when an admin clicks,
+// browser error reports, the admins' weekly note, review summaries, screening reviews and questions, plain-words
+// search and the shopping assistant chat. On only with ANTHROPIC_API_KEY (config.ai); every call costs a little, so it runs only when an admin clicks,
 // once a week for the note, when reviews or questions are posted or change, or (within limits) when a search finds
-// nothing. Admins check drafts before saving them; review summaries go on product pages as written, labelled as AI, and
+// nothing or a visitor chats. Admins check drafts before saving them; review summaries go on product pages as written, labelled as AI, and
 // can be switched off; screening only flags posts for an admin.
 export const DEFAULT_AI_MODEL = 'claude-opus-5-5';
 export const MAX_HIGHLIGHTS = 8;
@@ -227,6 +227,17 @@ export function aiClient(config) {
   });
   // Claude Opus and Sonnet can hand a declined request to another model on the server; Haiku can't.
   const fallbacks = !config.model.startsWith('claude-haiku');
+  // Anthropic's own reason (its error bodies never contain the key) goes to the server log; the HttpError says what to do.
+  function failed(err) {
+    if (err instanceof HttpError) return err;
+    const reason = err.error?.error?.message ?? err.message;
+    console.error(
+      `Claude API request failed: ${err.status ?? ''} ${err.error?.error?.type ?? err.name}: ${reason}` +
+        (err.requestID ? ` (request ${err.requestID})` : ''),
+    );
+    return new HttpError(502, failureMessage(err, reason, config.model), { expose: true });
+  }
+
   // One structured request; `failure` is what the admin sees when Claude declines.
   async function ask({ system, content, schema, failure, effort = 'low' }) {
     let message;
@@ -241,13 +252,7 @@ export function aiClient(config) {
         ...(fallbacks && { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }),
       });
     } catch (err) {
-      // Anthropic's own reason (its error bodies never contain the key), for the server log and the admin.
-      const reason = err.error?.error?.message ?? err.message;
-      console.error(
-        `Claude API request failed: ${err.status ?? ''} ${err.error?.error?.type ?? err.name}: ${reason}` +
-          (err.requestID ? ` (request ${err.requestID})` : ''),
-      );
-      throw new HttpError(502, failureMessage(err, reason, config.model), { expose: true });
+      throw failed(err);
     }
     if (message.stop_reason === 'refusal' || !message.parsed_output) {
       throw new HttpError(502, failure, { expose: true });
@@ -257,6 +262,37 @@ export function aiClient(config) {
 
   return {
     model: config.model,
+
+    // A conversation with tools (the shopping assistant): the SDK's tool runner calls the tools until Claude answers,
+    // at most `maxIterations` requests. `messages` are text-only turns, so there are no earlier thinking blocks to keep.
+    // Returns the answer's text; a refusal or an empty answer throws `failure`.
+    async chat({ system, messages, tools, maxIterations, failure }) {
+      let message;
+      try {
+        message = await client.beta.messages.toolRunner({
+          model: config.model,
+          max_tokens: 4000,
+          system,
+          messages,
+          tools,
+          max_iterations: maxIterations,
+          // Each request carries the whole conversation, rather than the SDK's default of a message thread kept on
+          // Anthropic's side: nothing of a visitor's chat is stored beyond the request.
+          thread: false,
+          output_config: { effort: 'low' },
+          ...(fallbacks && { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }),
+        });
+      } catch (err) {
+        throw failed(err);
+      }
+      const text = message.content
+        .filter((b) => b.type === 'text')
+        .map((b) => b.text)
+        .join('\n\n')
+        .trim();
+      if (message.stop_reason === 'refusal' || !text) throw new HttpError(502, failure, { expose: true });
+      return text;
+    },
     // `image`: { contentType, data (Buffer) } of an uploaded photo, or null. Returns { description, highlights }.
     async writeProduct({ title, brand, category, facts, image }) {
       const content = [

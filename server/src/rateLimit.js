@@ -36,3 +36,33 @@ export async function takeHourlySlot(db, key, max) {
   );
   return doc.uses.some((u) => u.id === id);
 }
+
+const IST_OFFSET = 330 * 60_000;
+// Today in India time, as the day the daily allowances below count.
+export const indiaDay = (now) => new Date(now.getTime() + IST_OFFSET).toISOString().slice(0, 10);
+
+// "At most `cap` a day" for the whole store, counted on a `settings` document (`{ _id, day, used }`, next to whatever
+// else it holds): one atomic pipeline update that starts again on a new India-time day. Returns true when this use is
+// allowed (and counted).
+export async function takeDailyCall(db, settingsId, cap, now = new Date()) {
+  const day = indiaDay(now);
+  const doc = await db.collection('settings').findOneAndUpdate(
+    { _id: settingsId },
+    [
+      {
+        $set: {
+          used: {
+            $cond: [{ $ne: ['$day', day] }, 1, { $cond: [{ $lt: ['$used', cap] }, { $add: ['$used', 1] }, '$used'] }],
+          },
+          taken: { $or: [{ $ne: ['$day', day] }, { $lt: ['$used', cap] }] },
+          day,
+        },
+      },
+    ],
+    { upsert: true, returnDocument: 'after' },
+  );
+  return doc.taken;
+}
+
+// How many of today's calls have been used, from the same document.
+export const usedToday = (doc, now = new Date()) => (doc?.day === indiaDay(now) ? doc.used : 0);

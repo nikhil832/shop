@@ -334,6 +334,45 @@ function PlainWordsSearch() {
   );
 }
 
+// The shopping assistant (stage 63): off until switched on here, with today's messages against the daily cap. Shown
+// only when the server has an API key.
+function ShoppingAssistant() {
+  const { data } = useFetch('/admin/assistant');
+  const [state, setState] = useState({ on: null, busy: false, error: null });
+  if (!data?.available) return null;
+  const on = state.on ?? data.enabled;
+
+  async function change(enabled) {
+    setState({ on: enabled, busy: true, error: null });
+    try {
+      await request('/admin/assistant', { method: 'PUT', body: { enabled } });
+      setState({ on: enabled, busy: false, error: null });
+    } catch (err) {
+      setState({ on: !enabled, busy: false, error: err.message });
+    }
+  }
+
+  return (
+    <section className="panel plain-words" aria-labelledby="assistant-heading">
+      <h2 id="assistant-heading">Shopping assistant</h2>
+      <label className="check">
+        <input type="checkbox" checked={on} disabled={state.busy} onChange={(e) => change(e.target.checked)} />
+        Show &ldquo;Ask Bazaar&rdquo; on shop pages
+      </label>
+      <p className="muted small">
+        A chat where Claude finds products for visitors. It only reads the catalog, and the product cards show live
+        prices, but its words can be wrong, and every message costs a little: at most 20 an hour per visitor and{' '}
+        {data.dailyCap} a day. Used today: {data.usedToday}.
+      </p>
+      {state.error && (
+        <p className="error small" role="alert">
+          {state.error}
+        </p>
+      )}
+    </section>
+  );
+}
+
 // The morning low-stock email, on or off for every admin. Saved as soon as it's ticked; back as it was if that fails.
 function LowStockEmailSwitch({ enabled }) {
   const [state, setState] = useState({ on: enabled, busy: false, error: null });
@@ -554,6 +593,7 @@ export default function AdminDashboard() {
           <StorageMeter storage={data.storage} />
           <WeeklyNote />
           <PlainWordsSearch />
+          <ShoppingAssistant />
         </div>
       )}
     </div>

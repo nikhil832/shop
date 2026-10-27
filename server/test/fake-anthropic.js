@@ -10,7 +10,62 @@ export const FAKE_ANTHROPIC_KEY = 'sk-ant-fake-key-for-tests';
 export async function startFakeAnthropic(port = 0) {
   const state = { calls: [], next: null, failures: 0, error: null };
 
+  const message = (body, content, stop) => ({
+    id: `msg_fake_${state.calls.length}`,
+    type: 'message',
+    role: 'assistant',
+    model: body.model,
+    content,
+    stop_reason: stop,
+    stop_sequence: null,
+    usage: { input_tokens: 400, output_tokens: 120 },
+  });
+
+  // The shopping assistant, a conversation with tools: a question is searched for (its words), found products are shown
+  // (plus a slug the store doesn't have), then the reply names the first one with the price the search returned.
+  // "Ignore your rules…" is declined in words; "refuse" gets a refusal.
+  function chat(body) {
+    const last = body.messages.at(-1);
+    if (typeof last.content === 'string') {
+      if (state.next === 'refusal' || /refuse/i.test(last.content)) return message(body, [], 'refusal');
+      if (/ignore/i.test(last.content)) {
+        return message(body, [{ type: 'text', text: 'I can only help with shopping at Bazaar.' }], 'end_turn');
+      }
+      const words = last.content
+        .toLowerCase()
+        .replace(/[^a-z ]/g, '')
+        .trim();
+      return message(
+        body,
+        [{ type: 'tool_use', id: `toolu_search_${state.calls.length}`, name: 'search_products', input: { words } }],
+        'tool_use',
+      );
+    }
+    const result = last.content.find((c) => c.type === 'tool_result');
+    const text = typeof result.content === 'string' ? result.content : result.content.map((c) => c.text).join('');
+    if (result.tool_use_id.startsWith('toolu_search_')) {
+      const found = JSON.parse(text);
+      if (!Array.isArray(found)) {
+        return message(body, [{ type: 'text', text: "I couldn't find that here. Try other words." }], 'end_turn');
+      }
+      const slugs = [found[0].slug, 'no-such-product'];
+      return message(
+        body,
+        [{ type: 'tool_use', id: `toolu_show_${state.calls.length}`, name: 'show_products', input: { slugs } }],
+        'tool_use',
+      );
+    }
+    // After show_products: the reply, using the search's own figures.
+    const searched = body.messages
+      .flatMap((m) => (Array.isArray(m.content) ? m.content : []))
+      .find((c) => c.type === 'tool_result' && c.tool_use_id.startsWith('toolu_search_'));
+    const searchText = typeof searched.content === 'string' ? searched.content : searched.content[0].text;
+    const [first] = JSON.parse(searchText);
+    return message(body, [{ type: 'text', text: `Have a look at ${first.title}, at ${first.price}.` }], 'end_turn');
+  }
+
   function answer(body) {
+    if (body.tools?.some((t) => t.name === 'search_products')) return chat(body);
     const prompt = body.messages[0].content.find((c) => c.type === 'text').text;
     const title = /^Title: (.*)$/m.exec(prompt)?.[1] ?? 'this product';
     const stop = state.next === 'refusal' ? 'refusal' : 'end_turn';

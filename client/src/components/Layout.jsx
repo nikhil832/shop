@@ -1,6 +1,7 @@
 import { Component, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import Header from './Header.jsx';
+import AssistantButton from './AssistantButton.jsx';
 import { reportError } from '../errorReports.js';
 
 // A page that failed to load or crashed shows this instead of a blank screen, and is reported to the admins; going
@@ -41,6 +42,7 @@ export default function Layout() {
         </PageError>
       </main>
       <footer className="footer">Bazaar · a demo store · prices in ₹</footer>
+      <AssistantButton />
     </>
   );
 }
