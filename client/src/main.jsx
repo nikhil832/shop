@@ -63,6 +63,8 @@ const Invoice = lazyPage(() => import('./pages/Invoice.jsx'));
 const CreditNote = lazyPage(() => import('./pages/CreditNote.jsx'));
 const ReturnRequest = lazyPage(() => import('./pages/ReturnRequest.jsx'));
 const Account = lazyPage(() => import('./pages/Account.jsx'));
+const Help = lazyPage(() => import('./pages/Help.jsx'));
+const HelpRequest = lazyPage(() => import('./pages/HelpRequest.jsx'));
 // Which of them the browser opened on, if any.
 const OPENED_ON = [
   [/^\/admin(\/|$)/, AdminRoutes],
@@ -70,6 +72,8 @@ const OPENED_ON = [
   [/^\/orders\/[^/]+\/credit-notes\/[^/]+$/, CreditNote],
   [/^\/orders\/[^/]+\/return$/, ReturnRequest],
   [/^\/account$/, Account],
+  [/^\/help$/, Help],
+  [/^\/help\/[^/]+$/, HelpRequest],
 ].find(([path]) => path.test(window.location.pathname))?.[1];
 
 // A failed preload is left to the page itself (it reloads once, or says it didn't load).
@@ -100,6 +104,8 @@ Promise.resolve(OPENED_ON?.preload())
                 <Route path="orders/:id/return" element={<ReturnRequest />} />
                 <Route path="wishlist" element={<Wishlist />} />
                 <Route path="account" element={<Account />} />
+                <Route path="help" element={<Help />} />
+                <Route path="help/:id" element={<HelpRequest />} />
                 <Route path="admin/*" element={<AdminRoutes />} />
                 <Route path="*" element={<NotFound />} />
               </Route>

@@ -293,6 +293,9 @@ export default function Order() {
               Cancel order
             </button>
           )}
+          <Link to={`/help?order=${order.id}`} className="btn">
+            Get help with this order
+          </Link>
         </OrderSummary>
       </div>
     </>

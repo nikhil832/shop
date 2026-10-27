@@ -57,7 +57,7 @@ const SHOP = [
   '/p/the-quiet-engineer-paperback',
   '/p/urbane-men-slim-fit-jeans',
 ];
-const SIGNED_OUT = ['/login', '/register', '/forgot-password', '/no-such-page'];
+const SIGNED_OUT = ['/login', '/register', '/forgot-password', '/no-such-page', '/help'];
 const CUSTOMER = (o) => [
   '/cart',
   '/checkout',
@@ -66,6 +66,7 @@ const CUSTOMER = (o) => [
   `/orders/${o.id}/invoice`,
   '/wishlist',
   '/account',
+  '/help',
 ];
 const ADMIN_PAGES = (o, p) => [
   '/admin',
@@ -86,6 +87,7 @@ const ADMIN_PAGES = (o, p) => [
   '/admin/gst',
   '/admin/activity',
   '/admin/errors',
+  '/admin/help',
 ];
 
 test('every page passes the accessibility check (light theme)', async ({ browser }) => {

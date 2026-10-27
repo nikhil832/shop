@@ -1,5 +1,5 @@
 import { Component, Suspense } from 'react';
-import { Outlet, useLocation } from 'react-router';
+import { Link, Outlet, useLocation } from 'react-router';
 import Header from './Header.jsx';
 import AssistantButton from './AssistantButton.jsx';
 import { reportError } from '../errorReports.js';
@@ -41,7 +41,9 @@ export default function Layout() {
           </Suspense>
         </PageError>
       </main>
-      <footer className="footer">Bazaar · a demo store · prices in ₹</footer>
+      <footer className="footer">
+        Bazaar · a demo store · prices in ₹ · <Link to="/help">Contact us</Link>
+      </footer>
       <AssistantButton />
     </>
   );

@@ -27,6 +27,7 @@ import { reviewSummariesRouter } from './reviewSummaries.js';
 import { screeningRouter } from './screening.js';
 import { smartSearchRouter } from './smartSearch.js';
 import { assistantRouter } from './assistant.js';
+import { helpRouter } from './routes/help.js';
 
 // Builds the Express app around an injected database. ctx = { db, client, config, razorpay, mail } (razorpay is null
 // when online payments aren't configured; mail sends or logs order emails).
@@ -69,6 +70,7 @@ export function createApp(ctx) {
   api.use(screeningRouter(ctx));
   api.use(smartSearchRouter(ctx));
   api.use(assistantRouter(ctx));
+  api.use(helpRouter(ctx));
   // Before adminRouter, whose /admin/orders/:id and /admin/products/:id would take "export" or "import" for an id.
   api.use(orderExportRouter(ctx));
   api.use(productImportRouter(ctx));

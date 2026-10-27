@@ -7,6 +7,7 @@ import { logActivity } from '../activity.js';
 import { UNANSWERED } from './questions.js';
 import { OPEN_REPORTS } from './errorReports.js';
 import { FLAGGED } from '../screening.js';
+import { WAITING } from './help.js';
 import { storageUse } from '../storage.js';
 
 // The `settings` document of the morning low-stock email (lowStockEmail.js): { day, at, enabled }.
@@ -96,6 +97,7 @@ export function dashboardRouter({ db, config }) {
       openErrors,
       flaggedReviews,
       flaggedQuestions,
+      helpWaiting,
       storage,
     ] = await Promise.all([
       orders
@@ -192,6 +194,7 @@ export function dashboardRouter({ db, config }) {
       db.collection('errorReports').countDocuments(OPEN_REPORTS),
       db.collection('reviews').countDocuments(FLAGGED),
       db.collection('questions').countDocuments(FLAGGED),
+      db.collection('helpRequests').countDocuments(WAITING),
       storageUse(db, config),
     ]);
 
@@ -272,6 +275,8 @@ export function dashboardRouter({ db, config }) {
       openErrors,
       // Reviews and questions screening flagged that no admin has dealt with (screening.js).
       flagged: { reviews: flaggedReviews, questions: flaggedQuestions },
+      // Help requests where the customer wrote last (routes/help.js).
+      helpWaiting,
       // How full the database is (storage.js).
       storage,
     });

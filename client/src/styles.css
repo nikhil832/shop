@@ -2829,3 +2829,58 @@ textarea {
     display: none;
   }
 }
+
+/* Help requests: the form, a customer's list and a conversation */
+.help-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.help-form textarea,
+.help-form select {
+  font-weight: 400;
+}
+.help-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.help-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.help-thread {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.help-message {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  overflow-wrap: anywhere;
+}
+.help-message.store {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.help-message p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+}
+.status.help-closed {
+  background: var(--bg);
+  color: var(--muted);
+}
+/* Links in the footer's line of text are underlined, like links inside paragraphs. */
+.footer a {
+  text-decoration: underline;
+}

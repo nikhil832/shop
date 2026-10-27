@@ -60,6 +60,8 @@ const INDEXES = {
   ],
   // Plain-words search readings, remembered for a week.
   searchInterpretations: [[{ at: 1 }, { expireAfterSeconds: CACHE_DAYS * 86_400 }]],
+  // Help requests: a customer's own, the admin inbox by status, and an order's.
+  helpRequests: [[{ userId: 1, updatedAt: -1 }], [{ status: 1, updatedAt: 1 }], [{ orderId: 1 }]],
   categories: [[{ slug: 1 }, { unique: true }]],
   products: [[{ slug: 1 }, { unique: true }], [{ categoryId: 1, price: 1 }], [{ brand: 1 }]],
   users: [[{ email: 1 }, { unique: true }]],

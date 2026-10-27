@@ -504,6 +504,59 @@ ${button('Open the dashboard', url)}`,
   return { subject, text, html };
 }
 
+// For the admins: a new help request, or a customer writing again (`followUp`), with the message and a link to the
+// Help inbox. `order` is { number } of the order it's about, or null.
+export function helpRequestEmail(request, order, followUp, publicUrl = DEFAULT_PUBLIC_URL) {
+  const last = request.messages.at(-1);
+  const about = order ? ` about order #${orderNumber(order)}` : '';
+  const subject = followUp
+    ? `Help request #${request.number}: ${request.name} wrote again`
+    : `Help request #${request.number} from ${request.name}${about}`;
+  const url = `${publicUrl}/admin/help`;
+  const who = `${request.name} (${request.email})${request.userId ? '' : ', not logged in'}`;
+  const text = [
+    `${who}${followUp ? ' wrote again' : ' asked for help'}${about}:`,
+    last.text,
+    `Answer in the admin panel: ${url}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>${escapeHtml(`${who}${followUp ? ' wrote again' : ' asked for help'}${about}:`)}</p>
+<blockquote style="margin:0 0 16px;padding:8px 12px;border-left:3px solid #e5e7eb;white-space:pre-wrap">${escapeHtml(last.text)}</blockquote>
+${button('Answer it', url)}`,
+    "You're getting this email because you're an admin of the store.",
+  );
+  return { subject, text, html };
+}
+
+// For the customer: the store's reply to their help request, with their message below it. Logged-in customers get a
+// link to the conversation; guests answer by writing a new request.
+export function helpReplyEmail(request, reply, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = request.name.split(/\s+/)[0];
+  const subject = `Re: your help request #${request.number}`;
+  const asked = [...request.messages].reverse().find((m) => m.from === 'customer');
+  const url = request.userId ? `${publicUrl}/help/${request._id}` : `${publicUrl}/help`;
+  const linkText = request.userId ? 'See the conversation' : 'Write to us again';
+  const text = [
+    `Hi ${firstName},`,
+    reply,
+    `You wrote: "${asked?.text ?? ''}"`,
+    request.userId ? `To reply, open the conversation: ${url}` : `To reply, write to us again: ${url}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p style="white-space:pre-wrap">${escapeHtml(reply)}</p>
+<p style="font-size:13px;color:#6b7280">You wrote:</p>
+<blockquote style="margin:0 0 16px;padding:8px 12px;border-left:3px solid #e5e7eb;color:#6b7280;white-space:pre-wrap">${escapeHtml(asked?.text ?? '')}</blockquote>
+${button(linkText, url)}`,
+    "You're getting this email because you asked Bazaar for help.",
+  );
+  return { subject, text, html };
+}
+
 // Who hears about store events (new orders, return requests): ADMIN_EMAIL if set, otherwise every admin account.
 export async function adminRecipients(ctx) {
   const configured = ctx.config.mail?.adminEmails ?? [];

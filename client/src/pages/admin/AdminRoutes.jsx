@@ -6,6 +6,7 @@ import AdminDashboard from './AdminDashboard.jsx';
 import AdminDelivery from './AdminDelivery.jsx';
 import AdminErrors from './AdminErrors.jsx';
 import AdminGst from './AdminGst.jsx';
+import AdminHelp from './AdminHelp.jsx';
 import AdminImport from './AdminImport.jsx';
 import AdminLayout from './AdminLayout.jsx';
 import AdminOrder from './AdminOrder.jsx';
@@ -44,6 +45,7 @@ export default function AdminRoutes() {
         <Route path="gst" element={<AdminGst />} />
         <Route path="activity" element={<AdminActivity />} />
         <Route path="errors" element={<AdminErrors />} />
+        <Route path="help" element={<AdminHelp />} />
       </Route>
     </Routes>
   );

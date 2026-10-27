@@ -513,6 +513,13 @@ export default function AdminDashboard() {
                   </Link>
                 )}
               </p>
+              {data.helpWaiting > 0 && (
+                <p>
+                  <Link to="/admin/help">
+                    {data.helpWaiting} help {data.helpWaiting === 1 ? 'request' : 'requests'} waiting
+                  </Link>
+                </p>
+              )}
               {data.questionsToAnswer > 0 && (
                 <p>
                   <Link to="/admin/questions">

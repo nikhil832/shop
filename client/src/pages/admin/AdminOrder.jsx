@@ -16,6 +16,7 @@ import { useFetch } from '../../useFetch.js';
 import NotFound from '../NotFound.jsx';
 import { ShipmentDetails } from '../Order.jsx';
 import { StatusBadge } from '../Orders.jsx';
+import { OrderHelpRequests } from './AdminHelp.jsx';
 
 // The next steps an admin can take from each status (the server enforces the same rules).
 const ACTIONS = {
@@ -211,6 +212,7 @@ export default function AdminOrder() {
               <h1>Order #{orderNumber(order)}</h1>
               <StatusBadge status={order.status} />
             </div>
+            <OrderHelpRequests orderId={order.id} />
             <ol className="timeline">
               {timeline.map(([label, at]) => (
                 <li key={label}>

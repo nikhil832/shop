@@ -76,3 +76,13 @@ export const addressFields = ({ name, phone, line1, line2, city, state, pincode 
 });
 // How many addresses the book keeps (MAX_ADDRESSES on the server).
 export const MAX_ADDRESSES = 10;
+
+// What a help request is about (TOPICS in server/src/routes/help.js), and its state, in words.
+export const HELP_TOPICS = {
+  order: 'An order',
+  product: 'A product',
+  payment: 'Payment or refund',
+  account: 'My account',
+  other: 'Something else',
+};
+export const HELP_STATUS = { waiting: 'Waiting for us', answered: 'Answered', closed: 'Closed' };

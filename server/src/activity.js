@@ -23,6 +23,7 @@ export const ACTIVITY_AREAS = [
   'settings',
   'accounts',
   'errors',
+  'help',
 ];
 export const ACTIVITY_DAYS = 365;
 const MAX_CHANGES = 100;

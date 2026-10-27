@@ -9,6 +9,7 @@ export default function AccountNav() {
       </NavLink>
       <NavLink to="/wishlist">Wishlist</NavLink>
       <NavLink to="/account">Account</NavLink>
+      <NavLink to="/help">Help</NavLink>
     </nav>
   );
 }
