@@ -53,7 +53,7 @@ const adminQuery = z.object({
 // For the dashboard's "needs attention".
 export const WAITING = { status: 'waiting' };
 
-const toRequest = (doc) => ({
+export const toRequest = (doc) => ({
   id: doc._id.toString(),
   number: doc.number,
   topic: doc.topic,

@@ -155,3 +155,30 @@ test('the address book: add, label, edit, make default, remove, and choose at ch
   await expect(cards).toHaveCount(1);
   await expect(cards.first()).toContainText('HomeDefault');
 });
+
+test('customers download their data and close their account', async ({ page }) => {
+  const email = uniqueEmail();
+  expect(
+    (
+      await page.request.post('/api/auth/register', { data: { name: 'Leela Das', email, password: 'password123' } })
+    ).ok(),
+  ).toBe(true);
+  await page.goto('/account#your-data');
+  const section = page.getByRole('region', { name: 'Your data' });
+
+  const download = page.waitForEvent('download');
+  await section.getByRole('link', { name: 'Download my data' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^bazaar-my-data-\d{4}-\d\d-\d\d\.json$/);
+  const data = JSON.parse(await (await import('node:fs/promises')).readFile(await file.path(), 'utf8'));
+  expect(data.account.email).toBe(email);
+
+  await section.getByText('Close my account').first().click();
+  await section.getByLabel('Your password').fill('password123');
+  await section.getByLabel('I understand my account will be deleted').check();
+  await section.getByRole('button', { name: 'Close my account' }).click();
+  await expect(page.getByRole('heading', { name: 'Your account is closed' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible();
+  const login = await page.request.post('/api/auth/login', { data: { email, password: 'password123' } });
+  expect(login.status()).toBe(401);
+});

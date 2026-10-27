@@ -504,6 +504,25 @@ ${button('Open the dashboard', url)}`,
   return { subject, text, html };
 }
 
+// Sent to the address of an account that was just closed (routes/accountData.js), so a closure the owner didn't make
+// doesn't go unnoticed.
+export function accountClosedEmail(user) {
+  const subject = 'Your Bazaar account was closed';
+  const firstName = user.name.split(/\s+/)[0];
+  const lines = [
+    'Your Bazaar account was closed, as asked. Your details, addresses, wishlist and reviews have been deleted. We keep your past orders for tax records, without your name, phone or street.',
+    "If you didn't close it, reply to this email straight away. You're welcome to make a new account with this address at any time.",
+  ];
+  const text = [`Hi ${firstName},`, ...lines, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}`,
+    "You're getting this email because it was the address of a Bazaar account.",
+  );
+  return { subject, text, html };
+}
+
 // For the admins: a new help request, or a customer writing again (`followUp`), with the message and a link to the
 // Help inbox. `order` is { number } of the order it's about, or null.
 export function helpRequestEmail(request, order, followUp, publicUrl = DEFAULT_PUBLIC_URL) {

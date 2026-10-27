@@ -6,6 +6,7 @@ import AccountNav from '../components/AccountNav.jsx';
 import AddressFields from '../components/AddressFields.jsx';
 import TwoStepSection from '../components/TwoStepSection.jsx';
 import { MAX_ADDRESSES, addressLine } from '../format.js';
+import { forgetCart } from '../cart.js';
 import { useFetch } from '../useFetch.js';
 
 // Each section saves on its own: { busy, error, done } where `done` is the confirmation to show.
@@ -154,6 +155,74 @@ function AddressBook({ user, setUser }) {
   );
 }
 
+// "Your data" (stage 65): download everything the store holds about you, or close the account (password, and a two-step
+// code when that's on). Closing calls `onClosed`, which logs this browser out.
+function YourData({ user, onClosed }) {
+  const [state, setState] = useState({ busy: false, error: null });
+
+  async function close(e) {
+    e.preventDefault();
+    const { password, code, confirm } = Object.fromEntries(new FormData(e.currentTarget));
+    setState({ busy: true, error: null });
+    try {
+      await request('/account/close', {
+        method: 'POST',
+        body: { password, ...(code && { code }), confirm: confirm === 'on' },
+      });
+      onClosed();
+    } catch (err) {
+      setState({ busy: false, error: err.message });
+    }
+  }
+
+  return (
+    <section className="panel account-section" id="your-data" aria-labelledby="data-heading">
+      <h2 id="data-heading">Your data</h2>
+      <p>
+        <a href="/api/account/data" download>
+          Download my data
+        </a>{' '}
+        <span className="muted small">
+          (your account, addresses, orders, returns, reviews, questions, wishlist and help requests, as a JSON file)
+        </span>
+      </p>
+      <details className="close-account">
+        <summary>Close my account</summary>
+        <form className="help-form" onSubmit={close}>
+          <p className="small">
+            This deletes your account, addresses, wishlist, alerts, saved cart, reviews, unanswered questions and help
+            requests, and logs you out everywhere. Answered questions stay on product pages, signed &ldquo;A
+            customer&rdquo;. Past orders are kept for tax records, without your name, phone or street. It can&apos;t be
+            undone, but you can make a new account any time. You can&apos;t close it while an order is on its way or a
+            return is open.
+          </p>
+          <label>
+            Your password
+            <input name="password" type="password" autoComplete="current-password" required maxLength={128} />
+          </label>
+          {user.twoStep && (
+            <label>
+              Code from your authenticator app (or a recovery code)
+              <input name="code" autoComplete="one-time-code" inputMode="numeric" required maxLength={20} />
+            </label>
+          )}
+          <label className="check">
+            <input type="checkbox" name="confirm" required />I understand my account will be deleted
+          </label>
+          {state.error && (
+            <p className="error" role="alert">
+              {state.error}
+            </p>
+          )}
+          <button type="submit" className="btn danger" disabled={state.busy}>
+            {state.busy ? 'Closing…' : 'Close my account'}
+          </button>
+        </form>
+      </details>
+    </section>
+  );
+}
+
 export default function Account() {
   const { user, setUser } = useAuth();
   const [details, saveDetails] = useSave();
@@ -162,6 +231,8 @@ export default function Account() {
   const [updates, saveUpdates] = useSave();
   // Bumped to reload the pending email change after asking for one or cancelling it.
   const [emailVersion, setEmailVersion] = useState(0);
+  // Set once the account is closed, before the user is cleared, so the page says so instead of asking to log in.
+  const [closed, setClosed] = useState(false);
   const { data: pending } = useFetch(user ? '/account/email' : null, emailVersion);
   // Links to a section (/account#addresses from checkout, #two-step from the admin panel) scroll to it once the page,
   // loaded on first use, has the user.
@@ -171,6 +242,14 @@ export default function Account() {
     if (ready && hash) document.getElementById(hash.slice(1))?.scrollIntoView();
   }, [ready, hash]);
 
+  if (closed) {
+    return (
+      <div className="empty-state" role="status">
+        <h1>Your account is closed</h1>
+        <p>We&apos;ve emailed you to confirm. Thank you for shopping with Bazaar.</p>
+      </div>
+    );
+  }
   if (user === undefined) return <p className="muted">Loading…</p>;
   if (!user) return <Navigate to="/login?next=/account" replace />;
 
@@ -328,6 +407,14 @@ export default function Account() {
       </form>
 
       <TwoStepSection />
+      <YourData
+        user={user}
+        onClosed={() => {
+          setClosed(true);
+          forgetCart();
+          setUser(null);
+        }}
+      />
     </div>
   );
 }

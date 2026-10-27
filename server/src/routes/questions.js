@@ -31,7 +31,7 @@ const adminQuery = z.object({
 });
 const visibilityBody = z.object({ hidden: z.boolean() });
 
-const toQuestion = (doc) => ({
+export const toQuestion = (doc) => ({
   id: doc._id.toString(),
   text: doc.text,
   author: doc.author,
@@ -133,7 +133,8 @@ export function questionsRouter(ctx) {
       hidden: q.hidden,
       screening: toScreening(q),
       product: product.get(q.productId.toString()) ?? null,
-      customer: person.get(q.userId.toString()) ?? null,
+      // No asker when their account was closed (accountData.js): the question stays, signed "A customer".
+      customer: (q.userId && person.get(q.userId.toString())) ?? null,
     }));
   }
 

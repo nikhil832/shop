@@ -28,6 +28,7 @@ import { screeningRouter } from './screening.js';
 import { smartSearchRouter } from './smartSearch.js';
 import { assistantRouter } from './assistant.js';
 import { helpRouter } from './routes/help.js';
+import { accountDataRouter } from './routes/accountData.js';
 
 // Builds the Express app around an injected database. ctx = { db, client, config, razorpay, mail } (razorpay is null
 // when online payments aren't configured; mail sends or logs order emails).
@@ -49,6 +50,7 @@ export function createApp(ctx) {
   api.use(sessionMiddleware(ctx));
   api.use(catalogRouter(ctx));
   api.use(authRouter(ctx));
+  api.use(accountDataRouter(ctx));
   api.use(accountRouter(ctx));
   api.use(ordersRouter(ctx));
   api.use(paymentsRouter(ctx));

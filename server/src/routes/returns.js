@@ -52,7 +52,7 @@ export function returnRefund(order, items, alreadyRefunded = 0) {
   return Math.max(0, Math.min(value - share, itemsPaid - alreadyRefunded));
 }
 
-const toReturn = (doc) => ({
+export const toReturn = (doc) => ({
   id: doc._id.toString(),
   orderId: doc.orderId.toString(),
   orderNumber: doc.orderNumber ?? null,

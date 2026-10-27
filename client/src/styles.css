@@ -2884,3 +2884,18 @@ textarea {
 .footer a {
   text-decoration: underline;
 }
+/* Closing an account: a red button, behind a "Close my account" disclosure */
+.btn.danger {
+  /* A fixed dark red: the dark theme's --danger is too light behind white text. */
+  background: #b91c1c;
+  border-color: #b91c1c;
+  color: #ffffff;
+}
+.close-account summary {
+  cursor: pointer;
+  color: var(--danger);
+  font-weight: 600;
+}
+.close-account form {
+  margin-top: 10px;
+}
