@@ -9,9 +9,51 @@ const MAX_IMAGES = 5;
 const MAX_BYTES = 1024 * 1024;
 const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-// The first image is the one shown on cards. Uploads go up immediately; the product keeps their URLs when saved.
-function Images({ images, onChange }) {
+// A description of an uploaded photo for people using screen readers (stage 59), with "Suggest", where Claude looks at
+// the photo (only when the server has an API key). Saved with the product.
+function PhotoDescription({ src, n, value, onChange, getTitle, ai }) {
   const [state, setState] = useState({ busy: false, error: null });
+
+  async function suggest() {
+    if (value.trim() && !window.confirm('Replace this description with a suggestion?')) return;
+    setState({ busy: true, error: null });
+    try {
+      const { alt } = await request('/admin/ai/alt-text', { method: 'POST', body: { image: src, title: getTitle() } });
+      onChange(alt);
+      setState({ busy: false, error: null });
+    } catch (err) {
+      setState({ busy: false, error: err.message });
+    }
+  }
+
+  return (
+    <div className="photo-description">
+      <label>
+        <span>
+          Description<span className="sr-only"> of image {n}</span>
+        </span>
+        <input value={value} maxLength={150} placeholder="What it shows" onChange={(e) => onChange(e.target.value)} />
+      </label>
+      {ai?.enabled && (
+        <button type="button" className="link" onClick={suggest} disabled={state.busy}>
+          {state.busy ? 'Looking…' : 'Suggest'}
+          <span className="sr-only"> a description of image {n}</span>
+        </button>
+      )}
+      {state.error && (
+        <p className="error small" role="alert">
+          {state.error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// The first image is the one shown on cards. Uploads go up immediately; the product keeps their URLs when saved, with
+// the descriptions (`alts`, by address) of the uploaded ones.
+function Images({ images, onChange, alts, onAlts, getTitle }) {
+  const [state, setState] = useState({ busy: false, error: null });
+  const { data: ai } = useFetch('/admin/ai');
 
   async function add(e) {
     const files = [...e.currentTarget.files];
@@ -55,6 +97,16 @@ function Images({ images, onChange }) {
             <button type="button" className="link danger" onClick={() => onChange(images.filter((x) => x !== src))}>
               Remove<span className="sr-only"> image {i + 1}</span>
             </button>
+            {src.startsWith('/api/images/') && (
+              <PhotoDescription
+                src={src}
+                n={i + 1}
+                value={alts[src] ?? ''}
+                onChange={(text) => onAlts({ ...alts, [src]: text })}
+                getTitle={getTitle}
+                ai={ai}
+              />
+            )}
           </li>
         ))}
       </ul>
@@ -331,6 +383,7 @@ function ProductForm({ product, categories }) {
   const navigate = useNavigate();
   const formRef = useRef(null);
   const [images, setImages] = useState(product?.images ?? []);
+  const [alts, setAlts] = useState(product?.imageAlts ?? {});
   const [state, setState] = useState({ busy: false, error: null });
   // Variant rows, or null for a product without variants, and the names of their one or two options.
   const [variants, setVariants] = useState(product?.variants.length ? product.variants.map(newRow) : null);
@@ -371,6 +424,10 @@ function ProductForm({ product, categories }) {
             stock: Number(form.get('stock')),
           }),
       images,
+      // Descriptions of the uploaded photos the product keeps (the server drops empty ones).
+      imageAlts: Object.fromEntries(
+        images.filter((src) => src.startsWith('/api/images/')).map((src) => [src, (alts[src] ?? '').trim()]),
+      ),
       active: form.get('active') === 'on',
     };
     setState({ busy: true, error: null });
@@ -468,7 +525,13 @@ function ProductForm({ product, categories }) {
         </label>
         <WriteForMe formRef={formRef} images={images} />
       </div>
-      <Images images={images} onChange={setImages} />
+      <Images
+        images={images}
+        onChange={setImages}
+        alts={alts}
+        onAlts={setAlts}
+        getTitle={() => formRef.current?.elements.namedItem('title').value ?? ''}
+      />
       <label className="check">
         <input
           type="checkbox"

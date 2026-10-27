@@ -81,3 +81,43 @@ test('the weekly note: switched off and on from the dashboard, and sent to the a
   await panel.getByRole('button', { name: 'Send me one now' }).click();
   await expect(panel.getByText('Sent to your email: last week’s note.')).toBeVisible();
 });
+
+test('photo descriptions: Claude suggests one, the admin saves it, and the product page reads it out', async ({
+  page,
+}) => {
+  const api = page.request;
+  expect((await api.post('/api/auth/login', { data: ADMIN })).ok()).toBe(true);
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+    'base64',
+  );
+  const { url } = await (
+    await api.post('/api/admin/images', { headers: { 'Content-Type': 'image/png' }, data: png })
+  ).json();
+  const [category] = await (await api.get('/api/categories')).json();
+  const product = await (
+    await api.post('/api/admin/products', {
+      data: {
+        title: `Griha Glass Vase ${Date.now()}`,
+        brand: 'Griha',
+        categoryId: category.id,
+        price: 49900,
+        mrp: 59900,
+        stock: 5,
+        images: [url],
+      },
+    })
+  ).json();
+
+  await page.goto(`/admin/products/${product.id}`);
+  const description = page.getByLabel('Description of image 1');
+  await expect(description).toHaveValue('');
+  await page.getByRole('button', { name: 'Suggest a description of image 1' }).click();
+  await expect(description).toHaveValue('a blue vase, seen from the side');
+  await description.fill('Clear glass vase with a blue rim, from the side');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page).toHaveURL('/admin/products');
+
+  await page.goto(`/p/${product.slug}`);
+  await expect(page.getByRole('img', { name: 'Clear glass vase with a blue rim, from the side' })).toBeVisible();
+});

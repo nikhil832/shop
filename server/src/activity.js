@@ -76,6 +76,9 @@ export function productChanges(before, after, categoryName) {
   if (JSON.stringify(before.images) !== JSON.stringify(after.images)) {
     changes.push({ field: 'Photos', from: String(before.images.length), to: `${after.images.length} (changed)` });
   }
+  if (JSON.stringify(before.imageAlts ?? {}) !== JSON.stringify(after.imageAlts ?? {})) {
+    changes.push({ field: 'Photo descriptions', to: 'edited' });
+  }
   push(changes, 'Shown', yesNo(before.active), yesNo(after.active));
 
   const variantsBefore = before.variants ?? [];

@@ -6,8 +6,9 @@ import { HttpError, parse, parseObjectId } from '../http.js';
 import { takeHourlySlot } from '../rateLimit.js';
 
 // The admin's writing assistant: "Write for me" in the product form (stage 51), where Claude drafts a description and
-// highlights, and "Draft an answer" for a customer's question (stage 56). The admin edits every draft before saving;
-// nothing is saved here. Each draft costs a little, so each admin gets AI_DRAFTS_PER_HOUR of both together.
+// highlights, "Draft an answer" for a customer's question (stage 56) and photo descriptions for screen readers (stage
+// 59). The admin edits every draft before saving; nothing is saved here. Each draft costs a little, so each admin gets
+// AI_DRAFTS_PER_HOUR of all of them together.
 export const AI_DRAFTS_PER_HOUR = 30;
 // Image types Claude reads (uploads can also be these).
 const READABLE = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -26,6 +27,10 @@ const draftBody = z.object({
 });
 
 const answerDraftBody = z.object({ questionId: z.string() });
+const altTextBody = z.object({
+  image: z.string().regex(/^\/api\/images\/[0-9a-f]{24}$/, 'Describe an uploaded photo'),
+  title: z.string().trim().max(150).default(''),
+});
 // Earlier answers about the same product that go with the question, so the draft agrees with them.
 const EARLIER_ANSWERS = 5;
 
@@ -60,6 +65,26 @@ export function aiWriterRouter({ db, ai }) {
       image: photo ? { contentType: photo.contentType, data: Buffer.from(photo.data.buffer) } : null,
     });
     res.json(draft);
+  });
+
+  // A description of one uploaded photo for screen readers (stage 59), for the admin to check before saving the product.
+  router.post('/admin/ai/alt-text', async (req, res) => {
+    const body = parse(altTextBody, req.body);
+    if (!ai)
+      throw new HttpError(503, 'The writing assistant is off: the server has no ANTHROPIC_API_KEY.', { expose: true });
+    const photo = await db
+      .collection('images')
+      .findOne({ _id: parseObjectId(body.image.split('/').pop(), 'image id') });
+    if (!photo) throw new HttpError(404, 'That photo is gone. Upload it again.');
+    if (!READABLE.includes(photo.contentType)) throw new HttpError(400, "Claude can't read this kind of photo");
+    if (!(await takeHourlySlot(db, `aiDraft:${req.user._id}`, AI_DRAFTS_PER_HOUR))) {
+      throw new HttpError(429, `You can ask for ${AI_DRAFTS_PER_HOUR} drafts an hour. Try again later.`);
+    }
+    const alt = await ai.describePhoto({
+      image: { contentType: photo.contentType, data: Buffer.from(photo.data.buffer) },
+      title: body.title,
+    });
+    res.json({ alt });
   });
 
   router.post('/admin/ai/answer-draft', async (req, res) => {

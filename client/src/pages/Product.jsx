@@ -14,12 +14,13 @@ import { rememberViewed } from '../recent.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
 
-function Gallery({ images, title }) {
+// `alts`: descriptions of uploaded photos by address; the title describes the rest.
+function Gallery({ images, title, alts = {} }) {
   const [selected, setSelected] = useState(0);
   return (
     <div className="gallery">
       <div className="gallery-main">
-        <img src={images[selected]} alt={title} width="600" height="600" />
+        <img src={images[selected]} alt={alts[images[selected]] || title} width="600" height="600" />
       </div>
       {images.length > 1 && (
         <div className="thumbs">
@@ -197,6 +198,7 @@ export default function Product() {
           key={`${product.id}:${photoSource?.id ?? ''}`}
           images={photoSource?.images ?? product.images}
           title={choiceText ? `${product.title}, ${choiceText}` : product.title}
+          alts={product.imageAlts}
         />
         <div className="product-info">
           <span className="brand">{product.brand}</span>

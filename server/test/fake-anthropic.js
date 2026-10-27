@@ -14,7 +14,7 @@ export async function startFakeAnthropic(port = 0) {
     const prompt = body.messages[0].content.find((c) => c.type === 'text').text;
     const title = /^Title: (.*)$/m.exec(prompt)?.[1] ?? 'this product';
     const stop = state.next === 'refusal' ? 'refusal' : 'end_turn';
-    // A weekly note, an error explanation, an answer draft for a customer's question, or else a product draft.
+    // A photo description, a weekly note, an error explanation, an answer draft, or else a product draft.
     const product = /^Product: (.*)$/m.exec(prompt)?.[1];
     const kind = /^Kind: (.*)$/m.exec(prompt)?.[1];
     // An explanation names the first file it was given, and repeats a link from the report (the server removes it).
@@ -29,19 +29,25 @@ export async function startFakeAnthropic(port = 0) {
     const note = /^Week: /.test(prompt) && {
       paragraphs: [`  Last week brought in ${sales}.  `, 'Two orders are waiting to ship.', ' '],
     };
-    const draft = note
-      ? note
-      : explained
-        ? explained
-        : product
-          ? {
-              answer: `  Yes: ${product} comes with what the description lists.  `,
-              fromDetails: !/warranty/i.test(prompt.split("Customer's question:")[1] ?? ''),
-            }
-          : {
-              description: `${title} is a dependable pick for everyday use.\n\nMade to last, and easy to look after.`,
-              highlights: ['Easy to use', 'Built to last.', '  Great value  '],
-            };
+    // A photo description, when asked about a photo with its product title.
+    const described = /^Product title: /.test(prompt) && {
+      alt: `  Photo of a ${body.messages[0].content[0].source.media_type === 'image/png' ? 'blue' : 'red'} vase, seen from the side  `,
+    };
+    const draft = described
+      ? described
+      : note
+        ? note
+        : explained
+          ? explained
+          : product
+            ? {
+                answer: `  Yes: ${product} comes with what the description lists.  `,
+                fromDetails: !/warranty/i.test(prompt.split("Customer's question:")[1] ?? ''),
+              }
+            : {
+                description: `${title} is a dependable pick for everyday use.\n\nMade to last, and easy to look after.`,
+                highlights: ['Easy to use', 'Built to last.', '  Great value  '],
+              };
     return {
       id: `msg_fake_${state.calls.length}`,
       type: 'message',

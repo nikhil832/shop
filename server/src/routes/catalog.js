@@ -2,6 +2,7 @@ import express from 'express';
 import { optionsOf, toVariant } from '../variants.js';
 import { z } from 'zod';
 import { HttpError, escapeRegex, parse } from '../http.js';
+import { imageAltsOf } from '../imageAlts.js';
 
 // Prices are integers in paise (₹1 = 100) everywhere: storage, API and client state.
 
@@ -412,6 +413,8 @@ export function catalogRouter({ db }) {
       description: doc.description,
       highlights: doc.highlights ?? [],
       images: doc.images,
+      // Descriptions of uploaded photos for screen readers, by address (the title stands in for the rest).
+      imageAlts: imageAltsOf(doc),
       // The option names ("Colour", "Size"), one row of choices each; [] without variants.
       options: doc.variants?.length ? optionsOf(doc) : [],
       variants: (doc.variants ?? []).map(toVariant),

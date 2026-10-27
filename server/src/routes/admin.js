@@ -6,6 +6,7 @@ import { HttpError, escapeRegex, parse, parseObjectId } from '../http.js';
 import { ICONS, image, slugify } from '../seed.js';
 import { refundPayment } from '../payments.js';
 import { missingImages } from './images.js';
+import { imageAltsOf, storedAlts } from '../imageAlts.js';
 import { MAX_OPTIONS, optionsOf, optionsPhrase, toVariant, variantLabel, variantTotals } from '../variants.js';
 import { cancelOrder, ORDER_STATUSES, toOrder } from './orders.js';
 import { sendOrderEmail } from '../emails.js';
@@ -31,6 +32,13 @@ const productFields = z.object({
   mrp: z.number().int().min(100, 'MRP must be at least ₹1').max(100_000_000),
   stock: z.number().int().min(0).max(100_000),
   images: z.array(imageRef).max(5),
+  // Descriptions of uploaded photos for screen readers, by photo address (stage 59); empty ones are dropped.
+  imageAlts: z
+    .record(
+      z.string().regex(/^\/api\/images\/[0-9a-f]{24}$/),
+      z.string().trim().max(150, 'A photo description can be at most 150 characters'),
+    )
+    .refine((alts) => Object.keys(alts).length <= 5, 'At most 5 photo descriptions'),
   active: z.boolean(),
 });
 // Variants (one kind of option, e.g. Size): each with its own price, MRP and stock. `id` keeps an existing variant
@@ -62,6 +70,7 @@ const createProduct = productFields
     description: productFields.shape.description.default(''),
     highlights: productFields.shape.highlights.default([]),
     images: productFields.shape.images.default([]),
+    imageAlts: productFields.shape.imageAlts.default({}),
     active: productFields.shape.active.default(true),
     // With variants, the product's own price, MRP and stock come from them.
     price: productFields.shape.price.optional(),
@@ -232,6 +241,7 @@ const toAdminProduct = (doc) => ({
   mrp: doc.mrp,
   stock: doc.stock,
   images: doc.images,
+  imageAlts: imageAltsOf(doc),
   active: doc.active,
   variantName: doc.variants?.length ? doc.variantName : '',
   options: doc.variants?.length ? optionsOf(doc) : [],
@@ -338,6 +348,7 @@ export function adminRouter(ctx) {
         slug,
         categoryId: category._id,
         images: body.images.length ? body.images : [image(slug, categoryIcon(category), body.brand)],
+        imageAlts: storedAlts(body.imageAlts, body.images),
         rating: { avg: 0, count: 0 },
         createdAt: now,
         updatedAt: now,
@@ -403,6 +414,13 @@ export function adminRouter(ctx) {
       update.images = [
         image(current.slug, category ? categoryIcon(category) : DEFAULT_ICON, body.brand ?? current.brand),
       ];
+    }
+    // Descriptions follow the photos: new ones as sent, or the old ones of the photos still there.
+    if (fields.imageAlts || fields.images) {
+      update.imageAlts = storedAlts(
+        fields.imageAlts ?? imageAltsOf(current),
+        update.images ?? fields.images ?? current.images,
+      );
     }
     const doc = await products.findOneAndUpdate(
       { _id },

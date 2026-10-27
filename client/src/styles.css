@@ -2668,3 +2668,26 @@ textarea {
 .weekly-note p {
   margin: 0;
 }
+/* A photo's description in the admin product form: the column widens past the 96px thumbnail. */
+.image-editor li:has(.photo-description) {
+  width: 200px;
+}
+.photo-description {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+}
+.photo-description label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.photo-description input {
+  width: 100%;
+  font-weight: 400;
+}

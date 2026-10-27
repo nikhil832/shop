@@ -3,9 +3,9 @@ import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
 import { HttpError } from './http.js';
 
-// The admin's writing assistant, through Claude's API with the official SDK: "Write for me" in the product form and
-// "Draft an answer" for customers' questions (routes/aiWriter.js), "Explain this error" for browser error reports and
-// the admins' weekly note. On only with ANTHROPIC_API_KEY (config.ai); every call costs a little, so it runs only when
+// The admin's writing assistant, through Claude's API with the official SDK: "Write for me" and photo descriptions in
+// the product form and "Draft an answer" for customers' questions (routes/aiWriter.js), "Explain this error" for
+// browser error reports and the admins' weekly note. On only with ANTHROPIC_API_KEY (config.ai); every call costs a little, so it runs only when
 // an admin clicks (or once a week for the note), and an admin always checks a draft before anything is saved.
 export const DEFAULT_AI_MODEL = 'claude-opus-5-5';
 export const MAX_HIGHLIGHTS = 8;
@@ -131,6 +131,15 @@ reports). A quiet week is fine to call quiet.
 - Quote figures exactly as given, rupees with the ₹ sign. Never calculate new numbers, percentages or forecasts, and \
 never guess reasons the figures don't show. No greeting or sign-off, no emoji, no exclamation marks, no lists.`;
 
+const altSchema = z.object({ alt: z.string() });
+
+const ALT_SYSTEM = `You write the description of a product photo for people using screen readers on Bazaar, an \
+online store in India. Given the photo and the product's title, write:
+- alt: one short phrase or sentence, at most 125 characters, saying what the photo shows that matters to a shopper: \
+the product, its colour, the angle or what's in view (a side view, the label, the product in use). Don't start with \
+"Image of" or "Photo of", don't repeat the whole title, and describe only what you can see: no prices, claims or \
+specifications that aren't visible.`;
+
 // What the admin sees when a request fails: the cases they can fix themselves, else Anthropic's reason or "try again".
 function failureMessage(err, reason, model) {
   if (err.status === 401) return 'The Anthropic API key was refused. Check ANTHROPIC_API_KEY on the server.';
@@ -222,6 +231,26 @@ export function aiClient(config) {
         .filter(Boolean)
         .slice(0, 4)
         .map((p) => p.slice(0, 1200));
+    },
+
+    // `image`: { contentType, data (Buffer) } of an uploaded photo; `title`: the product's, if known. Returns the text.
+    async describePhoto({ image, title }) {
+      const result = await ask({
+        system: ALT_SYSTEM,
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: image.contentType, data: image.data.toString('base64') },
+          },
+          { type: 'text', text: `Product title: ${title || '(not given yet)'}` },
+        ],
+        schema: altSchema,
+        failure: "The writing assistant couldn't describe this photo. Please write it yourself.",
+      });
+      return result.alt
+        .trim()
+        .replace(/^(an? )?(image|photo|picture) of /i, '')
+        .slice(0, 150);
     },
 
     // `report`: an errorReports document; `places`: [name, file] for the code names in it. Returns
