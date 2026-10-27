@@ -1,4 +1,5 @@
 import { Link, useLocation, useSearchParams } from 'react-router';
+import { isStaff } from '../permissions.js';
 import { useAuth } from '../auth.jsx';
 import { cartCount, useCart } from '../cart.js';
 import SearchBox from './SearchBox.jsx';
@@ -20,7 +21,7 @@ export default function Header() {
         <SearchBox key={urlQuery} initial={urlQuery} />
         <nav className="header-nav" aria-label="Account">
           {/* Nothing until the session check finishes, so "Log in" doesn't flash for logged-in users. */}
-          {user?.role === 'admin' && (
+          {isStaff(user) && (
             <Link to="/admin" className="header-link">
               Admin
             </Link>

@@ -1,7 +1,8 @@
 import express from 'express';
 import { ObjectId } from 'mongodb';
 import { z } from 'zod';
-import { clientIp, hashToken, networkOf, requireAdmin, requireUser } from '../auth.js';
+import { clientIp, hashToken, networkOf, requireUser } from '../auth.js';
+import { requirePermission } from '../staff.js';
 import { logActivity } from '../activity.js';
 import { helpReplyEmail, helpRequestEmail, sendToAdmins } from '../emails.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
@@ -158,7 +159,7 @@ export function helpRouter(ctx) {
   });
 
   // ---- Admin ----
-  router.use('/admin/help', requireAdmin);
+  router.use('/admin/help', requirePermission('help'));
 
   // Waiting (oldest first, so nobody waits longest), answered or closed (newest first), with a count of each; or all
   // of one order's.

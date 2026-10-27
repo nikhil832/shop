@@ -2899,3 +2899,18 @@ textarea {
 .close-account form {
   margin-top: 10px;
 }
+/* Admin → Staff: adding someone */
+.staff-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+.staff-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}

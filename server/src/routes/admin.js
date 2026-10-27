@@ -1,7 +1,8 @@
 import express from 'express';
 import { ObjectId } from 'mongodb';
 import { z } from 'zod';
-import { clientIp, networkOf, requireAdmin } from '../auth.js';
+import { clientIp, networkOf } from '../auth.js';
+import { can, staffGuard } from '../staff.js';
 import { HttpError, escapeRegex, parse, parseObjectId } from '../http.js';
 import { ICONS, image, slugify } from '../seed.js';
 import { refundPayment } from '../payments.js';
@@ -252,6 +253,21 @@ const toAdminProduct = (doc) => ({
 
 export const categoryIcon = (category) => category.icon ?? ICONS[category.slug] ?? DEFAULT_ICON;
 
+// What staff below admin may do here (staff.js): see orders and their notes, ship them (one, in bulk, tracking), and
+// hide or show reviews. Everything else under /admin is for admins.
+const ID = '[0-9a-f]{24}';
+const STAFF_ROUTES = [
+  ['GET', /^\/orders$/, 'orders.view'],
+  ['GET', new RegExp(`^/orders/${ID}$`), 'orders.view'],
+  ['POST', new RegExp(`^/orders/${ID}/status$`), 'orders.ship'],
+  ['POST', /^\/orders\/ship$/, 'orders.ship'],
+  ['PUT', new RegExp(`^/orders/${ID}/shipment$`), 'orders.ship'],
+  ['POST', new RegExp(`^/orders/${ID}/notes$`), 'orders.notes'],
+  ['DELETE', new RegExp(`^/orders/${ID}/notes/${ID}$`), 'orders.notes'],
+  ['GET', /^\/reviews$/, 'reviews'],
+  ['POST', new RegExp(`^/reviews/${ID}/visibility$`), 'reviews'],
+];
+
 export function adminRouter(ctx) {
   const { db } = ctx;
   const products = db.collection('products');
@@ -261,7 +277,7 @@ export function adminRouter(ctx) {
   const router = express.Router();
 
   // Every route below needs an admin. 401 when logged out, 403 for customers.
-  router.use('/admin', requireAdmin);
+  router.use('/admin', staffGuard(STAFF_ROUTES));
 
   async function findCategory(id) {
     const category = await categories.findOne({ _id: new ObjectId(id) });
@@ -661,6 +677,10 @@ export function adminRouter(ctx) {
   router.post('/admin/orders/:id/status', async (req, res) => {
     const _id = parseObjectId(req.params.id, 'order id');
     const { status, shipment } = parse(statusBody, req.body);
+    // Cancelling can refund money: admins only.
+    if (status === 'cancelled' && !can(req.user, 'orders.manage')) {
+      throw new HttpError(403, 'Only an admin can cancel an order');
+    }
     res.json((await withCustomers([await advanceOrder(req, _id, status, shipment)]))[0]);
   });
 

@@ -1,5 +1,5 @@
 import express from 'express';
-import { requireAdmin } from './auth.js';
+import { can, requireStaff } from './staff.js';
 import { logActivity } from './activity.js';
 import { HttpError, parseObjectId } from './http.js';
 
@@ -94,12 +94,15 @@ export const toScreening = (doc) =>
 
 export function screeningRouter({ db }) {
   const router = express.Router();
-  router.use('/admin/screening', requireAdmin);
+  router.use('/admin/screening', requireStaff);
 
   // "Looks fine": clears a flag the admin disagrees with. Only a flagged, uncleared post changes; that's logged.
   router.post('/admin/screening/:kind/:id/clear', async (req, res) => {
     const k = KINDS[req.params.kind];
     if (!k) throw new HttpError(404, 'Not found');
+    if (!can(req.user, req.params.kind === 'review' ? 'reviews' : 'questions')) {
+      throw new HttpError(403, "Your account can't do this");
+    }
     const _id = parseObjectId(req.params.id, `${req.params.kind} id`);
     const posts = db.collection(k.collection);
     const before = await posts.findOneAndUpdate(

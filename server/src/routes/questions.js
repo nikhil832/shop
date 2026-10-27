@@ -1,6 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
-import { requireAdmin, requireUser } from '../auth.js';
+import { requireUser } from '../auth.js';
+import { requirePermission } from '../staff.js';
 import { sendQuestionAnswered } from '../emails.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
 import { logActivity } from '../activity.js';
@@ -113,7 +114,7 @@ export function questionsRouter(ctx) {
   });
 
   // ---- Admin ----
-  router.use('/admin/questions', requireAdmin);
+  router.use('/admin/questions', requirePermission('questions'));
 
   // With the product's title and the asker's full name and email, which customers never see.
   async function adminView(docs) {

@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { hashToken, readCookie, sessionCookieOptions } from './auth.js';
 import { logActivity } from './activity.js';
 import { newLoginEmail } from './emails.js';
+import { isStaff } from './staff.js';
 
 // New-browser login alerts for admins. An admin's browser gets a long-lived random cookie (DEVICE_COOKIE) on its first
 // login; `knownDevices` holds a hash of it per account { userId, deviceHash, firstAt, lastAt, browser, ip }. A
@@ -39,7 +40,7 @@ export function describeBrowser(userAgent = '') {
 // Called after every successful login (password, two-step code, or reset link). For admins: makes sure this browser
 // has a device cookie, records it for the account, and alerts when it's new. Never throws: the login stands.
 export async function noteAdminLogin(ctx, req, res, user, ip) {
-  if (user.role !== 'admin') return;
+  if (!isStaff(user)) return;
   try {
     let token = readCookie(req, DEVICE_COOKIE);
     if (!token || !/^[\w-]{43}$/.test(token)) {

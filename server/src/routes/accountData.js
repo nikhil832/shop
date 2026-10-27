@@ -12,6 +12,7 @@ import {
 import { accountClosedEmail } from '../emails.js';
 import { HttpError, parse } from '../http.js';
 import { checkSecondStep, hasTwoStep } from '../twoStep.js';
+import { isStaff } from '../staff.js';
 import { toAddress } from '../addressBook.js';
 import { toRequest } from './help.js';
 import { toOrder } from './orders.js';
@@ -105,7 +106,8 @@ export function accountDataRouter(ctx) {
   router.post('/account/close', async (req, res) => {
     const body = parse(closeBody, req.body);
     const u = req.user;
-    if (u.role === 'admin') throw new HttpError(409, "Admin accounts can't be closed here.");
+    if (isStaff(u))
+      throw new HttpError(409, "Admin and staff accounts can't be closed here. Ask an admin to remove the role first.");
     if (!(await checkPassword(db, u.email, body.password, u.passwordHash, networkOf(clientIp(req, config))))) {
       throw new HttpError(400, 'Your password is wrong');
     }

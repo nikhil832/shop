@@ -3,6 +3,7 @@ import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { HttpError } from './http.js';
 import { toAddress } from './addressBook.js';
+import { permissionsOf } from './staff.js';
 
 const scryptAsync = promisify(scrypt);
 const KEY_LENGTH = 64;
@@ -178,6 +179,8 @@ export const toUser = (doc) => ({
   name: doc.name,
   email: doc.email,
   role: doc.role,
+  // What the admin panel may show this account (staff.js): ['*'] for admins, a few for staff, none for customers.
+  permissions: permissionsOf(doc),
   // The address book, default first; `address` is the default (or null), for checkout and the delivery check.
   addresses: (doc.addresses ?? []).map(toAddress),
   address: doc.addresses?.length ? toAddress(doc.addresses[0]) : null,

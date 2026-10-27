@@ -5,8 +5,11 @@ import { ORDER_STATUS, formatDate, formatPrice, orderNumber } from '../../format
 import { useFetch } from '../../useFetch.js';
 import Pager from '../../components/Pager.jsx';
 import { StatusBadge } from '../Orders.jsx';
+import { useAuth } from '../../auth.jsx';
+import { can } from '../../permissions.js';
 
 export default function AdminOrders() {
+  const { user } = useAuth();
   const [params, setParams] = useSearchParams();
   const status = params.get('status') ?? '';
   const q = params.get('q') ?? '';
@@ -113,9 +116,11 @@ export default function AdminOrders() {
           <Link className="btn small" to={`/admin/orders/slips?ids=${selected.join(',')}`}>
             Print packing slips
           </Link>
-          <button type="button" className="btn primary small" disabled={bulk.busy} onClick={shipSelected}>
-            Mark shipped
-          </button>
+          {can(user, 'orders.ship') && (
+            <button type="button" className="btn primary small" disabled={bulk.busy} onClick={shipSelected}>
+              Mark shipped
+            </button>
+          )}
           <button type="button" className="link" onClick={() => setSelection({ path, ids: [] })}>
             Clear
           </button>

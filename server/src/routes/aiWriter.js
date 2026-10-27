@@ -1,6 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
+import { requirePermission, requireStaff } from '../staff.js';
 import { MAX_HIGHLIGHTS } from '../ai.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
 import { takeHourlySlot } from '../rateLimit.js';
@@ -36,14 +37,15 @@ const EARLIER_ANSWERS = 5;
 
 export function aiWriterRouter({ db, ai }) {
   const router = express.Router();
-  router.use('/admin/ai', requireAdmin);
+  // Product copy and photo descriptions are admins' (the catalog); answer drafts go with answering questions.
+  router.use('/admin/ai', requireStaff);
 
   // Whether the form shows the button.
   router.get('/admin/ai', (req, res) => {
     res.json({ enabled: Boolean(ai), model: ai?.model ?? null });
   });
 
-  router.post('/admin/ai/product-draft', async (req, res) => {
+  router.post('/admin/ai/product-draft', requireAdmin, async (req, res) => {
     const body = parse(draftBody, req.body);
     if (!ai)
       throw new HttpError(503, 'The writing assistant is off: the server has no ANTHROPIC_API_KEY.', { expose: true });
@@ -68,7 +70,7 @@ export function aiWriterRouter({ db, ai }) {
   });
 
   // A description of one uploaded photo for screen readers (stage 59), for the admin to check before saving the product.
-  router.post('/admin/ai/alt-text', async (req, res) => {
+  router.post('/admin/ai/alt-text', requireAdmin, async (req, res) => {
     const body = parse(altTextBody, req.body);
     if (!ai)
       throw new HttpError(503, 'The writing assistant is off: the server has no ANTHROPIC_API_KEY.', { expose: true });
@@ -87,7 +89,7 @@ export function aiWriterRouter({ db, ai }) {
     res.json({ alt });
   });
 
-  router.post('/admin/ai/answer-draft', async (req, res) => {
+  router.post('/admin/ai/answer-draft', requirePermission('questions'), async (req, res) => {
     const body = parse(answerDraftBody, req.body);
     const _id = parseObjectId(body.questionId, 'question id');
     if (!ai)

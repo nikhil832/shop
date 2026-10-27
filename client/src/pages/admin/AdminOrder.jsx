@@ -17,8 +17,11 @@ import NotFound from '../NotFound.jsx';
 import { ShipmentDetails } from '../Order.jsx';
 import { StatusBadge } from '../Orders.jsx';
 import { OrderHelpRequests } from './AdminHelp.jsx';
+import { useAuth } from '../../auth.jsx';
+import { can } from '../../permissions.js';
 
-// The next steps an admin can take from each status (the server enforces the same rules).
+// The next steps an admin can take from each status (the server enforces the same rules). Cancelling needs an admin
+// (it can refund); delivering, like shipping, needs `orders.ship`.
 const ACTIONS = {
   awaiting_payment: [
     { status: 'cancelled', label: 'Cancel order', confirm: 'Cancel this unpaid order and put the stock back?' },
@@ -142,6 +145,7 @@ function OrderNotes({ order, onChange, busy }) {
 
 export default function AdminOrder() {
   const { id } = useParams();
+  const { user } = useAuth();
   const { data, error } = useFetch(`/admin/orders/${encodeURIComponent(id)}`);
   const { data: returns } = useFetch(`/admin/orders/${encodeURIComponent(id)}/returns`);
   const [updated, setUpdated] = useState(null);
@@ -313,7 +317,7 @@ export default function AdminOrder() {
               Invoice
             </Link>
           )}
-          {payment.status === 'refund_failed' && (
+          {payment.status === 'refund_failed' && can(user, '*') && (
             <button type="button" className="btn primary" onClick={retryRefund} disabled={action.busy}>
               Retry refund
             </button>
@@ -323,10 +327,11 @@ export default function AdminOrder() {
               {action.error}
             </p>
           )}
-          {order.status === 'placed' && (
+          {order.status === 'placed' && can(user, 'orders.ship') && (
             <ShipmentForm submitLabel="Mark as shipped" busy={action.busy} onSubmit={shipOrder} />
           )}
           {(order.status === 'shipped' || order.status === 'delivered') &&
+            can(user, 'orders.ship') &&
             (editingShipment ? (
               <ShipmentForm
                 shipment={order.shipment}
@@ -347,17 +352,19 @@ export default function AdminOrder() {
                 </button>
               </div>
             ))}
-          {ACTIONS[order.status]?.map((a) => (
-            <button
-              key={a.status}
-              type="button"
-              className={`btn ${a.primary ? 'primary' : ''}`}
-              disabled={action.busy}
-              onClick={() => setStatus(a)}
-            >
-              {a.label}
-            </button>
-          ))}
+          {ACTIONS[order.status]
+            ?.filter((a) => can(user, a.status === 'cancelled' ? '*' : 'orders.ship'))
+            .map((a) => (
+              <button
+                key={a.status}
+                type="button"
+                className={`btn ${a.primary ? 'primary' : ''}`}
+                disabled={action.busy}
+                onClick={() => setStatus(a)}
+              >
+                {a.label}
+              </button>
+            ))}
         </OrderSummary>
       </div>
     </>
