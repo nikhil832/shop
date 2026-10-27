@@ -42,3 +42,43 @@ test('recently viewed products follow the visitor, newest first, until cleared',
   await expect(page.getByRole('heading', { name: 'Top rated' })).toBeVisible();
   await expect(row(page, 'Recently viewed')).toHaveCount(0);
 });
+
+test('frequently bought together appears once two customers bought products in one order', async ({
+  page,
+  browser,
+}) => {
+  const MIXER = '/p/rasoi-mixer-grinder-750w';
+  const address = {
+    name: 'Kabir Shah',
+    phone: '9123456780',
+    line1: '12 Hill Road',
+    city: 'Pune',
+    state: 'Maharashtra',
+    pincode: '411001',
+  };
+  const productId = async (api, q) => (await (await api.get(`/api/products?q=${q}`)).json()).items[0].id;
+  // A new customer orders the mixer grinder and the book together (Cash on Delivery).
+  async function buyBoth() {
+    const api = (await (await browser.newContext()).newPage()).request;
+    const email = `together-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`;
+    await api.post('/api/auth/register', { data: { name: 'Kabir Shah', email, password: 'password123' } });
+    const items = [
+      { productId: await productId(api, 'rasoi%20mixer'), qty: 1 },
+      { productId: await productId(api, 'quiet%20engineer'), qty: 1 },
+    ];
+    const quote = await (await api.get(`/api/cart?items=${items.map((i) => `${i.productId}:1`).join(',')}`)).json();
+    const res = await api.post('/api/orders', { data: { items, address, expectedTotal: quote.total } });
+    expect(res.status()).toBe(201);
+  }
+
+  await buyBoth();
+  await page.goto(MIXER);
+  await expect(row(page, 'Similar products')).toBeVisible();
+  // One customer's order isn't enough to show.
+  await expect(row(page, 'Frequently bought together')).toHaveCount(0);
+
+  await buyBoth();
+  await page.reload();
+  const together = row(page, 'Frequently bought together');
+  await expect(together.getByRole('link').first()).toContainText('The Quiet Engineer');
+});

@@ -7,9 +7,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                              | Why                                                                       | To start                |
-| --- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------- |
-| 1   | **Frequently bought together**: on a product page, what other customers bought in the same orders | Uses real orders instead of category alone, which suggests better add-ons | "start bought together" |
+Nothing queued: every idea listed so far is built or set aside. Ask for new ideas ("what should we build next?") and
+they'll be added here.
 
 ## Set aside
 
@@ -87,3 +86,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Error reports: pages that didn't load or crashed in visitors' browsers, listed for admins by problem, with fixed/reopen                       | Stage 52 (`git log --grep "Stage 52"`) |
 | New-browser login alerts: an admin is emailed (and the activity log notes it) when their account logs in from a browser it hasn't used before | Stage 53 (`git log --grep "Stage 53"`) |
 | Address book: up to 10 saved addresses with labels and a default, chosen at checkout                                                          | Stage 54 (`git log --grep "Stage 54"`) |
+| Frequently bought together on product pages, from real orders (at least two customers)                                                        | Stage 55 (`git log --grep "Stage 55"`) |

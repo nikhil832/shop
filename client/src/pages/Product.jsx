@@ -115,6 +115,14 @@ function VariantPicker({ product, chosen, onChoose }) {
   });
 }
 
+// What other customers bought in the same orders (at least two of them, so no one's basket shows); nothing while
+// loading or when there's nothing to show.
+function BoughtTogether({ slug }) {
+  const { data } = useFetch(`/products/${encodeURIComponent(slug)}/bought-together`);
+  if (!data?.items.length) return null;
+  return <ProductRow title="Frequently bought together" items={data.items} />;
+}
+
 // Up to 8 products like this one; nothing while loading or when there are none.
 function SimilarProducts({ slug }) {
   const { data } = useFetch(`/products/${encodeURIComponent(slug)}/related`);
@@ -232,6 +240,7 @@ export default function Product() {
         </div>
       </article>
       {/* Remounted per product, so the row doesn't show the previous product's while the next loads. */}
+      <BoughtTogether key={`together-${product.slug}`} slug={product.slug} />
       <SimilarProducts key={`similar-${product.slug}`} slug={product.slug} />
       <Reviews key={product.id} product={product} onChange={() => setVersion((v) => v + 1)} />
       <Questions key={`questions-${product.id}`} product={product} />

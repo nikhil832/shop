@@ -86,6 +86,8 @@ const INDEXES = {
     [{ status: 1, expiresAt: 1 }, { partialFilterExpression: { status: 'awaiting_payment' } }],
     [{ 'payment.razorpayOrderId': 1 }, { partialFilterExpression: { 'payment.razorpayOrderId': { $exists: true } } }],
     [{ number: 1 }, { unique: true, partialFilterExpression: { number: { $exists: true } } }],
+    // Orders with a product: frequently bought together (newest first) and whether a reviewer bought it.
+    [{ 'items.productId': 1, createdAt: -1 }],
   ],
   // One review per customer per product; listed newest first per product and (for admins) overall.
   reviews: [

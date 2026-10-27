@@ -16,6 +16,15 @@ export const PRODUCT_SORTS = {
 
 const SUGGESTIONS = 6;
 export const RELATED = 8;
+// Frequently bought together: up to this many products, each bought in the same order as this one by at least
+// BOUGHT_TOGETHER_CUSTOMERS different customers (one customer's basket alone would show what they bought), looked for
+// in the product's latest BOUGHT_TOGETHER_ORDERS sales.
+export const BOUGHT_TOGETHER = 6;
+export const BOUGHT_TOGETHER_CUSTOMERS = 2;
+const BOUGHT_TOGETHER_ORDERS = 1000;
+// Orders that are sales, like SOLD in dashboard.js (importing it from there would make an import cycle through admin.js
+// and orders.js, which import this file).
+const SOLD = ['placed', 'shipped', 'delivered'];
 // Recently viewed products are remembered in the browser (slugs, newest first); the page asks for their cards.
 export const RECENTLY_VIEWED = 10;
 const recentQuery = z.object({
@@ -340,6 +349,41 @@ export function catalogRouter({ db }) {
       ])
       .toArray();
     res.json({ items: items.map(toProductCard) });
+  });
+
+  // What customers bought in the same orders as this product: by how many customers, then how many orders, then
+  // popularity. Only products on sale and in stock, as the row is for adding to the cart.
+  router.get('/products/:slug/bought-together', async (req, res) => {
+    const doc = await products.findOne({ slug: req.params.slug, active: true }, { projection: { _id: 1 } });
+    if (!doc) throw new HttpError(404, 'Product not found');
+    const items = await db
+      .collection('orders')
+      .aggregate([
+        // Sales only: unpaid and cancelled orders don't count.
+        { $match: { 'items.productId': doc._id, status: { $in: SOLD } } },
+        { $sort: { createdAt: -1 } },
+        { $limit: BOUGHT_TOGETHER_ORDERS },
+        { $unwind: '$items' },
+        { $match: { 'items.productId': { $ne: doc._id } } },
+        // Two sizes of one product in an order are one order.
+        { $group: { _id: '$items.productId', orders: { $addToSet: '$_id' }, customers: { $addToSet: '$userId' } } },
+        { $project: { orders: { $size: '$orders' }, customers: { $size: '$customers' } } },
+        { $match: { customers: { $gte: BOUGHT_TOGETHER_CUSTOMERS } } },
+        {
+          $lookup: {
+            from: 'products',
+            localField: '_id',
+            foreignField: '_id',
+            pipeline: [{ $match: { active: true, stock: { $gt: 0 } } }],
+            as: 'product',
+          },
+        },
+        { $unwind: '$product' },
+        { $sort: { customers: -1, orders: -1, 'product.rating.count': -1, _id: 1 } },
+        { $limit: BOUGHT_TOGETHER },
+      ])
+      .toArray();
+    res.json({ items: items.map((i) => toProductCard(i.product)) });
   });
 
   // Cards for the products this browser viewed lately, in the order asked; hidden or unknown ones are left out.
