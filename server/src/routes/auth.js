@@ -21,6 +21,7 @@ import { passwordResetEmail, RESET_LINK_MINUTES } from '../emails.js';
 import { takeHourlySlot } from '../rateLimit.js';
 import { MAX_WRONG_CODES, checkSecondStep, createLoginTicket, hasTwoStep } from '../twoStep.js';
 import { HttpError, parse } from '../http.js';
+import { noteAdminLogin } from '../loginAlerts.js';
 
 export const email = z.string().trim().toLowerCase().max(254).pipe(z.email('Enter a valid email'));
 
@@ -79,9 +80,11 @@ export function authRouter(ctx) {
     await ctx.mail.send({ to: { email: user.email, name: user.name }, ...passwordResetEmail(user, url) });
   }
 
+  // Every way of logging in ends here, so new-browser alerts for admins (loginAlerts.js) cover them all.
   async function startSession(req, res, user) {
     const token = await createSession(db, user._id);
     res.cookie(SESSION_COOKIE, token, { ...sessionCookieOptions(req), maxAge: SESSION_DAYS * 86_400_000 });
+    await noteAdminLogin(ctx, req, res, user, clientIp(req, ctx.config) ?? 'unknown');
   }
 
   router.get('/auth/me', (req, res) => {

@@ -43,13 +43,15 @@ export async function deleteSession(db, token) {
   if (token) await db.collection('sessions').deleteOne({ tokenHash: hashToken(token) });
 }
 
-export function readSessionCookie(req) {
+export function readCookie(req, cookie) {
   for (const part of (req.headers.cookie ?? '').split(';')) {
     const [name, ...value] = part.trim().split('=');
-    if (name === SESSION_COOKIE) return decodeURIComponent(value.join('='));
+    if (name === cookie) return decodeURIComponent(value.join('='));
   }
   return null;
 }
+
+export const readSessionCookie = (req) => readCookie(req, SESSION_COOKIE);
 
 export const sessionCookieOptions = (req) => ({
   httpOnly: true,

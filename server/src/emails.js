@@ -342,6 +342,50 @@ ${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}`,
   return { subject, text, html };
 }
 
+// Sent to an admin whose account just logged in from a browser it hasn't used before (loginAlerts.js). `login` is
+// { at, browser, ip }; the time is written in India time.
+export function newLoginEmail(user, login, publicUrl = DEFAULT_PUBLIC_URL) {
+  const subject = 'New login to your Bazaar admin account';
+  const firstName = user.name.split(/\s+/)[0];
+  const when = login.at.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
+  const details = [
+    ['When', `${when} (India time)`],
+    ['Browser', login.browser],
+    ['IP address', login.ip],
+  ];
+  const lines = [
+    `Your admin account (${user.email}) just logged in from a browser it hasn't used before.`,
+    "If it was you (a new device, another browser, or after clearing cookies), there's nothing to do.",
+    'If it wasn\'t you, someone knows your password: change it now from your account page, which logs out every other browser, and turn on two-step login there. If you can\'t log in, use "Forgot password" on the login page.',
+  ];
+  const url = `${publicUrl}/account`;
+  const text = [
+    `Hi ${firstName},`,
+    lines[0],
+    details.map(([k, v]) => `${k}: ${v}`).join('\n'),
+    lines[1],
+    lines[2],
+    url,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p>${escapeHtml(lines[0])}</p>
+<table style="border-collapse:collapse;margin:0 0 16px">${details
+      .map(
+        ([k, v]) =>
+          `<tr><td style="padding:2px 12px 2px 0;color:#6b7280">${escapeHtml(k)}</td><td style="padding:2px 0">${escapeHtml(v)}</td></tr>`,
+      )
+      .join('')}</table>
+<p>${escapeHtml(lines[1])}</p>
+<p>${escapeHtml(lines[2])}</p>
+${button('Open my account', url)}`,
+    "You're getting this email because you're an admin of the store, and admin accounts are told about every new browser.",
+  );
+  return { subject, text, html };
+}
+
 const PAYMENT_NAMES = { cod: 'Cash on Delivery', razorpay: 'Paid online' };
 
 // "New order" for the admins: who ordered, what, the total and how it's paid, and a link to it in the admin panel.

@@ -31,6 +31,7 @@ const NAMES = {
   emailChanges: 'Email changes',
   loginAttempts: 'Login attempts',
   loginChallenges: 'Two-step logins',
+  knownDevices: 'Admin browsers',
   rateLimits: 'Rate limits',
   settings: 'Settings',
   counters: 'Order numbers',

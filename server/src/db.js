@@ -1,6 +1,7 @@
 import { MongoClient } from 'mongodb';
 import { ACTIVITY_DAYS } from './activity.js';
 import { REPORT_DAYS } from './routes/errorReports.js';
+import { DEVICE_FORGET_DAYS } from './loginAlerts.js';
 
 // Connects and makes sure indexes exist. Returns the client (for sessions/transactions and closing) and the db.
 export async function connectDb(uri, dbName) {
@@ -48,6 +49,11 @@ const INDEXES = {
     [{ key: 1 }, { unique: true }],
     [{ fixedAt: 1, lastAt: -1 }],
     [{ lastAt: 1 }, { expireAfterSeconds: REPORT_DAYS * 86_400 }],
+  ],
+  // Admins' browsers (hashed device cookies) per account, for new-browser login alerts; forgotten after a year unused.
+  knownDevices: [
+    [{ userId: 1, deviceHash: 1 }, { unique: true }],
+    [{ lastAt: 1 }, { expireAfterSeconds: DEVICE_FORGET_DAYS * 86_400 }],
   ],
   categories: [[{ slug: 1 }, { unique: true }]],
   products: [[{ slug: 1 }, { unique: true }], [{ categoryId: 1, price: 1 }], [{ brand: 1 }]],
