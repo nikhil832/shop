@@ -5,8 +5,9 @@ import { MAX_HIGHLIGHTS } from '../ai.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
 import { takeHourlySlot } from '../rateLimit.js';
 
-// "Write for me" in the admin product form (stage 51): Claude drafts a description and highlights, which the admin
-// edits before saving. Nothing is saved here. Each draft costs a little, so each admin gets AI_DRAFTS_PER_HOUR.
+// The admin's writing assistant: "Write for me" in the product form (stage 51), where Claude drafts a description and
+// highlights, and "Draft an answer" for a customer's question (stage 56). The admin edits every draft before saving;
+// nothing is saved here. Each draft costs a little, so each admin gets AI_DRAFTS_PER_HOUR of both together.
 export const AI_DRAFTS_PER_HOUR = 30;
 // Image types Claude reads (uploads can also be these).
 const READABLE = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -23,6 +24,10 @@ const draftBody = z.object({
     .regex(/^\/api\/images\/[0-9a-f]{24}$/)
     .optional(),
 });
+
+const answerDraftBody = z.object({ questionId: z.string() });
+// Earlier answers about the same product that go with the question, so the draft agrees with them.
+const EARLIER_ANSWERS = 5;
 
 export function aiWriterRouter({ db, ai }) {
   const router = express.Router();
@@ -53,6 +58,42 @@ export function aiWriterRouter({ db, ai }) {
       category: category.name,
       facts: body.facts,
       image: photo ? { contentType: photo.contentType, data: Buffer.from(photo.data.buffer) } : null,
+    });
+    res.json(draft);
+  });
+
+  router.post('/admin/ai/answer-draft', async (req, res) => {
+    const body = parse(answerDraftBody, req.body);
+    const _id = parseObjectId(body.questionId, 'question id');
+    if (!ai)
+      throw new HttpError(503, 'The writing assistant is off: the server has no ANTHROPIC_API_KEY.', { expose: true });
+    const questions = db.collection('questions');
+    const question = await questions.findOne({ _id });
+    if (!question) throw new HttpError(404, 'Question not found');
+    const product = await db.collection('products').findOne({ _id: question.productId });
+    if (!product) throw new HttpError(409, "This question's product no longer exists");
+    const [category, answered] = await Promise.all([
+      db.collection('categories').findOne({ _id: product.categoryId }, { projection: { name: 1 } }),
+      questions
+        .find({ productId: product._id, _id: { $ne: _id }, hidden: false, answer: { $ne: null } })
+        .sort({ 'answer.at': -1 })
+        .limit(EARLIER_ANSWERS)
+        .toArray(),
+    ]);
+    if (!(await takeHourlySlot(db, `aiDraft:${req.user._id}`, AI_DRAFTS_PER_HOUR))) {
+      throw new HttpError(429, `You can ask for ${AI_DRAFTS_PER_HOUR} drafts an hour. Try again later.`);
+    }
+    const draft = await ai.answerQuestion({
+      product: {
+        title: product.title,
+        brand: product.brand,
+        category: category?.name ?? '',
+        description: product.description ?? '',
+        highlights: product.highlights ?? [],
+        variants: (product.variants ?? []).map((v) => v.label),
+      },
+      answered: answered.map((q) => ({ text: q.text, answer: q.answer.text })),
+      question: question.text,
     });
     res.json(draft);
   });

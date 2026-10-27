@@ -33,7 +33,7 @@ test('a customer asks, an admin answers, and everyone sees the answer', async ({
   const card = admin.getByRole('listitem').filter({ hasText: question });
   await expect(card).toContainText(`Meera Iyer (${email})`);
   await card.getByLabel('Your answer').fill('Yes: two nano SIMs and a memory card.');
-  await card.getByRole('button', { name: 'Answer' }).click();
+  await card.getByRole('button', { name: 'Answer', exact: true }).click();
   await expect(card).toHaveCount(0); // moved to Answered
   await admin.getByRole('button', { name: /^Answered/ }).click();
   await expect(admin.getByRole('listitem').filter({ hasText: question }).getByLabel('Answer')).toHaveValue(

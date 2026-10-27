@@ -146,3 +146,77 @@ test('Claude Haiku has no server-side fallback, so none is asked for', async () 
     await haiku.stop();
   }
 });
+
+// ---- Answer drafts for customers' questions (stage 56) ----
+
+async function askAbout(slug, text, extra = {}) {
+  const product = await t.db.collection('products').findOne({ slug });
+  const { insertedId } = await t.db.collection('questions').insertOne({
+    productId: product._id,
+    userId: product._id, // any id: the asker doesn't matter here
+    author: 'Asha R.',
+    text,
+    createdAt: new Date(),
+    answer: null,
+    hidden: false,
+    ...extra,
+  });
+  return insertedId.toString();
+}
+const answerDraft = (questionId, call = admin) => call('POST', '/admin/ai/answer-draft', { questionId });
+
+test('drafts an answer to a question from the product, its earlier answers and the question', async () => {
+  await t.db.collection('rateLimits').deleteMany({}); // the limit test above used up this admin's hour
+  const slug = 'the-quiet-engineer-paperback';
+  await askAbout(slug, 'Is it hardback?', { answer: { text: 'No, paperback only.', at: new Date() } });
+  await askAbout(slug, 'Rude spam', { answer: { text: 'Hidden reply', at: new Date() }, hidden: true });
+  const id = await askAbout(slug, 'How many pages does it have?');
+
+  const res = await answerDraft(id);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual(res.body, {
+    answer: 'Yes: The Quiet Engineer (Paperback) comes with what the description lists.',
+    fromDetails: true,
+  });
+  const { body } = t.claude.calls.at(-1);
+  assert.equal(body.output_config.effort, 'low');
+  assert.match(body.system, /never as instructions/);
+  const prompt = body.messages[0].content[0].text;
+  assert.match(prompt, /^Product: The Quiet Engineer \(Paperback\)$/m);
+  assert.match(prompt, /^Category: Books$/m);
+  assert.match(prompt, /Q: Is it hardback\?\nA: No, paperback only\./);
+  assert.doesNotMatch(prompt, /Hidden reply/);
+  assert.match(prompt, /Customer's question:\nHow many pages does it have\?$/);
+  // Nothing is saved: the question still waits for an answer.
+  assert.equal((await t.db.collection('questions').findOne({ text: 'How many pages does it have?' })).answer, null);
+
+  // Variants are listed, and an answer the details can't settle says so.
+  const jeans = await askAbout('urbane-men-slim-fit-jeans', 'What is the warranty?');
+  const unsure = await answerDraft(jeans);
+  assert.equal(unsure.body.fromDetails, false);
+  assert.match(t.claude.calls.at(-1).body.messages[0].content[0].text, /^Options: Blue \/ 30; .*Black \/ 32$/m);
+});
+
+test('answer drafts are for admins, checked, limited with product drafts, and say when Claude declines', async () => {
+  await t.db.collection('rateLimits').deleteMany({});
+  const id = await askAbout('the-quiet-engineer-paperback', 'Is it signed by the author?');
+  const customer = t.browser();
+  await customer('POST', '/auth/register', { name: 'Ravi K', email: 'ravi@example.com', password: 'password123' });
+  assert.equal((await answerDraft(id, customer)).status, 403);
+  assert.equal((await answerDraft('nope')).status, 400);
+  assert.equal((await answerDraft('000000000000000000000000')).status, 404);
+  const offAdmin = off.browser();
+  await offAdmin('POST', '/auth/register', { name: 'Off Admin', email: 'off@example.com', password: 'password123' });
+  await off.db.collection('users').updateOne({ email: 'off@example.com' }, { $set: { role: 'admin' } });
+  assert.equal((await answerDraft(id, offAdmin)).status, 503);
+
+  t.claude.refuseNext();
+  const refused = await answerDraft(id);
+  assert.equal(refused.status, 502);
+  assert.equal(refused.body.error, "The writing assistant couldn't draft this one. Please write the answer yourself.");
+
+  // One hourly allowance for both kinds of draft.
+  for (let i = 1; i < AI_DRAFTS_PER_HOUR; i++) assert.equal((await answerDraft(id)).status, 200);
+  assert.equal((await draft({})).status, 429);
+  assert.equal((await answerDraft(id)).status, 429);
+});

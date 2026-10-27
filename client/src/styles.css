@@ -2635,3 +2635,8 @@ textarea {
 .account-section {
   scroll-margin-top: 120px;
 }
+/* A draft the product's details didn't settle ("Draft an answer"): worth a second look. */
+.warning-text {
+  color: var(--warning);
+  font-weight: 600;
+}

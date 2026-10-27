@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { query, request } from '../../api.js';
 import Pager from '../../components/Pager.jsx';
@@ -11,9 +11,48 @@ const FILTERS = [
   ['hidden', 'Hidden'],
 ];
 
+// "Draft an answer" (stage 56): Claude drafts a reply from the product's details and earlier answers into the answer
+// box, for the admin to check and edit before answering. Shown only when the server has an API key (`ai.enabled`).
+function DraftAnswer({ question, textRef }) {
+  const [state, setState] = useState({ busy: false, error: null, draft: null });
+
+  async function draft() {
+    if (textRef.current.value.trim() && !window.confirm('Replace what you wrote with a draft?')) return;
+    setState({ busy: true, error: null, draft: null });
+    try {
+      const res = await request('/admin/ai/answer-draft', { method: 'POST', body: { questionId: question.id } });
+      textRef.current.value = res.answer;
+      textRef.current.focus();
+      setState({ busy: false, error: null, draft: res });
+    } catch (err) {
+      setState({ busy: false, error: err.message, draft: null });
+    }
+  }
+
+  return (
+    <>
+      <button type="button" className="btn small" onClick={draft} disabled={state.busy}>
+        {state.busy ? 'Drafting…' : 'Draft an answer'}
+      </button>
+      <p className={`small ${state.draft && !state.draft.fromDetails ? 'warning-text' : 'muted'}`} aria-live="polite">
+        {state.draft &&
+          (state.draft.fromDetails
+            ? 'Draft written from the product’s details. Check it before answering: it can get things wrong.'
+            : 'The product’s details don’t settle this: check the facts and finish the answer yourself.')}
+      </p>
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
+    </>
+  );
+}
+
 // One question: who asked what about which product, the answer box, and hide/show.
-function QuestionCard({ question, onChange }) {
+function QuestionCard({ question, onChange, ai }) {
   const [state, setState] = useState({ busy: false, error: null, saved: false });
+  const textRef = useRef(null);
   const q = question;
 
   async function send(path, body) {
@@ -44,7 +83,7 @@ function QuestionCard({ question, onChange }) {
       <form className="review-form" onSubmit={answer}>
         <label>
           {q.answer ? 'Answer' : 'Your answer'}
-          <textarea name="text" rows={3} maxLength={2000} required defaultValue={q.answer?.text ?? ''} />
+          <textarea ref={textRef} name="text" rows={3} maxLength={2000} required defaultValue={q.answer?.text ?? ''} />
         </label>
         {state.error && (
           <p className="error" role="alert">
@@ -65,6 +104,7 @@ function QuestionCard({ question, onChange }) {
           </button>
           {q.answer && <span className="muted small">Answered {formatDate(q.answer.at)}</span>}
         </div>
+        {ai?.enabled && <DraftAnswer question={q} textRef={textRef} />}
       </form>
     </li>
   );
@@ -75,6 +115,8 @@ export default function AdminQuestions() {
   const status = params.get('status') ?? 'unanswered';
   const page = Math.max(1, Number(params.get('page')) || 1);
   const [version, setVersion] = useState(0);
+  // Whether the writing assistant is on (it needs an API key on the server).
+  const { data: ai } = useFetch('/admin/ai');
   const { data, error, loading } = useFetch(
     `/admin/questions${query({ status, page: page > 1 ? page : '' })}`,
     version,
@@ -126,6 +168,7 @@ export default function AdminQuestions() {
             <QuestionCard
               key={`${q.id}:${q.answer?.text ?? ''}:${q.hidden}`}
               question={q}
+              ai={ai}
               onChange={() => setVersion((v) => v + 1)}
             />
           ))}

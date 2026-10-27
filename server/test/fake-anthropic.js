@@ -1,5 +1,5 @@
 // A stand-in for Claude's Messages API, so tests (and the e2e demo server) never call the real service or spend money.
-// Answers POST /v1/messages with a product draft as structured JSON, recording each request; test-only switches make
+// Answers POST /v1/messages with a product or answer draft as structured JSON, recording each request; test-only switches make
 // the next answers fail or the next one be a refusal.
 // Run directly for the e2e tests: FAKE_ANTHROPIC_PORT=4102 node server/test/fake-anthropic.js
 import { createServer } from 'node:http';
@@ -14,10 +14,17 @@ export async function startFakeAnthropic(port = 0) {
     const prompt = body.messages[0].content.find((c) => c.type === 'text').text;
     const title = /^Title: (.*)$/m.exec(prompt)?.[1] ?? 'this product';
     const stop = state.next === 'refusal' ? 'refusal' : 'end_turn';
-    const draft = {
-      description: `${title} is a dependable pick for everyday use.\n\nMade to last, and easy to look after.`,
-      highlights: ['Easy to use', 'Built to last.', '  Great value  '],
-    };
+    // An answer draft when asked about a customer's question, otherwise a product draft.
+    const product = /^Product: (.*)$/m.exec(prompt)?.[1];
+    const draft = product
+      ? {
+          answer: `  Yes: ${product} comes with what the description lists.  `,
+          fromDetails: !/warranty/i.test(prompt.split("Customer's question:")[1] ?? ''),
+        }
+      : {
+          description: `${title} is a dependable pick for everyday use.\n\nMade to last, and easy to look after.`,
+          highlights: ['Easy to use', 'Built to last.', '  Great value  '],
+        };
     return {
       id: `msg_fake_${state.calls.length}`,
       type: 'message',
