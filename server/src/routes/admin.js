@@ -36,6 +36,8 @@ const productFields = z.object({
   price: z.number().int().min(100, 'Price must be at least ₹1').max(100_000_000),
   mrp: z.number().int().min(100, 'MRP must be at least ₹1').max(100_000_000),
   stock: z.number().int().min(0).max(100_000),
+  // What it costs the store (stage 80, admins only), for profit; null clears it.
+  cost: z.number().int().min(0).max(100_000_000).nullable(),
   images: z.array(imageRef).max(5),
   // Descriptions of uploaded photos for screen readers, by photo address (stage 59); empty ones are dropped.
   imageAlts: z
@@ -60,6 +62,8 @@ const variantFields = z.object({
   price: productFields.shape.price,
   mrp: productFields.shape.mrp,
   stock: productFields.shape.stock,
+  // Left out: keeps the variant's cost (forms and files from before stage 80 don't send it).
+  cost: productFields.shape.cost.optional(),
   // Some of the product's photos, shown when this variant is chosen; none means all of them.
   images: z.array(imageRef).max(5).default([]),
 });
@@ -77,6 +81,7 @@ const createProduct = productFields
     images: productFields.shape.images.default([]),
     imageAlts: productFields.shape.imageAlts.default({}),
     active: productFields.shape.active.default(true),
+    cost: productFields.shape.cost.default(null),
     // With variants, the product's own price, MRP and stock come from them.
     price: productFields.shape.price.optional(),
     mrp: productFields.shape.mrp.optional(),
@@ -142,7 +147,7 @@ function checkVariantImages(variants, images) {
 
 // The variants to store (existing ids kept, new ones made) and the product totals they give.
 function storedVariants(variants, current = []) {
-  const known = new Set(current.map((v) => v._id.toString()));
+  const known = new Map(current.map((v) => [v._id.toString(), v]));
   const list = variants.map((v) => ({
     _id: v.id && known.has(v.id) ? new ObjectId(v.id) : new ObjectId(),
     values: v.values ?? [v.label],
@@ -150,6 +155,8 @@ function storedVariants(variants, current = []) {
     price: v.price,
     mrp: v.mrp,
     stock: v.stock,
+    // Not sent: the existing variant's cost stays.
+    cost: v.cost !== undefined ? v.cost : (known.get(v.id)?.cost ?? null),
     images: v.images,
   }));
   return { variants: list, ...variantTotals(list) };
@@ -250,6 +257,7 @@ const toAdminProduct = (doc) => ({
   price: doc.price,
   mrp: doc.mrp,
   stock: doc.stock,
+  cost: doc.cost ?? null,
   images: doc.images,
   imageAlts: imageAltsOf(doc),
   active: doc.active,
@@ -257,7 +265,8 @@ const toAdminProduct = (doc) => ({
   sale: doc.sale ? { name: doc.sale.name, percent: doc.sale.percent, endsAt: doc.sale.endsAt } : null,
   variantName: doc.variants?.length ? doc.variantName : '',
   options: doc.variants?.length ? optionsOf(doc) : [],
-  variants: (doc.variants ?? []).map(toVariant),
+  // Admins see each option's cost too (toVariant leaves it out for customers).
+  variants: (doc.variants ?? []).map((v) => ({ ...toVariant(v), cost: v.cost ?? null })),
   updatedAt: doc.updatedAt,
 });
 

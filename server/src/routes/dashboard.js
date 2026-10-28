@@ -10,6 +10,7 @@ import { FLAGGED } from '../screening.js';
 import { WAITING } from './help.js';
 import { storageUse } from '../storage.js';
 import { runningOut } from '../reorder.js';
+import { profitFor } from '../profit.js';
 
 // The `settings` document of the morning low-stock email (lowStockEmail.js): { day, at, enabled }.
 export const LOW_STOCK_EMAIL = 'lowStockEmail';
@@ -201,6 +202,8 @@ export function dashboardRouter({ db, config }) {
       storageUse(db, config),
       runningOut(db, now),
     ]);
+    // Profit from cost prices (profit.js), this period and the one before.
+    const [profit, profitBefore] = await Promise.all([profitFor(db, from, now), profitFor(db, previousFrom, from)]);
 
     const totals = stats.current[0] ?? { revenue: 0, orders: 0, discount: 0, itemsSold: 0 };
     const previous = stats.previous[0] ?? { revenue: 0, orders: 0 };
@@ -253,11 +256,21 @@ export function dashboardRouter({ db, config }) {
         itemsReturned: refunded.items,
         netRevenue: totals.revenue - refunded.refunds,
       },
+      // Over items sold with a cost price, before delivery charges (profit.js).
+      profit: {
+        sales: profit.sales,
+        cost: profit.cost,
+        profit: profit.profit,
+        margin: profit.margin,
+        items: profit.items,
+        uncostedItems: profit.uncostedItems,
+      },
       previous: {
         revenue: previous.revenue,
         orders: previous.orders,
         refunds: refundedBefore,
         netRevenue: previous.revenue - refundedBefore,
+        profit: profitBefore.profit,
       },
       daily,
       bestSellers: bestSellers.map((b) => ({
@@ -267,6 +280,8 @@ export function dashboardRouter({ db, config }) {
         qty: b.qty,
         returned: b.returned,
         sales: b.sales,
+        // Profit on its items with a cost price, or null when none had one.
+        profit: profit.byProduct.get(b._id.toString()) ?? null,
       })),
       toShip,
       lowStock,

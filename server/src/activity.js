@@ -70,6 +70,9 @@ function push(changes, field, from, to) {
 
 // What changed in a product, from the documents before and after: its fields, photos, and each variant's price, MRP
 // and stock by label (and variants added or removed). `categoryName(id)` names categories.
+// A cost price (stage 80) for the log: none is "(none)".
+const costText = (cost) => (cost === undefined || cost === null ? '(none)' : rupees(cost));
+
 export function productChanges(before, after, categoryName) {
   const changes = [];
   push(changes, 'Title', before.title, after.title);
@@ -91,6 +94,7 @@ export function productChanges(before, after, categoryName) {
     push(changes, 'Price', rupees(before.price), rupees(after.price));
     push(changes, 'MRP', rupees(before.mrp), rupees(after.mrp));
     push(changes, 'Stock', before.stock, after.stock);
+    push(changes, 'Cost', costText(before.cost), costText(after.cost));
     return changes;
   }
   const names = (doc) => (doc.variants?.length ? optionsOf(doc).join(', ') : '(none)');
@@ -107,6 +111,7 @@ export function productChanges(before, after, categoryName) {
     push(changes, `${v.label}: price`, rupees(old.price), rupees(v.price));
     push(changes, `${v.label}: MRP`, rupees(old.mrp), rupees(v.mrp));
     push(changes, `${v.label}: stock`, old.stock, v.stock);
+    push(changes, `${v.label}: cost`, costText(old.cost), costText(v.cost));
   }
   for (const v of byId.values()) changes.push({ field: v.label, to: 'removed' });
   return changes;

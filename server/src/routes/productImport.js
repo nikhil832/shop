@@ -31,6 +31,8 @@ const COLUMNS = [
   ['category', 'Category'],
   ['price', 'Price (₹)'],
   ['mrp', 'MRP (₹)'],
+  // What it costs the store (stage 80); empty keeps it.
+  ['cost', 'Cost (₹)'],
   ['stock', 'Stock'],
   ['active', 'Shown'],
   ['highlights', 'Highlights'],
@@ -184,6 +186,7 @@ async function makePlan(db, csv, session) {
     try {
       const price = get('price') && rupeesToPaise(get('price'), 'Price');
       const mrp = get('mrp') && rupeesToPaise(get('mrp'), 'MRP');
+      const cost = get('cost') ? rupeesToPaise(get('cost'), 'Cost') : null;
       const stock = get('stock') !== '' ? stockOf(get('stock')) : undefined;
 
       if (!row.slug) {
@@ -201,6 +204,7 @@ async function makePlan(db, csv, session) {
           highlights: highlightsOf(get('highlights')),
           price,
           mrp,
+          cost,
           stock,
           active: get('active') ? shownOf(get('active')) : true,
         };
@@ -210,6 +214,7 @@ async function makePlan(db, csv, session) {
           { field: 'category', to: category.name },
           { field: 'price', to: price },
           { field: 'mrp', to: mrp },
+          ...(cost !== null ? [{ field: 'cost', to: cost }] : []),
           { field: 'stock', to: stock },
           ...(doc.active ? [] : [{ field: 'active', to: false }]),
         ];
@@ -239,16 +244,21 @@ async function makePlan(db, csv, session) {
           );
         }
         row.variant = v.label;
-        const next = { price: price || v.price, mrp: mrp || v.mrp, stock: stock ?? v.stock };
+        const next = {
+          price: price || v.price,
+          mrp: mrp || v.mrp,
+          stock: stock ?? v.stock,
+          cost: cost ?? v.cost ?? null,
+        };
         if (next.mrp < next.price) throw new RowError('MRP must be at least the price');
         if (product.sale && (next.price !== v.price || next.mrp !== v.mrp)) throw new RowError(onSale(product));
-        for (const field of ['price', 'mrp', 'stock']) {
-          if (next[field] !== v[field]) row.changes.push({ field, from: v[field], to: next[field] });
+        for (const field of ['price', 'mrp', 'stock', 'cost']) {
+          if (next[field] !== (v[field] ?? null)) row.changes.push({ field, from: v[field] ?? null, to: next[field] });
         }
         Object.assign(v, next);
         update.variants = variants;
       } else {
-        if (product.variants?.length && (price || mrp || stock !== undefined)) {
+        if (product.variants?.length && (price || mrp || stock !== undefined || cost !== null)) {
           throw new RowError('This product has sizes or colours: change the price and stock on its variant rows');
         }
         const next = {};
@@ -263,6 +273,7 @@ async function makePlan(db, csv, session) {
         if (price) next.price = price;
         if (mrp) next.mrp = mrp;
         if (stock !== undefined) next.stock = stock;
+        if (cost !== null) next.cost = cost;
         if (get('active')) next.active = shownOf(get('active'));
         if ((next.mrp ?? product.mrp) < (next.price ?? product.price)) {
           throw new RowError('MRP must be at least the price');
@@ -346,6 +357,7 @@ export function productImportRouter(ctx) {
           cell(categoryName.get(p.categoryId.toString()) ?? '', { text: true }),
           hasVariants ? '' : rupees(p.price),
           hasVariants ? '' : rupees(p.mrp),
+          hasVariants || p.cost == null ? '' : rupees(p.cost),
           hasVariants ? '' : p.stock,
           p.active ? 'yes' : 'no',
           cell((p.highlights ?? []).join(HIGHLIGHT_SEPARATOR), { text: true }),
@@ -362,6 +374,7 @@ export function productImportRouter(ctx) {
             '',
             rupees(v.price),
             rupees(v.mrp),
+            v.cost == null ? '' : rupees(v.cost),
             v.stock,
             '',
             '',

@@ -17,7 +17,8 @@ export const daysLeft = (stock, perDay) => Math.floor(stock / perDay);
 export const suggestion = (stock, perDay) => Math.max(0, Math.ceil(perDay * COVER_DAYS) - stock);
 
 // Products and options that sold in the window and run out within RUNOUT_DAYS, soonest first:
-// [{ productId, variantId, slug, title, label, stock, sold, days (the window used), perDay, daysLeft, suggest }].
+// [{ productId, variantId, slug, title, label, stock, sold, days (the window used), perDay, daysLeft, suggest,
+//   suggestCost }].
 // Only shown products, and options that still exist. `total` counts them all; `items` has the first `limit`.
 export async function runningOut(db, now = new Date(), limit = 20) {
   const since = new Date(now.getTime() - WINDOW_DAYS * DAY);
@@ -41,7 +42,7 @@ export async function runningOut(db, now = new Date(), limit = 20) {
         .collection('products')
         .find(
           { _id: { $in: [...new Set(sales.map((s) => s._id.productId))] }, active: true },
-          { projection: { slug: 1, title: 1, stock: 1, variants: 1, createdAt: 1 } },
+          { projection: { slug: 1, title: 1, stock: 1, cost: 1, variants: 1, createdAt: 1 } },
         )
         .toArray()
     ).map((p) => [p._id.toString(), p]),
@@ -71,6 +72,8 @@ export async function runningOut(db, now = new Date(), limit = 20) {
       perDay: Math.round(perDay * 10) / 10,
       daysLeft: left,
       suggest: suggestion(stock, perDay),
+      // What that order would cost at the cost price (stage 80), or null without one.
+      suggestCost: (variant ?? product).cost != null ? suggestion(stock, perDay) * (variant ?? product).cost : null,
     });
   }
   rows.sort((a, b) => a.daysLeft - b.daysLeft || b.perDay - a.perDay || a.title.localeCompare(b.title));

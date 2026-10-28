@@ -122,8 +122,10 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   id: doc._id.toString(),
   // Orders placed before numbering (stage 2) have none; the client falls back to the end of the id.
   number: doc.number ?? null,
-  items: doc.items.map((i) => ({
+  // Customers never see what an item cost the store.
+  items: doc.items.map(({ cost, ...i }) => ({
     ...i,
+    ...(admin && cost !== undefined && { cost }),
     productId: i.productId.toString(),
     ...(i.variantId && { variantId: i.variantId.toString() }),
   })),
@@ -403,6 +405,8 @@ export function ordersRouter(ctx) {
             brand: doc.brand,
             image: imageFor(doc, variant),
             price: (variant ?? doc).price,
+            // The cost price when sold (stage 80), for profit; admins only (toOrder leaves it out for customers).
+            ...((variant ?? doc).cost != null && { cost: (variant ?? doc).cost }),
             qty,
             ...(gst && { gstRate: gst.forCategory(doc.categoryId).rate, hsn: gst.forCategory(doc.categoryId).hsn }),
           });

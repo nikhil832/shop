@@ -57,7 +57,9 @@ test('the export lists every product, then a row per variant; re-importing it ch
   assert.match(res.headers.get('content-disposition'), /attachment; filename="products-\d{4}-\d\d-\d\d\.csv"/);
   const text = res.body.toString('utf8');
   assert.ok(
-    text.startsWith('\uFEFFSlug,Variant,Title,Brand,Category,Price (₹),MRP (₹),Stock,Shown,Highlights,Description\r\n'),
+    text.startsWith(
+      '\uFEFFSlug,Variant,Title,Brand,Category,Price (₹),MRP (₹),Cost (₹),Stock,Shown,Highlights,Description\r\n',
+    ),
   );
   const rows = parseCsv(text);
   const variantRows = (
@@ -68,7 +70,7 @@ test('the export lists every product, then a row per variant; re-importing it ch
   ).reduce((n, p) => n + p.variants.length, 0);
   assert.equal(rows.length, 1 + 38 + variantRows);
   const book = rows.find((r) => r[0] === BOOK && !r[1]);
-  assert.deepEqual(book.slice(0, 9), [
+  assert.deepEqual(book.slice(0, 10), [
     BOOK,
     '',
     'The Quiet Engineer (Paperback)',
@@ -76,7 +78,8 @@ test('the export lists every product, then a row per variant; re-importing it ch
     'Books',
     '349.00',
     '499.00',
-    book[7],
+    '', // no cost price yet
+    book[8],
     'yes',
   ]);
   // A product with sizes has its numbers on its variant rows.

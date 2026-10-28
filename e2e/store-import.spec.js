@@ -28,7 +28,7 @@ test('an admin downloads the products, adds one from a file and changes it with 
   expect(download.suggestedFilename()).toMatch(/^products-\d{4}-\d\d-\d\d\.csv$/);
   const file = (await readFile(await download.path(), 'utf8')).replace(/^\uFEFF/, '');
   expect(file.split('\r\n')[0]).toBe(
-    'Slug,Variant,Title,Brand,Category,Price (₹),MRP (₹),Stock,Shown,Highlights,Description',
+    'Slug,Variant,Title,Brand,Category,Price (₹),MRP (₹),Cost (₹),Stock,Shown,Highlights,Description',
   );
   expect(file).toContain('the-quiet-engineer-paperback,');
 

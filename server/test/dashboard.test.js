@@ -137,7 +137,7 @@ test('counts sales by day, compares with the period before, and ranks best selle
     netRevenue: revenue,
   });
   // The 8-days-ago order is in the 7 days before.
-  assert.deepEqual(previous, { revenue: book.price * 4, orders: 1, refunds: 0, netRevenue: book.price * 4 });
+  assert.deepEqual(previous, { revenue: book.price * 4, orders: 1, refunds: 0, netRevenue: book.price * 4, profit: 0 }); // no cost prices yet
 
   assert.equal(daily.length, 7);
   const day = (daysAgo) => daily.find((d) => d.date === istDay(Date.now() - daysAgo * DAY));

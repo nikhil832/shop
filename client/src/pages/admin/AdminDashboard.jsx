@@ -457,6 +457,22 @@ export default function AdminDashboard() {
               <p className="stat-change muted">{data.totals.itemsSold} items sold</p>
             </div>
             <div className="panel stat">
+              <h2>Profit</h2>
+              {data.profit.items > data.profit.uncostedItems ? (
+                <>
+                  <p className="stat-value">{formatPrice(data.profit.profit)}</p>
+                  <p className="stat-change muted">
+                    {data.profit.margin}% margin
+                    {data.profit.uncostedItems > 0 &&
+                      ` · ${data.profit.uncostedItems} of ${data.profit.items} items have no cost price`}
+                  </p>
+                  <Change now={data.profit.profit} before={data.previous.profit} days={days} />
+                </>
+              ) : (
+                <p className="stat-change muted">Add cost prices to products (Admin → Products) to see profit.</p>
+              )}
+            </div>
+            <div className="panel stat">
               <h2>Discounts given</h2>
               <p className="stat-value">{formatPrice(data.totals.discount)}</p>
               <p className="stat-change muted">
@@ -483,6 +499,7 @@ export default function AdminDashboard() {
                         <th>Product</th>
                         <th className="num">Sold</th>
                         <th className="num">Sales</th>
+                        <th className="num">Profit</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -491,6 +508,7 @@ export default function AdminDashboard() {
                           <td>{b.slug ? <Link to={`/p/${b.slug}`}>{b.title}</Link> : b.title}</td>
                           <td className="num">{b.qty}</td>
                           <td className="num">{formatPrice(b.sales)}</td>
+                          <td className="num">{b.profit === null ? '—' : formatPrice(b.profit)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -498,7 +516,8 @@ export default function AdminDashboard() {
                 </div>
               )}
               <p className="muted small">
-                Sold is less any items returned; sales are item prices before discounts and delivery.
+                Sold is less any items returned; sales are item prices before discounts and delivery. Profit is after
+                coupon discounts and the cost price, for items that have one.
               </p>
             </section>
 
@@ -622,7 +641,12 @@ export default function AdminDashboard() {
                           </td>
                           <td className="num">{r.stock}</td>
                           <td className="num">{r.daysLeft}</td>
-                          <td className="num">{r.suggest || '—'}</td>
+                          <td className="num">
+                            {r.suggest || '—'}
+                            {r.suggest > 0 && r.suggestCost !== null && (
+                              <span className="muted small block">{formatPrice(r.suggestCost)}</span>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

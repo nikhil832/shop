@@ -139,6 +139,8 @@ const newRow = (v = {}) => ({
   values: v.values ?? (v.label ? [v.label] : []),
   price: v.price ? toRupees(v.price) : '',
   mrp: v.mrp ? toRupees(v.mrp) : '',
+  // What it costs the store (stage 80); empty: not known.
+  cost: v.cost != null ? toRupees(v.cost) : '',
   stock: v.stock ?? 0,
   images: v.images ?? [],
 });
@@ -169,7 +171,14 @@ function Variants({ names, onNames, rows, photos, onChange }) {
       for (const b of used(1)) {
         if (has.has(`${a}\u0000${b}`)) continue;
         const like = rows.find((r) => r.values[0]?.trim() === a) ?? rows[0];
-        added.push({ ...newRow(), values: [a, b], price: rows[0].price, mrp: rows[0].mrp, images: like.images });
+        added.push({
+          ...newRow(),
+          values: [a, b],
+          price: rows[0].price,
+          mrp: rows[0].mrp,
+          cost: rows[0].cost,
+          images: like.images,
+        });
       }
     }
     onChange([...rows, ...added].slice(0, MAX_VARIANTS));
@@ -217,6 +226,7 @@ function Variants({ names, onNames, rows, photos, onChange }) {
               ))}
               <th>Price (₹)</th>
               <th>MRP (₹)</th>
+              <th>Cost (₹)</th>
               <th>Stock</th>
               {photos.length > 0 && <th>Photos</th>}
               <th>
@@ -259,6 +269,16 @@ function Variants({ names, onNames, rows, photos, onChange }) {
                     value={r.mrp}
                     onChange={(e) => set(r.key, 'mrp', e.target.value)}
                     aria-label={`MRP of variant ${i + 1}`}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={r.cost}
+                    onChange={(e) => set(r.key, 'cost', e.target.value)}
+                    aria-label={`Cost of variant ${i + 1}`}
                   />
                 </td>
                 <td>
@@ -415,6 +435,7 @@ function ProductForm({ product, categories }) {
               values: optionNames.map((_, k) => (v.values[k] ?? '').trim()),
               price: toPaise(v.price),
               mrp: toPaise(v.mrp),
+              cost: v.cost === '' ? null : toPaise(v.cost),
               stock: Number(v.stock),
               // Only photos the product still has, in the product's order.
               images: images.filter((src) => v.images.includes(src)),
@@ -424,6 +445,7 @@ function ProductForm({ product, categories }) {
             variants: [],
             price: toPaise(form.get('price')),
             mrp: toPaise(form.get('mrp')),
+            cost: form.get('cost') === '' ? null : toPaise(form.get('cost')),
             stock: Number(form.get('stock')),
           }),
       images,
@@ -508,6 +530,16 @@ function ProductForm({ product, categories }) {
                 step="0.01"
                 required
                 defaultValue={product && toRupees(product.mrp)}
+              />
+            </label>
+            <label>
+              Cost (₹) <span className="muted small">(what it costs you; only admins see it)</span>
+              <input
+                name="cost"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={product?.cost != null ? toRupees(product.cost) : ''}
               />
             </label>
             <label>

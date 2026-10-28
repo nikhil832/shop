@@ -71,6 +71,8 @@ const COLUMNS = [
   'Payment status',
   // Paid with store credit (stage 72); the total less this was paid in money.
   'Store credit (₹)',
+  // What the items cost the store (stage 80), when every item had a cost price; else empty.
+  'Item cost (₹)',
   'City',
   'State',
   'PIN code',
@@ -234,6 +236,7 @@ export function orderExportRouter({ db }) {
         cell(PAYMENT[payment.method] ?? 'Cash on Delivery'),
         cell(payment.status ?? ''),
         cell(rupees(o.creditUsed ?? 0)),
+        cell(o.items.every((i) => i.cost != null) ? rupees(o.items.reduce((s, i) => s + i.cost * i.qty, 0)) : ''),
         cell(o.address.city, { text: true }),
         cell(o.address.state, { text: true }),
         cell(o.address.pincode, { text: true }),
