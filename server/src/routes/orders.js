@@ -13,6 +13,7 @@ import { findState, gstForOrders, gstInvoice } from '../gst.js';
 import { rememberAddress } from '../addressBook.js';
 import { byOf, CANCEL_REASONS, movedEntry, recordStock } from '../stockHistory.js';
 import { addCredit, amountDue } from '../credit.js';
+import { codAllowed } from '../cod.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
 export const FREE_DELIVERY_MIN = 49900;
@@ -146,6 +147,14 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   deliveredAt: doc.deliveredAt ?? null,
   cancelledAt: doc.cancelledAt ?? null,
   cancelledBy: doc.cancelledBy ?? null,
+  // A shipped order that came back undelivered (cod.js): why, and when. The admin's note is for admins only.
+  returnedToSender: doc.returnedToSender
+    ? {
+        reason: doc.returnedToSender.reason,
+        at: doc.returnedToSender.at,
+        ...(admin && { note: doc.returnedToSender.note }),
+      }
+    : null,
   // The GST lines of its tax invoice, for orders placed with GST on (gst.js); null otherwise.
   gstInvoice: gstInvoice(doc),
   // Admins' private notes (admin.js); never in what a customer gets.
@@ -163,8 +172,8 @@ export const toOrder = (doc, { admin = false } = {}) => ({
 // Cancels the order matching `filter` if its status is one of `from`, and puts its stock back, in one transaction.
 // A paid online order is then refunded. `by` is 'customer', 'admin' or 'system' (unpaid and expired). The customer
 // is emailed unless `notify` is false. `user` is the admin cancelling, for the stock history. Returns the updated order
-// document.
-export async function cancelOrder(ctx, filter, { from, by, user = null, notify = true }) {
+// document. `returned` { reason, note } (stage 79, cod.js) marks a shipped order that came back undelivered.
+export async function cancelOrder(ctx, filter, { from, by, user = null, notify = true, returned = null }) {
   const { db, client } = ctx;
   const orders = db.collection('orders');
   // An order still awaiting payment may in fact have been paid: settle that first, so a paid order is refunded.
@@ -177,7 +186,15 @@ export async function cancelOrder(ctx, filter, { from, by, user = null, notify =
       const now = new Date();
       order = await orders.findOneAndUpdate(
         { ...filter, status: { $in: from } },
-        { $set: { status: 'cancelled', cancelledAt: now, cancelledBy: by, updatedAt: now } },
+        {
+          $set: {
+            status: 'cancelled',
+            cancelledAt: now,
+            cancelledBy: by,
+            updatedAt: now,
+            ...(returned && { returnedToSender: { ...returned, at: now } }),
+          },
+        },
         { session, returnDocument: 'after' },
       );
       if (!order) {
@@ -186,7 +203,7 @@ export async function cancelOrder(ctx, filter, { from, by, user = null, notify =
         throw new HttpError(409, `This order can't be cancelled (it is ${existing.status})`);
       }
       // Stock goes back to the variant bought and to the product's total; a variant deleted since gets nothing back.
-      const reason = CANCEL_REASONS[by];
+      const reason = returned ? 'returned_to_sender' : CANCEL_REASONS[by];
       const entries = [];
       for (const i of order.items) {
         const after = await db
@@ -409,6 +426,11 @@ export function ordersRouter(ctx) {
         if (body.creditToUse > totals.total) throw new HttpError(400, 'creditToUse: More than the order costs');
         // All paid with credit: nothing to pay online or on delivery.
         const paidByCredit = body.creditToUse === totals.total;
+        // Cash on Delivery's limits (cod.js): an order value, and customers whose COD orders keep coming back.
+        if (!online && !paidByCredit) {
+          const cod = await codAllowed(db, req.user, totals.total - body.creditToUse);
+          if (!cod.allowed) throw new HttpError(409, cod.reason);
+        }
         // Taken inside the transaction: a failed order gives its number back, so numbers have no gaps or repeats.
         const counter = await db
           .collection('counters')

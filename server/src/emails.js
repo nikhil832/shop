@@ -35,6 +35,13 @@ const SUBJECTS = {
   cancelled: 'cancelled',
 };
 
+// Why a parcel came back (cod.js's RTO_REASONS, in the email's words; cod.js isn't imported, to keep imports one-way).
+const RTO_TEXT = {
+  refused: 'it was refused at the door',
+  unreachable: 'the courier couldn’t reach you',
+  address: 'the address was wrong or incomplete',
+};
+
 const CANCELLED_BY = {
   customer: 'Your order has been cancelled, as you asked.',
   admin: "We're sorry: we had to cancel your order.",
@@ -61,7 +68,11 @@ function intro(order, event) {
   }
   if (event === 'delivered') return ['Your order has been delivered. We hope you like it!'];
 
-  const lines = [CANCELLED_BY[order.cancelledBy] ?? CANCELLED_BY.admin];
+  const lines = [
+    order.returnedToSender
+      ? `Your order came back to us undelivered (${RTO_TEXT[order.returnedToSender.reason] ?? 'it couldn’t be delivered'}), so we've cancelled it.`
+      : (CANCELLED_BY[order.cancelledBy] ?? CANCELLED_BY.admin),
+  ];
   const refund = order.payment?.status;
   if (refund === 'refunded' || refund === 'refunding') {
     lines.push(

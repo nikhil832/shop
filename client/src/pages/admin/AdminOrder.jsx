@@ -13,6 +13,7 @@ import {
   returnStatusLabel,
   dueLabel,
   refundText,
+  RTO_REASONS,
 } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 import NotFound from '../NotFound.jsx';
@@ -35,6 +36,49 @@ const ACTIONS = {
     { status: 'cancelled', label: 'Cancel order', confirm: 'Cancel this shipped order and put the stock back?' },
   ],
 };
+
+// "Returned to sender" for a shipped order that came back undelivered (stage 79): why, and a note for admins.
+// Refused and unreachable count against the customer's Cash on Delivery.
+function ReturnedForm({ busy, onSubmit }) {
+  return (
+    <details className="returned-form">
+      <summary>Returned to sender</summary>
+      <form
+        className="review-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const f = Object.fromEntries(new FormData(e.currentTarget));
+          if (
+            window.confirm('Cancel this order as returned to sender? The stock goes back and any payment is refunded.')
+          ) {
+            onSubmit({ reason: f.reason, note: f.note });
+          }
+        }}
+      >
+        <label>
+          Why it came back
+          <select name="reason" required defaultValue="">
+            <option value="" disabled>
+              Choose…
+            </option>
+            {Object.entries(RTO_REASONS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Note (admins only, optional)
+          <input name="note" maxLength={300} />
+        </label>
+        <button type="submit" className="btn small" disabled={busy}>
+          Mark returned to sender
+        </button>
+      </form>
+    </details>
+  );
+}
 
 // Couriers suggested in the form; any other name can be typed.
 const COURIERS = ['India Post', 'Delhivery', 'Blue Dart', 'DTDC', 'Ekart', 'Xpressbees', 'Shadowfax', 'Ecom Express'];
@@ -198,7 +242,9 @@ export default function AdminOrder() {
     ['Shipped', order.shippedAt],
     ['Delivered', order.deliveredAt],
     [
-      { customer: 'Cancelled by customer', system: 'Expired unpaid' }[order.cancelledBy] ?? 'Cancelled',
+      order.returnedToSender
+        ? `Returned to sender: ${RTO_REASONS[order.returnedToSender.reason]}${order.returnedToSender.note ? ` (${order.returnedToSender.note})` : ''}`
+        : ({ customer: 'Cancelled by customer', system: 'Expired unpaid' }[order.cancelledBy] ?? 'Cancelled'),
       order.cancelledAt,
     ],
     [payment.refundedAt && 'Refund started', payment.refundedAt],
@@ -385,6 +431,12 @@ export default function AdminOrder() {
                 {a.label}
               </button>
             ))}
+          {order.status === 'shipped' && can(user, '*') && (
+            <ReturnedForm
+              busy={action.busy}
+              onSubmit={(body) => run(() => request(`/admin/orders/${order.id}/returned`, { method: 'POST', body }))}
+            />
+          )}
         </OrderSummary>
       </div>
     </>

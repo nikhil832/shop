@@ -54,7 +54,12 @@ let n = 0;
 const nextEmail = () => `payer${++n}@example.com`;
 
 test('offers online payment when Razorpay is configured', async () => {
-  assert.deepEqual((await t.call('GET', '/payments/options')).body, { cod: true, online: true });
+  assert.deepEqual((await t.call('GET', '/payments/options')).body, {
+    cod: true,
+    codMax: null,
+    codReason: null,
+    online: true,
+  });
 });
 
 test('an online order reserves stock and opens a Razorpay order for the exact total', async () => {

@@ -7,8 +7,12 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Nothing queued: every idea listed so far is built or set aside. Ask for new ideas ("what should we build next?") and
-they'll be added here.
+| #   | Idea                                                                                                                                                                                            | Why                                                                                                        | To start                |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------- |
+| 1   | **Cost prices and profit**: admins enter what each product (or option) costs the store; the dashboard shows profit and margin, best sellers by profit, and what a reorder suggestion would cost | Revenue alone hides which products actually make money, especially with sales and coupons                  | "start profit"          |
+| 2   | **Receiving stock**: record a delivery from a supplier ("50 received from Mehta Traders at ₹220 each"), which adds the stock, shows in stock history as "Received" and updates the cost price   | Restocking is now a bare number change by hand; this keeps who supplied what, when and at what price       | "start receiving stock" |
+| 3   | **Customer notes and tags**: admin-only notes and tags (VIP, wholesale, watch) on the customer page, shown on that customer's orders and help requests                                          | Lets the team remember things about regular customers and problem accounts, building on the customers page | "start customer notes"  |
+| 4   | **Product bundles**: admins put 2–3 products together at a bundle price ("Mixer + extra jar, save ₹300"), shown on those products' pages and bought in one click                                | Raises the order value; "frequently bought together" already shows which products sell together            | "start bundles"         |
 
 ## Set aside
 
@@ -101,3 +105,4 @@ they'll be added here.
 | Search insights: Admin → Searches with the week's most searched words and the searches that found nothing                                     | Stage 76 (`git log --grep "Stage 76"`) |
 | Gift cards: bought online for someone by email (now or on a chosen day), redeemed as store credit within a year                               | Stage 77 (`git log --grep "Stage 77"`) |
 | Install as an app: a web app manifest and the store's own icons, so phones offer "Add to home screen"                                         | Stage 78 (`git log --grep "Stage 78"`) |
+| Refused deliveries and COD limits: "Returned to sender" for shipped orders, a COD order limit, and online payment after repeated refusals     | Stage 79 (`git log --grep "Stage 79"`) |

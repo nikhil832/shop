@@ -12,6 +12,7 @@ const REASONS = {
   cancelled: 'Cancelled by the customer',
   store_cancelled: 'Cancelled by the store',
   released: 'Unpaid order released',
+  returned_to_sender: 'Returned to sender',
   returned: 'Return approved',
   edited: 'Changed by hand',
   imported: 'CSV import',

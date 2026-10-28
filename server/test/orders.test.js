@@ -284,7 +284,12 @@ test('numbers orders in sequence, and a failed order uses up no number', async (
 });
 
 test('without Razorpay keys only Cash on Delivery is offered', async () => {
-  assert.deepEqual((await t.call('GET', '/payments/options')).body, { cod: true, online: false });
+  assert.deepEqual((await t.call('GET', '/payments/options')).body, {
+    cod: true,
+    codMax: null,
+    codReason: null,
+    online: false,
+  });
   const call = await loggedIn('nokeys@example.com');
   const res = await call('POST', '/orders', {
     items: [{ productId: await idOf(BOOK), qty: 2 }],

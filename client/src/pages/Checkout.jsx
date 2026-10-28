@@ -156,6 +156,16 @@ export default function Checkout() {
   const balance = user.credit ?? 0;
   const creditToUse = useCredit ? Math.min(balance, quote.total) : 0;
   const due = quote.total - creditToUse;
+  // Why this order can't be paid on delivery (stage 79): this customer's COD orders keep coming back, or it's over
+  // the store's COD limit. The server checks the same when the order is placed.
+  const codBlocked = !options
+    ? null
+    : !options.cod
+      ? options.codReason
+      : options.codMax !== null && due > options.codMax
+        ? `Cash on Delivery is for orders up to ${formatPrice(options.codMax)}; please pay online.`
+        : null;
+  const cannotPay = due > 0 && codBlocked && !options?.online;
 
   async function submit(e) {
     e.preventDefault();
@@ -246,13 +256,20 @@ export default function Checkout() {
             </label>
           )}
           {due > 0 && (
-            <label className="payment-option">
-              {options?.online && <input type="radio" name="paymentMethod" value="cod" />}
+            <label className={`payment-option ${codBlocked ? 'disabled' : ''}`}>
+              {options?.online && (
+                <input type="radio" name="paymentMethod" value="cod" disabled={Boolean(codBlocked)} />
+              )}
               <span>
                 <strong>Cash on Delivery</strong>
-                <span className="muted small block">Pay in cash when your order arrives.</span>
+                <span className="muted small block">{codBlocked ?? 'Pay in cash when your order arrives.'}</span>
               </span>
             </label>
+          )}
+          {cannotPay && (
+            <p className="error small">
+              Online payment isn&apos;t available right now either. <Link to="/help">Contact us</Link> to order.
+            </p>
           )}
         </fieldset>
 
@@ -306,7 +323,7 @@ export default function Checkout() {
         <button
           type="submit"
           className="btn primary"
-          disabled={state.busy || loading || !quote.canCheckout || !options}
+          disabled={state.busy || loading || !quote.canCheckout || !options || cannotPay}
         >
           {state.busy ? 'Placing order…' : `Place order · ${formatPrice(due)}`}
         </button>

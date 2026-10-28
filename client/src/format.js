@@ -120,3 +120,11 @@ export function refundText(r) {
   if (!money) return `${formatPrice(credit)} as store credit`;
   return credit ? `${formatPrice(money)} ${how} + ${formatPrice(credit)} as store credit` : formatPrice(money);
 }
+
+// Why a parcel came back undelivered (stage 79; the same as server/src/cod.js).
+export const RTO_REASONS = {
+  refused: 'Refused by the customer',
+  unreachable: 'Customer couldn’t be reached',
+  address: 'Wrong or incomplete address',
+  other: 'Something else',
+};

@@ -16,6 +16,7 @@ import { sendOrderEmail } from '../emails.js';
 import { changeRating, inTransaction, toReview } from './reviews.js';
 import { byOf, recordStock, savedEntries } from '../stockHistory.js';
 import { logActivity, orderTarget, productChanges, productTarget, rupees, yesNo } from '../activity.js';
+import { RTO_REASONS } from '../cod.js';
 
 const hexId = (what) => z.string().regex(/^[0-9a-f]{24}$/, `Choose a ${what}`);
 
@@ -219,6 +220,11 @@ const shipmentFields = z
       .default(''),
   })
   .refine((s) => !s.trackingNumber || s.courier, { message: 'Name the courier', path: ['courier'] });
+// A shipped order that came back undelivered (cod.js).
+const returnedBody = z.object({
+  reason: z.enum(Object.keys(RTO_REASONS), 'Choose why it came back'),
+  note: z.string().trim().max(300).default(''),
+});
 const statusBody = z.object({
   status: z.enum(['shipped', 'delivered', 'cancelled']),
   shipment: shipmentFields.optional(),
@@ -707,6 +713,33 @@ export function adminRouter(ctx) {
       throw new HttpError(403, 'Only an admin can cancel an order');
     }
     res.json((await withCustomers([await advanceOrder(req, _id, status, shipment)]))[0]);
+  });
+
+  // Returned to sender: the parcel came back undelivered. A cancellation of a shipped order (stock, coupon and store
+  // credit back, online payments refunded) that remembers why; refused and unreachable ones count against COD.
+  // Admins only (it can refund), as it isn't in STAFF_ROUTES.
+  router.post('/admin/orders/:id/returned', async (req, res) => {
+    const _id = parseObjectId(req.params.id, 'order id');
+    const { reason, note } = parse(returnedBody, req.body);
+    const current = await orders.findOne({ _id }, { projection: { status: 1 } });
+    if (!current) throw new HttpError(404, 'Order not found');
+    if (current.status !== 'shipped') throw new HttpError(409, 'Only a shipped order can come back undelivered');
+    const doc = await cancelOrder(
+      ctx,
+      { _id },
+      { from: ['shipped'], by: 'admin', user: req.user, returned: { reason, note } },
+    );
+    await logActivity(db, req.user, {
+      area: 'orders',
+      action: 'Returned to sender',
+      target: orderTarget(doc),
+      changes: [
+        { field: 'Reason', to: RTO_REASONS[reason] },
+        ...(note ? [{ field: 'Note', to: note }] : []),
+        ...(doc.payment?.status ? [{ field: 'Payment', to: doc.payment.status }] : []),
+      ],
+    });
+    res.json((await withCustomers([doc]))[0]);
   });
 
   router.post('/admin/orders/:id/notes', async (req, res) => {

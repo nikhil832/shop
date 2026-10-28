@@ -214,7 +214,7 @@ export function orderExportRouter({ db }) {
       return [
         cell(o.number ?? o._id.toString().slice(-8).toUpperCase()),
         cell(istDateTime(o.createdAt)),
-        cell(o.status),
+        cell(o.returnedToSender ? 'returned to sender' : o.status),
         cell(customer?.name ?? o.address.name, { text: true }),
         cell(customer?.email ?? '', { text: true }),
         cell(o.items.reduce((n, i) => n + i.qty, 0)),

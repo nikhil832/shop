@@ -2,6 +2,79 @@ import { useState } from 'react';
 import { request } from '../../api.js';
 import { useFetch } from '../../useFetch.js';
 
+// Cash on Delivery's rules (stage 79): the largest order paid on delivery, and after how many refused or unreachable
+// COD orders a customer must pay online. An empty box switches that rule off.
+function CodRules() {
+  const [version, setVersion] = useState(0);
+  const { data } = useFetch('/admin/cod', version);
+  const [state, setState] = useState({ busy: false, error: null, done: null });
+  if (!data) return null;
+
+  async function save(e) {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.currentTarget));
+    setState({ busy: true, error: null, done: null });
+    try {
+      await request('/admin/cod', {
+        method: 'PUT',
+        body: {
+          maxOrder: f.maxOrder === '' ? null : Math.round(Number(f.maxOrder) * 100),
+          refusedLimit: f.refusedLimit === '' ? null : Number(f.refusedLimit),
+        },
+      });
+      setState({ busy: false, error: null, done: 'Saved.' });
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setState({ busy: false, error: err.message, done: null });
+    }
+  }
+
+  return (
+    <form key={JSON.stringify(data)} className="panel delivery-rule" onSubmit={save} aria-labelledby="cod-rules">
+      <h2 id="cod-rules">Cash on Delivery</h2>
+      <p className="muted small">
+        Orders over the limit, and customers whose Cash on Delivery orders came back refused or unreachable that many
+        times, must pay online. Leave a box empty for no limit. A customer can be allowed again from their page under
+        Customers.
+      </p>
+      <div className="address-grid">
+        <label>
+          Largest order paid on delivery (₹)
+          <input
+            name="maxOrder"
+            type="number"
+            min="100"
+            step="1"
+            defaultValue={data.maxOrder === null ? '' : data.maxOrder / 100}
+            placeholder="No limit"
+          />
+        </label>
+        <label>
+          Pay online only after this many refused
+          <input
+            name="refusedLimit"
+            type="number"
+            min="1"
+            max="10"
+            step="1"
+            defaultValue={data.refusedLimit ?? ''}
+            placeholder="Never"
+          />
+        </label>
+      </div>
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
+      {state.done && <p role="status">{state.done}</p>}
+      <button type="submit" className="btn primary" disabled={state.busy}>
+        Save
+      </button>
+    </form>
+  );
+}
+
 // The rule's numbers from a form: delivered in min–max days, or not delivered.
 function ruleFrom(form) {
   const f = Object.fromEntries(new FormData(form));
@@ -182,6 +255,7 @@ export default function AdminDelivery() {
           </button>
         </div>
       </form>
+      <CodRules />
     </div>
   );
 }

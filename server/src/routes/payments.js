@@ -5,6 +5,7 @@ import { HttpError, parse, parseObjectId } from '../http.js';
 import { checkoutParams, confirmPayment, syncPayment } from '../payments.js';
 import { expireOrder, toOrder } from './orders.js';
 import { confirmGiftCard } from '../giftCards.js';
+import { codAllowed } from '../cod.js';
 
 // What Razorpay's checkout hands back to the browser after a successful payment.
 const paymentBody = z.object({
@@ -27,8 +28,11 @@ export function paymentsRouter(ctx) {
   }
 
   // Which payment methods checkout should offer.
-  router.get('/payments/options', (req, res) => {
-    res.json({ cod: true, online: Boolean(razorpay) });
+  // `cod` is whether this visitor may pay on delivery at all (cod.js), `codMax` the largest amount (paise, or null),
+  // and `codReason` why not, for checkout to show.
+  router.get('/payments/options', async (req, res) => {
+    const cod = await codAllowed(db, req.user);
+    res.json({ cod: cod.allowed, codMax: cod.max, codReason: cod.reason, online: Boolean(razorpay) });
   });
 
   // Opens (or reopens) payment for an order that is still awaiting it, e.g. after the customer closed the popup.

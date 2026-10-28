@@ -15,6 +15,7 @@ import {
   smallImage,
   dueLabel,
   refundText,
+  RTO_REASONS,
 } from '../format.js';
 import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
@@ -180,9 +181,11 @@ export default function Order() {
                   {order.shippedAt && ` · shipped on ${formatDate(order.shippedAt)}`}
                   {order.deliveredAt && ` · delivered on ${formatDate(order.deliveredAt)}`}
                   {order.cancelledAt &&
-                    (order.cancelledBy === 'system'
-                      ? ' · cancelled: payment not completed in time'
-                      : ` · cancelled ${order.cancelledBy === 'admin' ? 'by the store ' : ''}on ${formatDate(order.cancelledAt)}`)}
+                    (order.returnedToSender
+                      ? ` · came back undelivered on ${formatDate(order.cancelledAt)} (${RTO_REASONS[order.returnedToSender.reason].toLowerCase()})`
+                      : order.cancelledBy === 'system'
+                        ? ' · cancelled: payment not completed in time'
+                        : ` · cancelled ${order.cancelledBy === 'admin' ? 'by the store ' : ''}on ${formatDate(order.cancelledAt)}`)}
                 </span>
               </div>
               <StatusBadge status={order.status} />

@@ -7,6 +7,7 @@ import { grantBody, grantCredit, toCreditEntry } from '../credit.js';
 import { REFUNDED_RETURNS, SOLD } from './dashboard.js';
 import { toRequest } from './help.js';
 import { toReturn } from './returns.js';
+import { codAllowed, refusedCodOrders } from '../cod.js';
 
 // Admin → Customers (stage 74, admins only): every account with what it has bought, and one customer's whole story on
 // one page (orders, returns, help requests, store credit), where an admin can also give store credit. Nothing is
@@ -157,6 +158,8 @@ export function customersRouter(ctx) {
         return { id, number, topic, status, updatedAt, messages: messages.length };
       }),
       credit: credit.map(toCreditEntry),
+      // Cash on Delivery: COD orders that came back for a reason that was theirs, and whether they may still use it.
+      cod: { refused: await refusedCodOrders(db, user), allowed: (await codAllowed(db, user)).allowed },
     });
   });
 

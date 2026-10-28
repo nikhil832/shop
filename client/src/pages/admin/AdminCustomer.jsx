@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
+import { request } from '../../api.js';
 import {
   HELP_STATUS,
   HELP_TOPICS,
@@ -99,6 +100,28 @@ export default function AdminCustomer() {
           </>
         )}
       </section>
+
+      {(data.cod.refused > 0 || !data.cod.allowed) && (
+        <section className="panel" aria-labelledby="customer-cod">
+          <h2 id="customer-cod">Cash on Delivery</h2>
+          <p>
+            {data.cod.refused} Cash on Delivery {data.cod.refused === 1 ? 'order' : 'orders'} came back refused or
+            unreachable. {data.cod.allowed ? 'They can still pay on delivery.' : 'They must pay online.'}
+          </p>
+          {!data.cod.allowed && (
+            <button
+              type="button"
+              className="btn small"
+              onClick={async () => {
+                await request(`/admin/cod/forgive/${c.id}`, { method: 'POST' });
+                setVersion((v) => v + 1);
+              }}
+            >
+              Allow Cash on Delivery again
+            </button>
+          )}
+        </section>
+      )}
 
       <section className="panel" aria-labelledby="customer-orders">
         <h2 id="customer-orders">Orders</h2>
