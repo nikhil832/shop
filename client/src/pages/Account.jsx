@@ -194,6 +194,7 @@ const CREDIT_REASONS = {
   cancelled: 'Back from a cancelled order',
   spent: 'Paid for an order',
   gift_card: 'Gift card redeemed',
+  cashback: 'Cashback',
 };
 
 // Store credit (stage 72, #credit): the balance and every change, newest first. Shown once there is any history.

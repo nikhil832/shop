@@ -34,6 +34,64 @@ function couponBody(form) {
   };
 }
 
+// Cashback (stage 85): store credit for orders kept past their return window. Off until switched on; only orders
+// placed from then earn it.
+function Cashback() {
+  const [version, setVersion] = useState(0);
+  const { data } = useFetch('/admin/cashback', version);
+  const [state, setState] = useState({ busy: false, error: null, done: null });
+  if (!data) return null;
+  async function save(e) {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.currentTarget));
+    setState({ busy: true, error: null, done: null });
+    try {
+      await request('/admin/cashback', {
+        method: 'PUT',
+        body: { enabled: f.enabled === 'on', percent: Number(f.percent), cap: Math.round(Number(f.cap) * 100) },
+      });
+      setState({ busy: false, error: null, done: 'Saved.' });
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setState({ busy: false, error: err.message, done: null });
+    }
+  }
+  return (
+    <form key={JSON.stringify(data)} className="panel" onSubmit={save} aria-labelledby="cashback-heading">
+      <h2 id="cashback-heading">Cashback</h2>
+      <p className="muted small">
+        A percentage of what each delivered order paid for the items kept comes back as store credit once its 7-day
+        return window has passed. Only orders placed after it&apos;s switched on earn it.
+        {data.since && ` On since ${new Date(data.since).toLocaleDateString('en-IN')}.`} Paid so far:{' '}
+        {formatPrice(data.paid.total)} on {data.paid.orders} {data.paid.orders === 1 ? 'order' : 'orders'}.
+      </p>
+      <label className="check">
+        <input name="enabled" type="checkbox" defaultChecked={data.enabled} />
+        Give cashback
+      </label>
+      <div className="address-grid">
+        <label>
+          Percent back
+          <input name="percent" type="number" min="1" max="20" step="1" required defaultValue={data.percent} />
+        </label>
+        <label>
+          At most per order (₹)
+          <input name="cap" type="number" min="1" step="1" required defaultValue={data.cap / 100} />
+        </label>
+      </div>
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
+      {state.done && <p role="status">{state.done}</p>}
+      <button type="submit" className="btn primary" disabled={state.busy}>
+        Save cashback
+      </button>
+    </form>
+  );
+}
+
 export default function AdminCoupons() {
   const [version, setVersion] = useState(0);
   const { data: coupons, error } = useFetch('/admin/coupons', version);
@@ -178,6 +236,7 @@ export default function AdminCoupons() {
           </button>
         </div>
       </form>
+      <Cashback />
     </div>
   );
 }

@@ -24,6 +24,7 @@ const CREDIT_REASONS = {
   cancelled: 'Back from a cancelled order',
   spent: 'Paid for an order',
   gift_card: 'Gift card redeemed',
+  cashback: 'Cashback',
 };
 
 // Tags (stage 82): ticked boxes, saved as soon as one changes.

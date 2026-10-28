@@ -920,3 +920,23 @@ export function giftCardCancelledEmail(card) {
   );
   return { subject, text, html };
 }
+
+// Cashback (stage 85, cashback.js): store credit for an order kept past its return window.
+export function cashbackEmail(user, order, amount, balance, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = user.name.split(/\s+/)[0];
+  const subject = `${rupees(amount)} cashback for order #${orderNumber(order)}`;
+  const url = `${publicUrl}/account#credit`;
+  const lines = [
+    `Thanks for shopping with us! ${rupees(amount)} cashback for order #${orderNumber(order)} is now in your account as store credit.`,
+    `You have ${rupees(balance)} to use at checkout. It doesn't expire.`,
+  ];
+  const text = [`Hi ${firstName},`, ...lines, `See it in your account: ${url}`, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+${button('See my store credit', url)}`,
+    "You're getting this email because you ordered from Bazaar.",
+  );
+  return { subject, text, html };
+}

@@ -120,6 +120,11 @@ export default function Cart() {
           total={quote.total}
           freeDeliveryMin={quote.freeDeliveryMin}
         >
+          {quote.cashback?.amount > 0 && (
+            <p className="small cashback-note">
+              You&apos;ll get {formatPrice(quote.cashback.amount)} back as store credit, 7 days after delivery.
+            </p>
+          )}
           {!quote.canCheckout && <p className="error small">Fix the items marked above to continue.</p>}
           <button
             type="button"

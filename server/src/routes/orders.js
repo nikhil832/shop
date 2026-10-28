@@ -15,6 +15,7 @@ import { byOf, CANCEL_REASONS, movedEntry, recordStock } from '../stockHistory.j
 import { addCredit, amountDue } from '../credit.js';
 import { codAllowed } from '../cod.js';
 import { applyBundles, bundlesFor } from '../bundles.js';
+import { cashbackOn, cashbackSettings } from '../cashback.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
 export const FREE_DELIVERY_MIN = 49900;
@@ -349,8 +350,12 @@ export function ordersRouter(ctx) {
         couponError = err.message;
       }
     }
+    // Cashback this order would earn (stage 85), when it's on: on the items after bundle and coupon savings.
+    const cashback = await cashbackSettings(db);
+    const itemsPaid = totals.subtotal - (coupon && coupon.type !== 'free_delivery' ? coupon.discount : 0);
     res.json({
       items: lines,
+      cashback: cashback.enabled ? { amount: cashbackOn(itemsPaid, cashback), percent: cashback.percent } : null,
       // `subtotal` (below) is after bundle savings; `itemsTotal` before them.
       itemsTotal,
       bundles: bundled.applied,

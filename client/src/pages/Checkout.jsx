@@ -350,6 +350,11 @@ export default function Checkout() {
         freeDeliveryMin={quote.freeDeliveryMin}
         creditUsed={creditToUse}
       >
+        {quote.cashback?.amount > 0 && (
+          <p className="small cashback-note">
+            You&apos;ll get {formatPrice(quote.cashback.amount)} back as store credit, 7 days after delivery.
+          </p>
+        )}
         <CouponBox
           applied={quote.coupon}
           error={coupon && !loading ? quote.couponError : null}
