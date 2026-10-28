@@ -31,6 +31,7 @@ import { helpRouter } from './routes/help.js';
 import { accountDataRouter } from './routes/accountData.js';
 import { staffRouter } from './staff.js';
 import { salesRouter } from './sales.js';
+import { securityHeaders } from './securityHeaders.js';
 
 // Builds the Express app around an injected database. ctx = { db, client, config, razorpay, mail } (razorpay is null
 // when online payments aren't configured; mail sends or logs order emails).
@@ -40,6 +41,8 @@ export function createApp(ctx) {
   // When hosted (Render), one HTTPS proxy sits in front: trusting it makes req.secure true, so the session cookie is
   // marked Secure. Locally there is no proxy and nothing changes.
   app.set('trust proxy', 1);
+  // On everything, pages and API alike (securityHeaders.js).
+  app.use(securityHeaders);
   // The raw body is kept for the Razorpay webhook, whose signature covers the exact bytes sent.
   app.use(express.json({ limit: '100kb', verify: (req, res, buf) => (req.rawBody = buf) }));
 

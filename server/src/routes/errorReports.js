@@ -11,7 +11,7 @@ import { AI_DRAFTS_PER_HOUR } from './aiWriter.js';
 // Error reports from visitors' browsers (collection `errorReports`): when a page fails to load or crashes, the client
 // posts what happened, and admins see one entry per problem with how often it happened. Reports of the same problem
 // (kind, message and the top line of the stack) are counted on one document:
-// { key, kind: 'load' | 'crash', message, stack, componentStack, count, firstAt, lastAt, paths (≤10, newest last),
+// { key, kind: 'load' | 'crash' | 'blocked' (by the security policy, securityHeaders.js), message, stack, componentStack, count, firstAt, lastAt, paths (≤10, newest last),
 //   browser (the latest user agent), fixedAt: Date | null, explanation?: { explanation, whereToLook, urgent, at, model } }
 // A report after an admin marked the problem fixed opens it again. Entries go REPORT_DAYS after their last report.
 
@@ -28,7 +28,7 @@ const text = (max) =>
     .max(20_000)
     .transform((s) => s.slice(0, max));
 const reportBody = z.object({
-  kind: z.enum(['load', 'crash']),
+  kind: z.enum(['load', 'crash', 'blocked']),
   message: text(500).pipe(z.string().trim().min(1, 'Say what went wrong')),
   stack: text(4000).optional(),
   componentStack: text(4000).optional(),

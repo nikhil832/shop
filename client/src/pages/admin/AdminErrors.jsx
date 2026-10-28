@@ -9,7 +9,7 @@ const FILTERS = [
   ['open', 'Open'],
   ['fixed', 'Fixed'],
 ];
-const KINDS = { load: "Page didn't load", crash: 'Page crashed' };
+const KINDS = { load: "Page didn't load", crash: 'Page crashed', blocked: 'Blocked by the security policy' };
 const when = (iso) => `${formatDate(iso)}, ${formatTime(iso)}`;
 
 // "Explain this error" (stage 57): Claude's plain-words reading of the report and where to look in the code, kept on
@@ -162,9 +162,9 @@ export default function AdminErrors() {
         <h1>Errors</h1>
       </div>
       <p className="muted small">
-        Pages that didn&apos;t load or crashed in visitors&apos; browsers, one entry per problem with how often it
-        happened. Mark one fixed once a change for it is live; if it happens again it opens again. Entries go after 90
-        days without a report.
+        Pages that didn&apos;t load, crashed or had something blocked by the security policy in visitors&apos; browsers,
+        one entry per problem with how often it happened. Mark one fixed once a change for it is live; if it happens
+        again it opens again. Entries go after 90 days without a report.
       </p>
 
       <div className="status-tabs" role="group" aria-label="Filter by status">

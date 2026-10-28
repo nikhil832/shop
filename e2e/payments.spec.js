@@ -1,14 +1,15 @@
 import { test, expect } from '@playwright/test';
 
 // Razorpay's checkout script is replaced with a stub: "paying" asks the stand-in Razorpay (port 4101, started by
-// playwright.config.js) for a signed payment, exactly what the real window hands back. Set window.__razorpayAction
-// to 'dismiss' to simulate closing the window instead.
+// playwright.config.js) for a signed payment, exactly what the real window hands back. It asks through a razorpay.com
+// address, sent on to the stand-in below, since the store's security policy lets pages talk only to itself and
+// Razorpay. Set window.__razorpayAction to 'dismiss' to simulate closing the window instead.
 const CHECKOUT_STUB = `
 window.Razorpay = function (options) {
   this.open = async function () {
     window.__razorpayOptions = options;
     if (window.__razorpayAction === 'dismiss') return setTimeout(() => options.modal.ondismiss(), 0);
-    const res = await fetch('http://localhost:4101/test/pay', {
+    const res = await fetch('https://api.razorpay.com/test/pay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ order_id: options.order_id }),
@@ -30,6 +31,9 @@ const summary = (page) => page.getByRole('complementary', { name: 'Order summary
 test.beforeEach(async ({ page }) => {
   await page.route('https://checkout.razorpay.com/v1/checkout.js', (route) =>
     route.fulfill({ contentType: 'application/javascript', body: CHECKOUT_STUB }),
+  );
+  await page.route('https://api.razorpay.com/test/pay', (route) =>
+    route.fetch({ url: 'http://localhost:4101/test/pay' }).then((response) => route.fulfill({ response })),
   );
 });
 

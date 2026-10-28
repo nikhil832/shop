@@ -17,6 +17,7 @@ import Order from './pages/Order.jsx';
 import Orders from './pages/Orders.jsx';
 import Wishlist from './pages/Wishlist.jsx';
 import NotFound from './pages/NotFound.jsx';
+import { watchSecurityPolicy } from './errorReports.js';
 import './styles.css';
 
 // After a deploy, an open tab may ask for a page file the new build no longer has: reload once to get the new build.
@@ -75,6 +76,8 @@ const OPENED_ON = [
   [/^\/help$/, Help],
   [/^\/help\/[^/]+$/, HelpRequest],
 ].find(([path]) => path.test(window.location.pathname))?.[1];
+
+watchSecurityPolicy();
 
 // A failed preload is left to the page itself (it reloads once, or says it didn't load).
 Promise.resolve(OPENED_ON?.preload())
