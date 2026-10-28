@@ -156,6 +156,37 @@ function AddressBook({ user, setUser }) {
 }
 
 // "Your data" (stage 65): download everything the store holds about you, or close the account (password, and a two-step
+// An account made at checkout (stage 84) has no password yet: it's set from an emailed link (the reset page).
+function SetPassword({ email }) {
+  const [state, setState] = useState({ busy: false, sent: false, error: null });
+  async function send() {
+    setState({ busy: true, sent: false, error: null });
+    try {
+      await request('/auth/forgot-password', { method: 'POST', body: { email } });
+      setState({ busy: false, sent: true, error: null });
+    } catch (err) {
+      setState({ busy: false, sent: false, error: err.message });
+    }
+  }
+  return (
+    <section className="panel account-section" aria-labelledby="password-heading">
+      <h2 id="password-heading">Password</h2>
+      <p>
+        Your account was made when you ordered, so it has no password yet. Set one to log in on other devices or after
+        logging out.
+      </p>
+      {state.sent ? (
+        <p role="status">We&apos;ve emailed a link to {email}. It works for an hour.</p>
+      ) : (
+        <button type="button" className="btn" disabled={state.busy} onClick={send}>
+          Email me a link to set a password
+        </button>
+      )}
+      {state.error && <p className="error">{state.error}</p>}
+    </section>
+  );
+}
+
 const CREDIT_REASONS = {
   goodwill: 'Added by the store',
   taken: 'Taken back by the store',
@@ -423,34 +454,38 @@ export default function Account() {
 
       <AddressBook user={user} setUser={setUser} />
 
-      <form className="panel account-section" onSubmit={submitPassword} aria-labelledby="password-heading">
-        <h2 id="password-heading">Change password</h2>
-        <label>
-          Current password
-          <input name="currentPassword" type="password" autoComplete="current-password" required maxLength={128} />
-        </label>
-        <label>
-          New password
-          <input
-            name="newPassword"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={8}
-            maxLength={128}
-          />
-          <span className="muted small">At least 8 characters, different from your current one</span>
-        </label>
-        <label>
-          Type the new password again
-          <input name="confirm" type="password" autoComplete="new-password" required maxLength={128} />
-        </label>
-        <Feedback state={password} />
-        <button type="submit" className="btn primary" disabled={password.busy}>
-          Change password
-        </button>
-        <p className="muted small">This logs you out on your other devices.</p>
-      </form>
+      {user.hasPassword ? (
+        <form className="panel account-section" onSubmit={submitPassword} aria-labelledby="password-heading">
+          <h2 id="password-heading">Change password</h2>
+          <label>
+            Current password
+            <input name="currentPassword" type="password" autoComplete="current-password" required maxLength={128} />
+          </label>
+          <label>
+            New password
+            <input
+              name="newPassword"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              maxLength={128}
+            />
+            <span className="muted small">At least 8 characters, different from your current one</span>
+          </label>
+          <label>
+            Type the new password again
+            <input name="confirm" type="password" autoComplete="new-password" required maxLength={128} />
+          </label>
+          <Feedback state={password} />
+          <button type="submit" className="btn primary" disabled={password.busy}>
+            Change password
+          </button>
+          <p className="muted small">This logs you out on your other devices.</p>
+        </form>
+      ) : (
+        <SetPassword email={user.email} />
+      )}
 
       <StoreCredit user={user} />
       <TwoStepSection />

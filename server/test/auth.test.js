@@ -21,6 +21,7 @@ test('registers, stays logged in with the cookie, and logs out', async () => {
     'cartReminderEmails',
     'credit',
     'email',
+    'hasPassword',
     'id',
     'name',
     'permissions',

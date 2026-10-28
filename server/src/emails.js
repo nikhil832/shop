@@ -1,4 +1,5 @@
 import { variantTitle } from './variants.js';
+import { SET_PASSWORD_DAYS, setPasswordLink } from './passwordLinks.js';
 
 // Customer emails: order confirmed (placed), shipped, delivered and cancelled, sent after the change is saved (a failure
 // is logged and never undoes or fails the change itself), the password reset link and back-in-stock alerts. And one for
@@ -88,7 +89,8 @@ function intro(order, event) {
 }
 
 // Builds { subject, text, html } for an order email. `user` is { name }; links point at `publicUrl`.
-export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL) {
+// `setPasswordUrl` (stage 84): for an account made at checkout, the link to give it a password.
+export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL, { setPasswordUrl = null } = {}) {
   const subject = `Order #${orderNumber(order)} ${SUBJECTS[event]}`;
   const firstName = user.name.split(/\s+/)[0];
   const orderUrl = `${publicUrl}/orders/${order._id}`;
@@ -122,9 +124,13 @@ export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL) {
       : [];
   const reviewNote = event === 'delivered' ? 'Tell other shoppers what you think: open an item to review it.' : null;
 
+  const accountNote = setPasswordUrl
+    ? `We've made you a Bazaar account with this email, so you can follow your order. Set a password to log in next time (the link works for ${SET_PASSWORD_DAYS} days; after that, use "Forgot password").`
+    : null;
   const text = [
     `Hi ${firstName},`,
     ...paragraphs,
+    ...(accountNote ? [`${accountNote}\n${setPasswordUrl}`] : []),
     [
       ...items.map((i) => `- ${i.text}: ${i.amount}${event === 'delivered' ? ` (review: ${i.url})` : ''}`),
       ...totals.map(([label, value]) => `${label}: ${value}`),
@@ -141,6 +147,7 @@ export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL) {
     subject,
     `<p>Hi ${escapeHtml(firstName)},</p>
 ${paragraphs.map((p) => `<p>${escapeHtml(p)}</p>`).join('\n')}
+${accountNote ? `<p>${escapeHtml(accountNote)}</p>${button('Set a password', setPasswordUrl)}` : ''}
 <table style="width:100%;border-collapse:collapse;margin:16px 0">
 ${items
   .map(
@@ -790,9 +797,16 @@ export async function sendReturnDecision(ctx, ret, order) {
 // Emails the order's customer about `event`. Never throws: the order change it reports is already saved.
 export async function sendOrderEmail(ctx, order, event) {
   try {
-    const user = await ctx.db.collection('users').findOne({ _id: order.userId }, { projection: { name: 1, email: 1 } });
+    const user = await ctx.db
+      .collection('users')
+      .findOne({ _id: order.userId }, { projection: { name: 1, email: 1, passwordHash: 1 } });
     if (!user) return;
-    const email = orderEmail(order, event, user, ctx.config.mail?.publicUrl);
+    // An account made at checkout (stage 84) gets a link to set its password with each order's confirmation.
+    const setPasswordUrl =
+      event === 'placed' && !user.passwordHash
+        ? await setPasswordLink(ctx.db, user._id, ctx.config.mail?.publicUrl)
+        : null;
+    const email = orderEmail(order, event, user, ctx.config.mail?.publicUrl, { setPasswordUrl });
     await ctx.mail.send({ to: { email: user.email, name: user.name }, ...email });
   } catch (err) {
     console.error(`Could not send the ${event} email for order ${order._id}:`, err.message);

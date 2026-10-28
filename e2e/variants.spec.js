@@ -40,6 +40,7 @@ test('a size must be chosen; each size is its own cart line and order line', asy
 
   // Check out as a new customer.
   await page.getByRole('button', { name: 'Checkout' }).click();
+  await page.getByRole('region', { name: 'Your details' }).getByRole('link', { name: 'Log in' }).click();
   await page.getByRole('link', { name: 'Create an account' }).click();
   await page.getByLabel('Name').fill('Asha Rao');
   await page.getByLabel('Email').fill(`sizes-${unique()}@example.com`);

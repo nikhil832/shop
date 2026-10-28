@@ -51,13 +51,15 @@ test('guests can fill a cart, change quantities and see the delivery charge', as
   await expect(cartLink(page)).toHaveAccessibleName('Cart, 0 items');
 });
 
-test('checkout asks to log in, places a COD order, and the order can be cancelled', async ({ page }) => {
+test('checkout offers to log in, places a COD order, and the order can be cancelled', async ({ page }) => {
   page.on('dialog', (dialog) => dialog.accept());
   await addToCart(page, PHONE);
   await page.goto('/cart');
   await page.getByRole('button', { name: 'Checkout' }).click();
 
-  // Not logged in: off to the login page, then to sign-up, and back to checkout.
+  // Not logged in: checkout asks for a name and email, or offers to log in; this shopper signs up and comes back.
+  await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();
+  await page.getByRole('region', { name: 'Your details' }).getByRole('link', { name: 'Log in' }).click();
   await expect(page).toHaveURL('/login?next=/checkout');
   await page.getByRole('link', { name: 'Create an account' }).click();
   await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible();

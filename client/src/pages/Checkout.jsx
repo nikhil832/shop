@@ -126,6 +126,35 @@ function DeliveryAddress({ user }) {
   );
 }
 
+// A visitor who isn't logged in (stage 84): no saved addresses yet; the account is made when they order.
+const NEW_CUSTOMER = { name: '', addresses: [] };
+
+// Name and email for checking out without an account; the account is made with them, and the confirmation email
+// brings a link to set a password.
+function NewCustomerDetails() {
+  return (
+    <section className="panel" aria-labelledby="details-heading">
+      <h1 id="details-heading">Your details</h1>
+      <p className="small">
+        Already have an account? <Link to="/login?next=/checkout">Log in</Link>
+      </p>
+      <div className="address-grid">
+        <label>
+          Your name
+          <input name="buyerName" required maxLength={80} autoComplete="name" />
+        </label>
+        <label>
+          Email
+          <input name="buyerEmail" type="email" required maxLength={254} autoComplete="email" />
+        </label>
+      </div>
+      <p className="muted small">
+        We&apos;ll make you an account to follow your order, and email a link to set a password.
+      </p>
+    </section>
+  );
+}
+
 export default function Checkout() {
   const { user, setUser } = useAuth();
   const items = useCart();
@@ -142,18 +171,17 @@ export default function Checkout() {
     error,
     loading,
   } = useFetch(
-    user && items.length
+    user !== undefined && items.length
       ? `/cart?items=${cartQuery(items)}${coupon ? `&coupon=${encodeURIComponent(coupon)}` : ''}`
       : null,
     state.version,
   );
 
   if (user === undefined) return <p className="muted">Loading…</p>;
-  if (!user) return <Navigate to="/login?next=/checkout" replace />;
   if (!items.length && !state.busy) return <Navigate to="/cart" replace />;
   if (error) return <p className="error">{error.message}</p>;
   if (!quote) return <p className="muted">Loading…</p>;
-  const balance = user.credit ?? 0;
+  const balance = user?.credit ?? 0;
   const creditToUse = useCredit ? Math.min(balance, quote.total) : 0;
   const due = quote.total - creditToUse;
   // Why this order can't be paid on delivery (stage 79): this customer's COD orders keep coming back, or it's over
@@ -173,12 +201,26 @@ export default function Checkout() {
       paymentMethod = 'cod',
       addressChoice = 'new',
       saveAddress,
+      buyerName,
+      buyerEmail,
       ...typed
     } = Object.fromEntries(new FormData(e.currentTarget));
-    const saved = user.addresses.find((a) => a.id === addressChoice);
+    const saved = user?.addresses.find((a) => a.id === addressChoice);
     const address = saved ? addressFields(saved) : typed;
     setState((s) => ({ ...s, busy: true, error: null }));
     let order;
+    // Not logged in: make the account first (it logs this browser in), then order as any customer.
+    if (!user) {
+      try {
+        const made = await request('/auth/quick-account', {
+          method: 'POST',
+          body: { name: buyerName, email: buyerEmail },
+        });
+        setUser(made.user);
+      } catch (err) {
+        return setState((s) => ({ ...s, busy: false, error: err.message }));
+      }
+    }
     try {
       order = await request('/orders', {
         method: 'POST',
@@ -227,7 +269,10 @@ export default function Checkout() {
     <form className="cart-page" onSubmit={submit}>
       <div className="checkout-main">
         {/* Remounted per user, so another account's choice doesn't carry over. */}
-        <DeliveryAddress key={user.id} user={user} />
+        {!user && <NewCustomerDetails />}
+        {/* Remounted per account with saved addresses, so another account's choice doesn't carry over; a new
+            customer's typed address stays when their account is made. */}
+        <DeliveryAddress key={user?.addresses.length ? user.id : 'no-addresses'} user={user ?? NEW_CUSTOMER} />
 
         <fieldset className="panel payment-options">
           <legend>

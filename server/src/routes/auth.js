@@ -33,6 +33,9 @@ const registerBody = z.object({
   password: newPassword,
 });
 
+const quickBody = registerBody.omit({ password: true });
+const QUICK_ACCOUNTS_PER_HOUR = 5; // per visitor network
+
 const loginBody = z.object({
   email,
   password: z.string().min(1, 'Enter your password').max(128),
@@ -111,6 +114,29 @@ export function authRouter(ctx) {
     res.status(201).json({ user: toUser(doc) });
   });
 
+  // Checkout without a password (stage 84): an account from just a name and email, logged in at once, so a new
+  // customer can order. A link to set a password comes with the order confirmation (passwordLinks.js); until then it
+  // can't be logged into with a password. An email with an account already must log in, as when signing up.
+  router.post('/auth/quick-account', async (req, res) => {
+    if (req.user) throw new HttpError(400, 'You are already logged in');
+    const body = parse(quickBody, req.body);
+    const network = networkOf(clientIp(req, ctx.config));
+    if (!(await takeHourlySlot(db, `quickAccount:${hashToken(network)}`, QUICK_ACCOUNTS_PER_HOUR))) {
+      throw new HttpError(429, 'Too many new accounts from here this hour. Please try again later.');
+    }
+    const doc = { name: body.name, email: body.email, passwordHash: null, role: 'user', createdAt: new Date() };
+    try {
+      const { insertedId } = await users.insertOne(doc);
+      doc._id = insertedId;
+    } catch (err) {
+      if (err.code === 11000)
+        throw new HttpError(409, 'There’s already an account with this email: log in to check out');
+      throw err;
+    }
+    await startSession(req, res, doc);
+    res.status(201).json({ user: toUser(doc) });
+  });
+
   router.post('/auth/login', async (req, res) => {
     const body = parse(loginBody, req.body);
     const user = await users.findOne({ email: body.email });
@@ -165,7 +191,10 @@ export function authRouter(ctx) {
     const current = pending && (await users.findOne({ _id: pending.userId }));
     if (!current) throw new HttpError(400, BAD_RESET_LINK);
     // Checked before the link is used up, so the customer can choose another password with the same link.
-    if (await verifyPassword(body.password, current.passwordHash)) throw new HttpError(400, SAME_PASSWORD);
+    // (An account made at checkout has no password yet: nothing to compare.)
+    if (current.passwordHash && (await verifyPassword(body.password, current.passwordHash))) {
+      throw new HttpError(400, SAME_PASSWORD);
+    }
     // Claimed and deleted in one step, so a link works only once even if submitted twice at the same moment.
     const reset = await resets.findOneAndDelete(live);
     if (!reset) throw new HttpError(400, BAD_RESET_LINK);

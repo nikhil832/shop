@@ -7,8 +7,12 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Nothing queued: every idea listed so far is built or set aside. Ask for new ideas ("what should we build next?") and
-they'll be added here.
+| #   | Idea                                                                                                                                                                              | Why                                                                                                            | To start               |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| 1   | **Cashback as store credit**: a percentage of each delivered order (e.g. 2%, admin's choice, with a cap) comes back as store credit once the return window has passed             | A reason to come back and order again, paid only on orders that were kept; builds on store credit              | "start cashback"       |
+| 2   | **Delivery dates at checkout**: "Arrives by Thu 31 Oct" for the chosen address at checkout, in the order confirmation email and on the order page, from the delivery areas        | Shoppers want to know when it comes before paying; the product page already knows the PIN code's delivery days | "start delivery dates" |
+| 3   | **Refer a friend**: each customer gets a link; a friend's first order gets money off, and the customer earns store credit once that order is delivered and past its return window | Word of mouth is the cheapest way to new customers; paying only for kept orders limits abuse                   | "start referrals"      |
+| 4   | **Size guides**: a size chart per category or product (e.g. shoe sizes UK/EU/cm), linked beside "Choose a size"                                                                   | Fewer wrong sizes means fewer returns, which cost two-way shipping                                             | "start size guides"    |
 
 ## Set aside
 
@@ -106,3 +110,4 @@ they'll be added here.
 | Receiving stock: supplier deliveries add stock, show as "Received" in stock history and average into the cost price                           | Stage 81 (`git log --grep "Stage 81"`) |
 | Customer notes and tags: VIP / Wholesale / Watch tags and signed notes on the customer page, shown on their orders and help requests          | Stage 82 (`git log --grep "Stage 82"`) |
 | Product bundles: 2–3 simple products at a bundle price, applied whenever the cart holds the full set, with "Add bundle" on product pages      | Stage 83 (`git log --grep "Stage 83"`) |
+| Checkout without a password: name and email at checkout make the account; the confirmation brings a link to set a password                    | Stage 84 (`git log --grep "Stage 84"`) |
