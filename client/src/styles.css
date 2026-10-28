@@ -968,6 +968,21 @@ p a:not(.btn) {
   flex: 1;
   min-width: 0;
 }
+/* Size guides (stage 88): the product page's chart, in the browser's own modal dialog. */
+.size-guide {
+  width: min(560px, calc(100vw - 32px));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  padding: 16px;
+}
+.size-guide::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+.size-guide-link {
+  margin: 4px 0 8px;
+}
 /* The account page's store credit history. */
 .credit-history {
   list-style: none;

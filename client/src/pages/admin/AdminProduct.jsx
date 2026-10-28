@@ -404,6 +404,7 @@ function WriteForMe({ formRef, images }) {
 
 function ProductForm({ product, categories }) {
   const navigate = useNavigate();
+  const { data: guides } = useFetch('/admin/size-guides');
   const formRef = useRef(null);
   const [images, setImages] = useState(product?.images ?? []);
   const [alts, setAlts] = useState(product?.imageAlts ?? {});
@@ -454,6 +455,8 @@ function ProductForm({ product, categories }) {
         images.filter((src) => src.startsWith('/api/images/')).map((src) => [src, (alts[src] ?? '').trim()]),
       ),
       active: form.get('active') === 'on',
+      // '' is the category's size guide (stage 88).
+      sizeGuide: form.get('sizeGuide') || null,
     };
     setState({ busy: true, error: null });
     try {
@@ -560,6 +563,20 @@ function ProductForm({ product, categories }) {
           <input name="active" type="checkbox" defaultChecked={product?.active ?? true} />
           Show in store
         </label>
+        {guides?.items.length > 0 && (
+          <label>
+            Size guide
+            <select name="sizeGuide" defaultValue={product?.sizeGuide ?? ''}>
+              <option value="">The category&apos;s</option>
+              {guides.items.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+              <option value="none">None</option>
+            </select>
+          </label>
+        )}
         <label className="wide">
           Highlights (one per line, up to 8)
           <textarea name="highlights" rows="3" defaultValue={product?.highlights.join('\n')} />

@@ -10,6 +10,7 @@ import WishlistButton from '../components/WishlistButton.jsx';
 import CompareToggle from '../components/CompareToggle.jsx';
 import DeliveryCheck from '../components/DeliveryCheck.jsx';
 import BundleOffers from '../components/BundleOffers.jsx';
+import SizeGuide from '../components/SizeGuide.jsx';
 import ProductRow from '../components/ProductRow.jsx';
 import RecentlyViewed from '../components/RecentlyViewed.jsx';
 import { rememberViewed } from '../recent.js';
@@ -215,7 +216,10 @@ export default function Product() {
           )}
           <span className="muted small">Inclusive of all taxes</span>
           {product.variants.length > 0 && product.stock > 0 && (
-            <VariantPicker product={product} chosen={chosen} onChoose={choose} />
+            <>
+              <VariantPicker product={product} chosen={chosen} onChoose={choose} />
+              <SizeGuide key={product.slug} slug={product.slug} />
+            </>
           )}
           <p className={`stock ${stockClass(shown.stock)}`}>{stockText(shown.stock)}</p>
           {/* Sold out (the whole product, or the chosen variant): ask for an email instead. Remounted when the

@@ -49,6 +49,8 @@ const INDEXES = {
     [{ area: 1, at: -1 }],
     [{ 'by.id': 1, at: -1 }],
   ],
+  // Size guides, found by category (stage 88).
+  sizeGuides: [[{ categoryIds: 1 }]],
   // Bundles: found by the products in a cart or on a product page.
   bundles: [[{ productIds: 1, active: 1 }]],
   // Deliveries from suppliers, newest first, by supplier.

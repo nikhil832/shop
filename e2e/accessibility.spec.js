@@ -99,6 +99,7 @@ const ADMIN_PAGES = (o, p) => [
   '/admin/gift-cards',
   '/admin/stock-receipts',
   '/admin/bundles',
+  '/admin/size-guides',
 ];
 
 test('every page passes the accessibility check (light theme)', async ({ browser }) => {

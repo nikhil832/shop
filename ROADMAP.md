@@ -7,9 +7,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                            | Why                                                                | To start            |
-| --- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------- |
-| 1   | **Size guides**: a size chart per category or product (e.g. shoe sizes UK/EU/cm), linked beside "Choose a size" | Fewer wrong sizes means fewer returns, which cost two-way shipping | "start size guides" |
+Nothing queued: every idea listed so far is built or set aside. Ask for new ideas ("what should we build next?") and
+they'll be added here.
 
 ## Set aside
 
@@ -111,3 +110,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Cashback as store credit: a percentage of kept orders, paid as credit after the return window (off until switched on)                          | Stage 85 (`git log --grep "Stage 85"`) |
 | Delivery dates: "Arrives between …" at checkout, kept on the order and in the confirmation; late orders on the dashboard                       | Stage 86 (`git log --grep "Stage 86"`) |
 | Refer a friend: a link per customer; the friend's first order gets money off, the referrer earns credit when it's kept (off until switched on) | Stage 87 (`git log --grep "Stage 87"`) |
+| Size guides: size charts per category (or product), opened from "Size guide" beside a product's options                                        | Stage 88 (`git log --grep "Stage 88"`) |

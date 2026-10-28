@@ -44,6 +44,7 @@ import { stockReceiptsRouter } from './stockReceipts.js';
 import { bundlesRouter } from './bundles.js';
 import { cashbackRouter } from './cashback.js';
 import { referralsRouter } from './referrals.js';
+import { sizeGuidesRouter } from './sizeGuides.js';
 
 // Builds the Express app around an injected database. ctx = { db, client, config, razorpay, mail } (razorpay is null
 // when online payments aren't configured; mail sends or logs order emails).
@@ -104,6 +105,7 @@ export function createApp(ctx) {
   api.use(bundlesRouter(ctx));
   api.use(cashbackRouter(ctx));
   api.use(referralsRouter(ctx));
+  api.use(sizeGuidesRouter(ctx));
   // Before adminRouter, whose /admin/orders/:id and /admin/products/:id would take "export" or "import" for an id.
   api.use(orderExportRouter(ctx));
   api.use(productImportRouter(ctx));

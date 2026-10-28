@@ -39,6 +39,8 @@ const productFields = z.object({
   stock: z.number().int().min(0).max(100_000),
   // What it costs the store (stage 80, admins only), for profit; null clears it.
   cost: z.number().int().min(0).max(100_000_000).nullable(),
+  // Its size guide (stage 88): a guide's id, 'none', or null for its category's.
+  sizeGuide: z.union([z.literal('none'), z.string().regex(/^[0-9a-f]{24}$/, 'Choose a size guide')]).nullable(),
   images: z.array(imageRef).max(5),
   // Descriptions of uploaded photos for screen readers, by photo address (stage 59); empty ones are dropped.
   imageAlts: z
@@ -83,6 +85,7 @@ const createProduct = productFields
     imageAlts: productFields.shape.imageAlts.default({}),
     active: productFields.shape.active.default(true),
     cost: productFields.shape.cost.default(null),
+    sizeGuide: productFields.shape.sizeGuide.default(null),
     // With variants, the product's own price, MRP and stock come from them.
     price: productFields.shape.price.optional(),
     mrp: productFields.shape.mrp.optional(),
@@ -259,6 +262,7 @@ const toAdminProduct = (doc) => ({
   mrp: doc.mrp,
   stock: doc.stock,
   cost: doc.cost ?? null,
+  sizeGuide: doc.sizeGuide ?? null,
   images: doc.images,
   imageAlts: imageAltsOf(doc),
   active: doc.active,

@@ -11,6 +11,7 @@ export const ADMIN_TABS = [
   { to: '/admin/customers', label: 'Customers', permission: '*' },
   { to: '/admin/searches', label: 'Searches', permission: '*' },
   { to: '/admin/categories', label: 'Categories', permission: '*' },
+  { to: '/admin/size-guides', label: 'Size guides', permission: '*' },
   { to: '/admin/reviews', label: 'Reviews', permission: 'reviews' },
   { to: '/admin/questions', label: 'Questions', permission: 'questions' },
   { to: '/admin/help', label: 'Help', permission: 'help' },

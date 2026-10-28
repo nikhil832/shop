@@ -24,6 +24,7 @@ const NAMES = {
   giftCards: 'Gift cards',
   stockReceipts: 'Deliveries received',
   bundles: 'Bundles',
+  sizeGuides: 'Size guides',
   errorReports: 'Error reports',
   carts: 'Saved carts',
   wishlist: 'Wishlists',

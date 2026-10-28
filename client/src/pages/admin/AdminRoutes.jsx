@@ -20,6 +20,7 @@ import AdminSearches from './AdminSearches.jsx';
 import AdminGiftCards from './AdminGiftCards.jsx';
 import { AdminReceipt, AdminReceiptNew, AdminReceipts } from './AdminReceipts.jsx';
 import AdminBundles from './AdminBundles.jsx';
+import AdminSizeGuides from './AdminSizeGuides.jsx';
 import AdminOrder from './AdminOrder.jsx';
 import AdminOrders from './AdminOrders.jsx';
 import AdminPackingSlips from './AdminPackingSlips.jsx';
@@ -76,6 +77,7 @@ export default function AdminRoutes() {
         <Route path="gift-cards" element={<AdminGiftCards />} />
         <Route path="stock-receipts" element={<AdminReceipts />} />
         <Route path="bundles" element={<AdminBundles />} />
+        <Route path="size-guides" element={<AdminSizeGuides />} />
         <Route path="stock-receipts/new" element={<AdminReceiptNew />} />
         <Route path="stock-receipts/:id" element={<AdminReceipt />} />
       </Route>
