@@ -7,9 +7,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                                                  | Why                                                                                           | To start               |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------- |
-| 1   | **Install as an app**: a web app manifest and icons, so phones offer "Add to home screen" and the store opens full-screen like an app | Cheap (no app store, no new code paths) and brings customers back with an icon on their phone | "start install as app" |
+Nothing queued: every idea listed so far is built or set aside. Ask for new ideas ("what should we build next?") and
+they'll be added here.
 
 ## Set aside
 
@@ -101,3 +100,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Reorder suggestions: days of stock left at the last 30 days' sales and how many to order, on the dashboard and in the morning email           | Stage 75 (`git log --grep "Stage 75"`) |
 | Search insights: Admin → Searches with the week's most searched words and the searches that found nothing                                     | Stage 76 (`git log --grep "Stage 76"`) |
 | Gift cards: bought online for someone by email (now or on a chosen day), redeemed as store credit within a year                               | Stage 77 (`git log --grep "Stage 77"`) |
+| Install as an app: a web app manifest and the store's own icons, so phones offer "Add to home screen"                                         | Stage 78 (`git log --grep "Stage 78"`) |
