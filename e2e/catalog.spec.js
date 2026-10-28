@@ -47,10 +47,10 @@ test('filters and sorting update the URL and the results', async ({ page }) => {
   await page.goto('/search?category=mobiles');
   await expect(resultCount(page)).toHaveText('7 products');
 
-  await tick(page.getByRole('checkbox', { name: /Voltix/ }));
+  await tick(page.getByRole('checkbox', { name: /^Voltix/ }));
   await expect(page).toHaveURL(/brand=Voltix/);
   await expect(resultCount(page)).toHaveText('2 products');
-  await tick(page.getByRole('checkbox', { name: /Orbit/ }));
+  await tick(page.getByRole('checkbox', { name: /^Orbit/ }));
   await expect(resultCount(page)).toHaveText('4 products');
 
   await page.getByRole('combobox', { name: 'Sort by' }).selectOption('price_asc');

@@ -113,6 +113,8 @@ export const PRIVATE_PATHS = [
   '/forgot-password',
   '/reset-password',
   '/confirm-email',
+  // Any mix of products (stage 73): endless addresses with nothing new on them.
+  '/compare',
   '/api/',
 ];
 

@@ -698,6 +698,145 @@ p a:not(.btn) {
 .address-grid input {
   font-weight: 400;
 }
+/* Compare products (stage 73): the tick under cards, the tray across the bottom and the comparison table. */
+.card-with-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.card-with-compare .card {
+  flex: 1;
+}
+.compare-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.compare-toggle.disabled {
+  cursor: default;
+}
+.product-extras {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+.compare-tray {
+  position: fixed;
+  left: 16px;
+  /* Room for the shopping assistant's button in the corner. */
+  right: 96px;
+  bottom: 16px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 0.15);
+}
+.compare-tray-space {
+  height: 96px;
+}
+.compare-tray p {
+  margin: 0 0 4px;
+}
+.compare-tray ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.compare-tray li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.compare-tray-title {
+  max-width: 16em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+.compare-tray-items {
+  min-width: 0;
+}
+.compare-tray-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.compare-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 560px;
+}
+.compare-table th,
+.compare-table td {
+  padding: 10px;
+  border-top: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+.compare-table thead th,
+.compare-table thead td {
+  border-top: 0;
+}
+.compare-table tbody th {
+  width: 110px;
+  color: var(--muted);
+  font-weight: 600;
+}
+/* The row names stay in view while the table scrolls sideways on a phone. */
+.compare-table tbody th,
+.compare-table thead td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+.compare-product {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text);
+  font-weight: 600;
+}
+.compare-product img {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+.compare-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+@media (max-width: 800px) {
+  .compare-tray {
+    left: 8px;
+    right: 80px;
+    bottom: 8px;
+  }
+  .compare-tray-space {
+    height: 150px;
+  }
+  .compare-table tbody th {
+    width: 80px;
+  }
+}
 /* The account page's store credit history. */
 .credit-history {
   list-style: none;

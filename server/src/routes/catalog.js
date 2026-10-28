@@ -205,6 +205,8 @@ export const toProductCard = (doc) => ({
   slug: doc.slug,
   title: doc.title,
   brand: doc.brand,
+  // For comparing (stage 73): products are compared within one category.
+  categoryId: doc.categoryId.toString(),
   price: doc.price,
   mrp: doc.mrp,
   stock: doc.stock,

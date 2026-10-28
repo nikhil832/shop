@@ -7,6 +7,7 @@ import Reviews from '../components/Reviews.jsx';
 import Questions from '../components/Questions.jsx';
 import StockAlertButton from '../components/StockAlertButton.jsx';
 import WishlistButton from '../components/WishlistButton.jsx';
+import CompareToggle from '../components/CompareToggle.jsx';
 import DeliveryCheck from '../components/DeliveryCheck.jsx';
 import ProductRow from '../components/ProductRow.jsx';
 import RecentlyViewed from '../components/RecentlyViewed.jsx';
@@ -228,7 +229,10 @@ export default function Product() {
           ) : (
             <AddToCart key={product.id} product={product} variant={variant} missing={missing} />
           )}
-          <WishlistButton key={`wish-${product.id}`} product={product} />
+          <div className="product-extras">
+            <WishlistButton key={`wish-${product.id}`} product={product} />
+            <CompareToggle product={product} />
+          </div>
           <DeliveryCheck />
 
           {product.highlights.length > 0 && (

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { query } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
+import CompareToggle from '../components/CompareToggle.jsx';
 import { formatPrice } from '../format.js';
 import { useFetch } from '../useFetch.js';
 
@@ -262,7 +263,10 @@ export default function Search() {
         )}
         <div className={`product-grid ${loading ? 'stale' : ''}`}>
           {data?.items.map((p) => (
-            <ProductCard key={p.id} product={p} />
+            <div key={p.id} className="card-with-compare">
+              <ProductCard product={p} />
+              <CompareToggle product={p} />
+            </div>
           ))}
         </div>
 

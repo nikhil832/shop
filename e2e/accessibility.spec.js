@@ -65,6 +65,7 @@ const CUSTOMER = (o) => [
   `/orders/${o.id}`,
   `/orders/${o.id}/invoice`,
   '/wishlist',
+  '/compare?slugs=stride-running-shoes,urbane-men-slim-fit-jeans',
   '/account',
   '/help',
 ];
