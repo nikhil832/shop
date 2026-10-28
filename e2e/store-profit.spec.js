@@ -10,7 +10,7 @@ const ADDRESS = {
   pincode: '411001',
 };
 
-// The only spec that gives products a cost price, so the dashboard's profit is this product's.
+// The only spec that sells products with a cost price, so the dashboard's profit is this product's.
 test('an admin enters a cost price and the dashboard shows the profit and margin', async ({ page, browser }) => {
   expect((await page.request.post('/api/auth/login', { data: ADMIN })).ok()).toBe(true);
   const [category] = await (await page.request.get('/api/categories')).json();

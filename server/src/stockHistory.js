@@ -6,7 +6,8 @@ import { requirePermission } from './staff.js';
 // Stock history (stage 70, collection `stockHistory`): every change to a product's or a variant's stock, with why,
 // written in the same transaction as the change itself, so the list can't miss one or show one that didn't happen:
 // { productId, variantId: ObjectId | null, label (the variant's, or null for the product's own stock), change,
-//   after (that stock once changed), reason (REASONS), orderId?, orderNumber?, returnId?, by: { id, name } | null, at }
+//   after (that stock once changed), reason (REASONS), orderId?, orderNumber?, returnId?, receiptId?, receiptNumber?,
+//   by: { id, name } | null, at }
 // A product with variants has entries per variant only: its own stock is their sum. Entries go after HISTORY_DAYS.
 
 export const HISTORY_DAYS = 365;
@@ -17,6 +18,7 @@ export const REASONS = {
   store_cancelled: 'Cancelled by the store',
   released: 'Unpaid order released',
   returned_to_sender: 'Returned to sender',
+  received: 'Received',
   returned: 'Return approved',
   edited: 'Changed by hand',
   imported: 'CSV import',
@@ -93,6 +95,8 @@ const toEntry = (doc) => ({
   reason: doc.reason,
   order: doc.orderId ? { id: doc.orderId.toString(), number: doc.orderNumber ?? null } : null,
   returnId: doc.returnId?.toString() ?? null,
+  // A delivery from a supplier (stockReceipts.js).
+  receipt: doc.receiptId ? { id: doc.receiptId.toString(), number: doc.receiptNumber } : null,
   by: doc.by?.name ?? null,
 });
 

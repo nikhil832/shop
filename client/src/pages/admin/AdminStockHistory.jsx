@@ -13,6 +13,7 @@ const REASONS = {
   store_cancelled: 'Cancelled by the store',
   released: 'Unpaid order released',
   returned_to_sender: 'Returned to sender',
+  received: 'Received',
   returned: 'Return approved',
   edited: 'Changed by hand',
   imported: 'CSV import',
@@ -21,7 +22,7 @@ const REASONS = {
 
 const signed = (n) => (n > 0 ? `+${n}` : `−${-n}`);
 
-function Why({ entry }) {
+function Why({ entry, admin }) {
   const { order } = entry;
   return (
     <>
@@ -30,6 +31,17 @@ function Why({ entry }) {
         <>
           {' · '}
           <Link to={`/admin/orders/${order.id}`}>Order #{order.number ?? order.id.slice(-8).toUpperCase()}</Link>
+        </>
+      )}
+      {entry.receipt && (
+        <>
+          {' · '}
+          {/* Packers see the number; the delivery's page is for admins. */}
+          {admin ? (
+            <Link to={`/admin/stock-receipts/${entry.receipt.id}`}>Delivery #{entry.receipt.number}</Link>
+          ) : (
+            `Delivery #${entry.receipt.number}`
+          )}
         </>
       )}
       {entry.by && <span className="muted"> · {entry.by}</span>}
@@ -69,11 +81,19 @@ export default function AdminStockHistory() {
       <section className="panel">
         <div className="admin-head">
           <h1>Stock history{product && `: ${product.title}`}</h1>
+          {product && can(user, '*') && (
+            <Link
+              to={`/admin/stock-receipts/new?product=${product.id}${variant && variant !== 'product' ? `&variant=${variant}` : ''}`}
+              className="btn small"
+            >
+              Receive stock
+            </Link>
+          )}
         </div>
         <p className="muted small">
-          Every change to this product&apos;s stock, newest first: orders, cancellations, returns, unpaid orders
-          released, and changes by hand or from a CSV file. Kept for a year; changes from before this list existed
-          aren&apos;t in it.
+          Every change to this product&apos;s stock, newest first: deliveries, orders, cancellations, returns, unpaid
+          orders released, and changes by hand or from a CSV file. Kept for a year; changes from before this list
+          existed aren&apos;t in it.
         </p>
         {product && (
           <p>
@@ -122,7 +142,7 @@ export default function AdminStockHistory() {
                     <td className="num">{signed(e.change)}</td>
                     <td className="num">{e.after}</td>
                     <td>
-                      <Why entry={e} />
+                      <Why entry={e} admin={can(user, '*')} />
                     </td>
                   </tr>
                 ))}

@@ -7,6 +7,7 @@ export const ADMIN_TABS = [
   { to: '/admin', label: 'Dashboard', permission: '*' },
   { to: '/admin/orders', label: 'Orders', permission: 'orders.view' },
   { to: '/admin/products', label: 'Products', permission: '*' },
+  { to: '/admin/stock-receipts', label: 'Receiving', permission: '*' },
   { to: '/admin/customers', label: 'Customers', permission: '*' },
   { to: '/admin/searches', label: 'Searches', permission: '*' },
   { to: '/admin/categories', label: 'Categories', permission: '*' },

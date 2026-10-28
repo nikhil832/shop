@@ -7,11 +7,10 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                                                                                                          | Why                                                                                                        | To start                |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------- |
-| 1   | **Receiving stock**: record a delivery from a supplier ("50 received from Mehta Traders at ₹220 each"), which adds the stock, shows in stock history as "Received" and updates the cost price | Restocking is now a bare number change by hand; this keeps who supplied what, when and at what price       | "start receiving stock" |
-| 2   | **Customer notes and tags**: admin-only notes and tags (VIP, wholesale, watch) on the customer page, shown on that customer's orders and help requests                                        | Lets the team remember things about regular customers and problem accounts, building on the customers page | "start customer notes"  |
-| 3   | **Product bundles**: admins put 2–3 products together at a bundle price ("Mixer + extra jar, save ₹300"), shown on those products' pages and bought in one click                              | Raises the order value; "frequently bought together" already shows which products sell together            | "start bundles"         |
+| #   | Idea                                                                                                                                                             | Why                                                                                                        | To start               |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------- |
+| 1   | **Customer notes and tags**: admin-only notes and tags (VIP, wholesale, watch) on the customer page, shown on that customer's orders and help requests           | Lets the team remember things about regular customers and problem accounts, building on the customers page | "start customer notes" |
+| 2   | **Product bundles**: admins put 2–3 products together at a bundle price ("Mixer + extra jar, save ₹300"), shown on those products' pages and bought in one click | Raises the order value; "frequently bought together" already shows which products sell together            | "start bundles"        |
 
 ## Set aside
 
@@ -106,3 +105,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Install as an app: a web app manifest and the store's own icons, so phones offer "Add to home screen"                                         | Stage 78 (`git log --grep "Stage 78"`) |
 | Refused deliveries and COD limits: "Returned to sender" for shipped orders, a COD order limit, and online payment after repeated refusals     | Stage 79 (`git log --grep "Stage 79"`) |
 | Cost prices and profit: admin-only cost per product and option, kept on each order item; profit and margin on the dashboard                   | Stage 80 (`git log --grep "Stage 80"`) |
+| Receiving stock: supplier deliveries add stock, show as "Received" in stock history and average into the cost price                           | Stage 81 (`git log --grep "Stage 81"`) |
