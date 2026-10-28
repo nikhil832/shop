@@ -439,10 +439,22 @@ ${button('Open the order', url)}`,
 
 // The morning list of products running out, for the admins. `products` are from lowStockProducts() (lowest first, at
 // most a page of them) and `total` is how many there are in all.
-export function lowStockEmail(products, total, publicUrl = DEFAULT_PUBLIC_URL) {
+// `soon` (stage 75, reorder.js): { items, total } of products and options running out within RUNOUT_DAYS at their
+// recent sales, listed after the low ones with how many to order; either list may be empty, not both.
+export function lowStockEmail(products, total, publicUrl = DEFAULT_PUBLIC_URL, soon = { items: [], total: 0 }) {
   const soldOut = products.filter((p) => p.stock === 0).length;
-  const subject = `Low stock: ${total} product${total === 1 ? '' : 's'} to restock${soldOut ? ` (${soldOut} sold out)` : ''}`;
+  const plural = (n) => `${n} product${n === 1 ? '' : 's'}`;
+  const subject = total
+    ? `Low stock: ${plural(total)} to restock${soldOut ? ` (${soldOut} sold out)` : ''}${soon.total ? `, ${soon.total} running out soon` : ''}`
+    : `Running out soon: ${plural(soon.total)} at recent sales`;
   const url = `${publicUrl}/admin/products?status=low`;
+  const soonRows = soon.items.map((r) => ({
+    title: r.label ? `${r.title} (${r.label})` : r.title,
+    detail: `${r.stock} left, sells about ${r.perDay} a day${r.suggest ? `; order about ${r.suggest} for a month` : ''}`,
+    left: r.daysLeft === 0 ? 'today' : `${r.daysLeft} day${r.daysLeft === 1 ? '' : 's'}`,
+  }));
+  const soonIntro = 'Running out within two weeks at the last month’s sales:';
+  const soonMore = soon.total > soon.items.length ? `And ${soon.total - soon.items.length} more.` : '';
   const left = (stock) => (stock === 0 ? 'sold out' : `${stock} left`);
   const rows = products.map((p) => ({
     title: p.title,
@@ -453,9 +465,15 @@ export function lowStockEmail(products, total, publicUrl = DEFAULT_PUBLIC_URL) {
   const intro = 'These products in the store have 5 or fewer left.';
 
   const text = [
-    intro,
-    rows.map((r) => `${r.title}: ${r.left}${r.detail ? ` (${r.detail})` : ''}`).join('\n'),
+    ...(total ? [intro, rows.map((r) => `${r.title}: ${r.left}${r.detail ? ` (${r.detail})` : ''}`).join('\n')] : []),
     ...(more ? [more] : []),
+    ...(soon.total
+      ? [
+          soonIntro,
+          soonRows.map((r) => `${r.title}: ${r.left} (${r.detail})`).join('\n'),
+          ...(soonMore ? [soonMore] : []),
+        ]
+      : []),
     `See them in the admin panel: ${url}`,
     'Bazaar · a demo store',
   ].join('\n\n');
@@ -463,7 +481,9 @@ export function lowStockEmail(products, total, publicUrl = DEFAULT_PUBLIC_URL) {
   const cell = 'padding:6px 0;border-bottom:1px solid #e5e7eb;vertical-align:top';
   const html = layout(
     subject,
-    `<p>${escapeHtml(intro)}</p>
+    `${
+      total
+        ? `<p>${escapeHtml(intro)}</p>
 <table style="width:100%;border-collapse:collapse;margin:16px 0">
 ${rows
   .map(
@@ -472,7 +492,23 @@ ${rows
   )
   .join('\n')}
 </table>
-${more ? `<p>${escapeHtml(more)}</p>` : ''}
+${more ? `<p>${escapeHtml(more)}</p>` : ''}`
+        : ''
+    }
+${
+  soon.total
+    ? `<p>${escapeHtml(soonIntro)}</p>
+<table style="width:100%;border-collapse:collapse;margin:16px 0">
+${soonRows
+  .map(
+    (r) =>
+      `<tr><td style="${cell}">${escapeHtml(r.title)}<br><span style="font-size:13px;color:#6b7280">${escapeHtml(r.detail)}</span></td><td style="${cell};text-align:right;white-space:nowrap">${r.left}</td></tr>`,
+  )
+  .join('\n')}
+</table>
+${soonMore ? `<p>${escapeHtml(soonMore)}</p>` : ''}`
+    : ''
+}
 ${button('Open low stock', url)}`,
     "You're getting this email each morning because you're an admin of the store and some products are running low.",
   );

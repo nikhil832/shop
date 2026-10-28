@@ -389,7 +389,7 @@ function LowStockEmailSwitch({ enabled }) {
     <>
       <label className="check">
         <input type="checkbox" checked={state.on} disabled={state.busy} onChange={(e) => change(e.target.checked)} />
-        Email this list to admins each morning
+        Email these lists to admins each morning
       </label>
       {state.error && <p className="error small">{state.error}</p>}
     </>
@@ -591,6 +591,48 @@ export default function AdminDashboard() {
                     <Link to="/admin/products?status=low">see them all</Link>.
                   </>
                 )}
+              </p>
+              <h3>Running out soon</h3>
+              {data.runningOut.items.length === 0 ? (
+                <p className="muted">Nothing runs out within two weeks at the last month&apos;s sales.</p>
+              ) : (
+                <div className="table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Product</th>
+                        <th className="num">Left</th>
+                        <th className="num">Days</th>
+                        <th className="num">Order</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.runningOut.items.map((r) => (
+                        <tr key={`${r.productId}.${r.variantId ?? ''}`}>
+                          <td>
+                            <Link
+                              to={`/admin/products/${r.productId}/stock${r.variantId ? `?variant=${r.variantId}` : ''}`}
+                            >
+                              {r.title}
+                              {r.label && ` (${r.label})`}
+                            </Link>
+                            <span className="muted small block">
+                              {r.sold} sold in {r.days} days, about {r.perDay} a day
+                            </span>
+                          </td>
+                          <td className="num">{r.stock}</td>
+                          <td className="num">{r.daysLeft}</td>
+                          <td className="num">{r.suggest || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <p className="muted small">
+                How long the stock lasts at the last 30 days&apos; sales, and about how many to order for a month.
+                {data.runningOut.total > data.runningOut.items.length &&
+                  ` Showing the ${data.runningOut.items.length} soonest of ${data.runningOut.total}.`}
               </p>
               <LowStockEmailSwitch enabled={data.lowStockEmail} />
             </section>

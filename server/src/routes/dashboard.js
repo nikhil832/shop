@@ -9,6 +9,7 @@ import { OPEN_REPORTS } from './errorReports.js';
 import { FLAGGED } from '../screening.js';
 import { WAITING } from './help.js';
 import { storageUse } from '../storage.js';
+import { runningOut } from '../reorder.js';
 
 // The `settings` document of the morning low-stock email (lowStockEmail.js): { day, at, enabled }.
 export const LOW_STOCK_EMAIL = 'lowStockEmail';
@@ -82,7 +83,8 @@ export function dashboardRouter({ db, config }) {
   // running out.
   router.get('/admin/dashboard', async (req, res) => {
     const { days } = parse(dashboardQuery, req.query);
-    const from = periodStart(new Date(), days);
+    const now = new Date();
+    const from = periodStart(now, days);
     const previousFrom = new Date(from.getTime() - days * DAY);
     const current = { createdAt: { $gte: from }, status: { $in: SOLD } };
 
@@ -99,6 +101,7 @@ export function dashboardRouter({ db, config }) {
       flaggedQuestions,
       helpWaiting,
       storage,
+      soon,
     ] = await Promise.all([
       orders
         .aggregate([
@@ -196,6 +199,7 @@ export function dashboardRouter({ db, config }) {
       db.collection('questions').countDocuments(FLAGGED),
       db.collection('helpRequests').countDocuments(WAITING),
       storageUse(db, config),
+      runningOut(db, now),
     ]);
 
     const totals = stats.current[0] ?? { revenue: 0, orders: 0, discount: 0, itemsSold: 0 };
@@ -279,6 +283,8 @@ export function dashboardRouter({ db, config }) {
       helpWaiting,
       // How full the database is (storage.js).
       storage,
+      // Products and options running out within two weeks at their recent sales, with how many to order (reorder.js).
+      runningOut: soon,
     });
   });
 

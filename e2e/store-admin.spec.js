@@ -235,7 +235,7 @@ test('admin pages fit a phone screen without sideways scrolling', async ({ page 
 
 test('the morning low-stock email can be switched off and on from the dashboard', async ({ page }) => {
   await logIn(page, ADMIN);
-  const toggle = page.getByRole('checkbox', { name: 'Email this list to admins each morning' });
+  const toggle = page.getByRole('checkbox', { name: 'Email these lists to admins each morning' });
   await expect(toggle).toBeChecked();
   await toggle.click();
   await expect(toggle).not.toBeChecked();
@@ -252,7 +252,7 @@ test('the morning low-stock email can be switched off and on from the dashboard'
 test('the activity log shows what admins changed, filtered by area', async ({ page }) => {
   await logIn(page, ADMIN);
   // Two changes that leave things as they were: the morning email off, then on again.
-  const toggle = page.getByRole('checkbox', { name: 'Email this list to admins each morning' });
+  const toggle = page.getByRole('checkbox', { name: 'Email these lists to admins each morning' });
   await toggle.click();
   await expect(toggle).toBeEnabled();
   await expect(toggle).not.toBeChecked();
