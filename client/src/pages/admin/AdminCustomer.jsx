@@ -21,6 +21,7 @@ const CREDIT_REASONS = {
   returned: 'Return refunded as credit',
   cancelled: 'Back from a cancelled order',
   spent: 'Paid for an order',
+  gift_card: 'Gift card redeemed',
 };
 
 // One account on Admin → Customers (stage 74): details, totals, the latest orders, returns and help requests, and store

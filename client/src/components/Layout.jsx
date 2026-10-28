@@ -45,7 +45,8 @@ export default function Layout() {
         </PageError>
       </main>
       <footer className="footer">
-        Bazaar · a demo store · prices in ₹ · <Link to="/help">Contact us</Link>
+        Bazaar · a demo store · prices in ₹ · <Link to="/gift-cards">Gift cards</Link> ·{' '}
+        <Link to="/help">Contact us</Link>
       </footer>
       <CompareTray />
       <AssistantButton />

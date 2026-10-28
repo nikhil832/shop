@@ -17,6 +17,7 @@ import { sendWeeklyNote } from './weeklyNote.js';
 import { updateReviewSummaries } from './reviewSummaries.js';
 import { screenPosts } from './screening.js';
 import { runSales } from './sales.js';
+import { remindGiftCards, sendScheduledGiftCards } from './giftCards.js';
 import { loadConfig } from './config.js';
 import { previewRouter } from './preview.js';
 import { checkStorage } from './storage.js';
@@ -38,8 +39,8 @@ const app = createApp(ctx);
 // Every minute: start and end scheduled sales, release the stock of online orders whose 30-minute payment window has
 // passed, then email customers waiting for products that are back in stock (which that release can cause), those whose
 // wishlist got cheaper and those who left a cart a day ago, once a morning the admins' list of products running out,
-// on Mondays their weekly note, rewrite "What customers say" for products whose reviews changed, and screen new
-// reviews and questions.
+// on Mondays their weekly note, rewrite "What customers say" for products whose reviews changed, screen new
+// reviews and questions, and send gift cards whose day has come.
 const sweeper = setInterval(async () => {
   // First, so a sale starting or ending now is in the prices the emails below read.
   await runSales(ctx).catch((err) => console.error(err));
@@ -51,6 +52,9 @@ const sweeper = setInterval(async () => {
   await sendWeeklyNote(ctx).catch((err) => console.error(err));
   await updateReviewSummaries(ctx).catch((err) => console.error(err));
   await screenPosts(ctx).catch((err) => console.error(err));
+  // Gift cards for today, and reminders a month before one runs out (giftCards.js).
+  await sendScheduledGiftCards(ctx).catch((err) => console.error(err));
+  await remindGiftCards(ctx).catch((err) => console.error(err));
 }, 60_000);
 
 // At startup (the free plan sleeps, so hourly runs may not come) and then every hour: delete uploaded photos that no

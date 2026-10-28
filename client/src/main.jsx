@@ -67,6 +67,7 @@ const Account = lazyPage(() => import('./pages/Account.jsx'));
 const Help = lazyPage(() => import('./pages/Help.jsx'));
 const HelpRequest = lazyPage(() => import('./pages/HelpRequest.jsx'));
 const Compare = lazyPage(() => import('./pages/Compare.jsx'));
+const GiftCards = lazyPage(() => import('./pages/GiftCards.jsx'));
 // Which of them the browser opened on, if any.
 const OPENED_ON = [
   [/^\/admin(\/|$)/, AdminRoutes],
@@ -77,6 +78,7 @@ const OPENED_ON = [
   [/^\/help$/, Help],
   [/^\/help\/[^/]+$/, HelpRequest],
   [/^\/compare$/, Compare],
+  [/^\/gift-cards$/, GiftCards],
 ].find(([path]) => path.test(window.location.pathname))?.[1];
 
 watchSecurityPolicy();
@@ -109,6 +111,7 @@ Promise.resolve(OPENED_ON?.preload())
                 <Route path="orders/:id/return" element={<ReturnRequest />} />
                 <Route path="wishlist" element={<Wishlist />} />
                 <Route path="compare" element={<Compare />} />
+                <Route path="gift-cards" element={<GiftCards />} />
                 <Route path="account" element={<Account />} />
                 <Route path="help" element={<Help />} />
                 <Route path="help/:id" element={<HelpRequest />} />

@@ -21,6 +21,7 @@ const NAMES = {
   announcements: 'Announcements',
   creditLedger: 'Store credit',
   searchStats: 'Search insights',
+  giftCards: 'Gift cards',
   errorReports: 'Error reports',
   carts: 'Saved carts',
   wishlist: 'Wishlists',

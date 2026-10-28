@@ -65,6 +65,7 @@ const CUSTOMER = (o) => [
   `/orders/${o.id}`,
   `/orders/${o.id}/invoice`,
   '/wishlist',
+  '/gift-cards',
   '/compare?slugs=stride-running-shoes,urbane-men-slim-fit-jeans',
   '/account',
   '/help',
@@ -95,6 +96,7 @@ const ADMIN_PAGES = (o, p) => [
   '/admin/announcements',
   '/admin/customers',
   '/admin/searches',
+  '/admin/gift-cards',
 ];
 
 test('every page passes the accessibility check (light theme)', async ({ browser }) => {

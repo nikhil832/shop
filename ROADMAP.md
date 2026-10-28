@@ -7,10 +7,9 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                                                  | Why                                                                                                | To start               |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------- |
-| 1   | **Gift cards**: buy a gift card online (₹500–₹10,000) for someone by email; they redeem the code as store credit                      | Builds on store credit (stage 72): a gift option for festivals, and money in before anything ships | "start gift cards"     |
-| 2   | **Install as an app**: a web app manifest and icons, so phones offer "Add to home screen" and the store opens full-screen like an app | Cheap (no app store, no new code paths) and brings customers back with an icon on their phone      | "start install as app" |
+| #   | Idea                                                                                                                                  | Why                                                                                           | To start               |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------- |
+| 1   | **Install as an app**: a web app manifest and icons, so phones offer "Add to home screen" and the store opens full-screen like an app | Cheap (no app store, no new code paths) and brings customers back with an icon on their phone | "start install as app" |
 
 ## Set aside
 
@@ -101,3 +100,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Customers page: Admin → Customers with orders, money spent, returns, help requests and store credit per account                               | Stage 74 (`git log --grep "Stage 74"`) |
 | Reorder suggestions: days of stock left at the last 30 days' sales and how many to order, on the dashboard and in the morning email           | Stage 75 (`git log --grep "Stage 75"`) |
 | Search insights: Admin → Searches with the week's most searched words and the searches that found nothing                                     | Stage 76 (`git log --grep "Stage 76"`) |
+| Gift cards: bought online for someone by email (now or on a chosen day), redeemed as store credit within a year                               | Stage 77 (`git log --grep "Stage 77"`) |

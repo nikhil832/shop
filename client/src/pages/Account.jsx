@@ -162,6 +162,7 @@ const CREDIT_REASONS = {
   returned: 'Return refunded as credit',
   cancelled: 'Back from a cancelled order',
   spent: 'Paid for an order',
+  gift_card: 'Gift card redeemed',
 };
 
 // Store credit (stage 72, #credit): the balance and every change, newest first. Shown once there is any history.
@@ -173,6 +174,7 @@ function StoreCredit({ user }) {
       <h2 id="credit-heading">Store credit</h2>
       <p>
         You have <strong>{formatPrice(user.credit)}</strong>, used at checkout before you pay. It doesn&apos;t expire.
+        Have a gift card? <Link to="/gift-cards">Redeem it</Link>.
       </p>
       <ul className="credit-history">
         {data.items.map((e) => (

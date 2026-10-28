@@ -49,6 +49,16 @@ const INDEXES = {
     [{ area: 1, at: -1 }],
     [{ 'by.id': 1, at: -1 }],
   ],
+  // Gift cards: by code (only once paid), by Razorpay order (payments and the webhook), by buyer, the sweep's lists;
+  // unpaid ones go UNPAID_DAYS after they were started (payBy is unset once paid).
+  giftCards: [
+    [{ codeHash: 1 }, { unique: true, partialFilterExpression: { codeHash: { $exists: true } } }],
+    [{ 'payment.razorpayOrderId': 1 }],
+    [{ buyerId: 1, createdAt: -1 }],
+    [{ status: 1, sendAt: 1 }],
+    [{ status: 1, expiresAt: 1 }],
+    [{ payBy: 1 }, { expireAfterSeconds: 0 }],
+  ],
   // Search insights: one per week and search; gone KEEP_DAYS after the last one.
   searchStats: [
     [{ week: 1, term: 1 }, { unique: true }],

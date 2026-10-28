@@ -17,6 +17,7 @@ import AdminAnnouncements from './AdminAnnouncements.jsx';
 import AdminCustomers from './AdminCustomers.jsx';
 import AdminCustomer from './AdminCustomer.jsx';
 import AdminSearches from './AdminSearches.jsx';
+import AdminGiftCards from './AdminGiftCards.jsx';
 import AdminOrder from './AdminOrder.jsx';
 import AdminOrders from './AdminOrders.jsx';
 import AdminPackingSlips from './AdminPackingSlips.jsx';
@@ -70,6 +71,7 @@ export default function AdminRoutes() {
         <Route path="customers" element={<AdminCustomers />} />
         <Route path="customers/:id" element={<AdminCustomer />} />
         <Route path="searches" element={<AdminSearches />} />
+        <Route path="gift-cards" element={<AdminGiftCards />} />
       </Route>
     </Routes>
   );

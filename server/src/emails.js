@@ -808,3 +808,90 @@ ${button('See my store credit', url)}`,
   );
   return { subject, text, html };
 }
+
+// ---- Gift cards (stage 77, giftCards.js) ----
+
+const longDate = (d) =>
+  new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
+
+// For the recipient: who it's from, their message, the code and how to use it.
+export function giftCardEmail(card, code, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = card.recipient.name.split(/\s+/)[0];
+  const subject = `${card.buyerName} sent you a ${rupees(card.amount)} Bazaar gift card`;
+  const url = `${publicUrl}/gift-cards`;
+  const lines = [
+    `${card.buyerName} sent you a gift card for ${rupees(card.amount)} to spend at Bazaar.`,
+    ...(card.message ? [`"${card.message}"`] : []),
+    `Your code: ${code}`,
+    `To use it, log in (or make an account) and enter the code under Gift cards: it becomes store credit, used at checkout. Redeem it by ${longDate(card.expiresAt)}.`,
+  ];
+  const text = [`Hi ${firstName},`, ...lines, `Redeem it here: ${url}`, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p>${escapeHtml(lines[0])}</p>
+${card.message ? `<blockquote style="margin:0 0 16px;padding:8px 12px;border-left:3px solid #e5e7eb;white-space:pre-wrap">${escapeHtml(card.message)}</blockquote>` : ''}
+<p style="font-size:22px;font-weight:700;letter-spacing:2px;font-family:monospace">${escapeHtml(code)}</p>
+<p>${escapeHtml(lines.at(-1))}</p>
+${button('Redeem it', url)}`,
+    `You're getting this email because ${card.buyerName} sent you a gift card.`,
+  );
+  return { subject, text, html };
+}
+
+// For the buyer: the receipt, when it goes, and a copy of the code in case the recipient's email goes astray.
+export function giftCardReceiptEmail(card, code, publicUrl = DEFAULT_PUBLIC_URL) {
+  const subject = `Your ${rupees(card.amount)} gift card for ${card.recipient.name}`;
+  const url = `${publicUrl}/gift-cards`;
+  const when =
+    card.status === 'scheduled'
+      ? `We'll email it to ${card.recipient.email} on ${longDate(card.sendAt)}.`
+      : `We've emailed it to ${card.recipient.email}.`;
+  const lines = [
+    `Thanks! You paid ${rupees(card.amount)} for a gift card for ${card.recipient.name}.`,
+    when,
+    `A copy of the code, in case their email goes astray: ${code}. It can be redeemed until ${longDate(card.expiresAt)}.`,
+  ];
+  const text = [...lines, `Your gift cards: ${url}`, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+${button('Your gift cards', url)}`,
+    "You're getting this email because you bought a gift card.",
+  );
+  return { subject, text, html };
+}
+
+// For a recipient who hasn't redeemed it: it runs out soon. The code isn't kept, so it points to the first email.
+export function giftCardReminderEmail(card, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = card.recipient.name.split(/\s+/)[0];
+  const subject = `Your Bazaar gift card runs out on ${longDate(card.expiresAt)}`;
+  const url = `${publicUrl}/gift-cards`;
+  const line = `The ${rupees(card.amount)} gift card ${card.buyerName} sent you hasn't been redeemed yet. The code is in our email from ${longDate(card.sentAt)}; redeem it by ${longDate(card.expiresAt)}.`;
+  const text = [`Hi ${firstName},`, line, `Redeem it here: ${url}`, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p>${escapeHtml(line)}</p>
+${button('Redeem it', url)}`,
+    `You're getting this email because ${card.buyerName} sent you a gift card.`,
+  );
+  return { subject, text, html };
+}
+
+// For the buyer: the store cancelled their card (not redeemed) and refunds it.
+export function giftCardCancelledEmail(card) {
+  const subject = `Your ${rupees(card.amount)} gift card was cancelled`;
+  const refund =
+    card.payment.status === 'refunded'
+      ? `We've started a refund of ${rupees(card.amount)} to your original payment method. It usually reaches you in 5–7 working days.`
+      : `Your refund of ${rupees(card.amount)} is being processed. We'll take care of it.`;
+  const lines = [`We've cancelled the gift card for ${card.recipient.name}; its code no longer works.`, refund];
+  const text = [...lines, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n'),
+    "You're getting this email because you bought a gift card.",
+  );
+  return { subject, text, html };
+}

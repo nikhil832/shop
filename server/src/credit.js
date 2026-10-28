@@ -22,6 +22,7 @@ export const REASONS = {
   returned: 'Return refunded as credit',
   cancelled: 'Credit back from a cancelled order',
   spent: 'Paid for an order',
+  gift_card: 'Gift card redeemed',
 };
 export const MAX_GRANT = 1_000_000; // ₹10,000 per goodwill change
 const PAGE = 50;

@@ -4,6 +4,7 @@ import { requireUser } from '../auth.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
 import { checkoutParams, confirmPayment, syncPayment } from '../payments.js';
 import { expireOrder, toOrder } from './orders.js';
+import { confirmGiftCard } from '../giftCards.js';
 
 // What Razorpay's checkout hands back to the browser after a successful payment.
 const paymentBody = z.object({
@@ -78,13 +79,19 @@ export function paymentsRouter(ctx) {
     const payment = event.payload?.payment?.entity;
     if (WEBHOOK_EVENTS.has(event.event) && payment?.order_id) {
       const order = await orders.findOne({ 'payment.razorpayOrderId': payment.order_id });
-      if (order) {
+      // Or a gift card's payment (giftCards.js), confirmed the same way.
+      const card =
+        !order && (await db.collection('giftCards').findOne({ 'payment.razorpayOrderId': payment.order_id }));
+      if (order || card) {
         try {
-          await confirmPayment(ctx, order, payment);
+          await (order ? confirmPayment(ctx, order, payment) : confirmGiftCard(ctx, card, payment));
         } catch (err) {
           // A 4xx means the event doesn't fit the order (wrong amount etc.): retrying won't help, so acknowledge it.
           if (!(err.status < 500)) throw err;
-          console.error(`Webhook ${event.event} for order ${order._id} ignored:`, err.message);
+          console.error(
+            `Webhook ${event.event} for ${order ? 'order' : 'gift card'} ${(order ?? card)._id} ignored:`,
+            err.message,
+          );
         }
       }
     }
