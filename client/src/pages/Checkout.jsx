@@ -296,6 +296,8 @@ export default function Checkout() {
       <OrderSummary
         count={cartCount(quote.items)}
         subtotal={quote.subtotal}
+        bundleSaving={quote.bundleSaving}
+        bundles={quote.bundles}
         delivery={quote.delivery}
         discount={quote.discount}
         couponCode={quote.coupon?.code}

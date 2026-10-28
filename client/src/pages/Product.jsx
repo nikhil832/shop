@@ -9,6 +9,7 @@ import StockAlertButton from '../components/StockAlertButton.jsx';
 import WishlistButton from '../components/WishlistButton.jsx';
 import CompareToggle from '../components/CompareToggle.jsx';
 import DeliveryCheck from '../components/DeliveryCheck.jsx';
+import BundleOffers from '../components/BundleOffers.jsx';
 import ProductRow from '../components/ProductRow.jsx';
 import RecentlyViewed from '../components/RecentlyViewed.jsx';
 import { rememberViewed } from '../recent.js';
@@ -234,6 +235,7 @@ export default function Product() {
             <CompareToggle product={product} />
           </div>
           <DeliveryCheck />
+          <BundleOffers key={product.slug} slug={product.slug} />
 
           {product.highlights.length > 0 && (
             <section>

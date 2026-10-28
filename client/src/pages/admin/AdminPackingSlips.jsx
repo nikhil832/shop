@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from 'react-router';
-import { lineKey } from '../../cart.js';
+import { itemKey } from '../../cart.js';
 import { formatDate, formatPrice, orderNumber } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 import { StatusBadge } from '../Orders.jsx';
@@ -82,7 +82,7 @@ export default function AdminPackingSlips() {
               </thead>
               <tbody>
                 {order.items.map((i) => (
-                  <tr key={lineKey(i)}>
+                  <tr key={itemKey(i)}>
                     <td>
                       {i.title}
                       {i.brand && <span className="muted small"> · {i.brand}</span>}

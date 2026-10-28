@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { addLines, cartQuery, lineKey } from '../cart.js';
+import { addLines, cartQuery, lineKey, itemKey } from '../cart.js';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
@@ -34,7 +34,13 @@ function notAddable(line) {
 // Puts the order's items that can still be bought back in the cart, as many as were bought (or as are left), at
 // today's prices. Returns { added, skipped: [{ title, reason }] }.
 async function buyAgain(order) {
-  const quote = await request(`/cart?items=${cartQuery(order.items)}`);
+  // One line per product (or option): an order's bundled and full-price units of one product go back together.
+  const merged = new Map();
+  for (const i of order.items) {
+    const key = lineKey(i);
+    merged.set(key, { ...i, qty: (merged.get(key)?.qty ?? 0) + i.qty });
+  }
+  const quote = await request(`/cart?items=${cartQuery([...merged.values()])}`);
   const titleOf = new Map(order.items.map((i) => [lineKey(i), i.title]));
   const lines = [];
   const skipped = [];
@@ -192,7 +198,7 @@ export default function Order() {
             </div>
             <ul className="cart-lines">
               {order.items.map((i) => (
-                <li key={lineKey(i)} className="cart-line">
+                <li key={itemKey(i)} className="cart-line">
                   {/* The picture repeats the name's link next to it: a shortcut for the mouse, skipped by keyboards and screen readers. */}
                   <Link to={`/p/${i.slug}`} className="cart-thumb" tabIndex={-1} aria-hidden="true">
                     {i.image && <img src={smallImage(i.image)} alt="" width="96" height="96" />}
@@ -202,6 +208,7 @@ export default function Order() {
                     <Link to={`/p/${i.slug}`} className="cart-title">
                       {i.title}
                     </Link>
+                    {i.bundle && <span className="muted small">In the &ldquo;{i.bundle.name}&rdquo; bundle</span>}
                     <span className="muted small">
                       {formatPrice(i.price)} × {i.qty}
                     </span>
@@ -273,6 +280,7 @@ export default function Order() {
         <OrderSummary
           count={count}
           subtotal={order.subtotal}
+          bundleSaving={order.bundleSaving}
           delivery={order.delivery}
           discount={order.discount}
           couponCode={order.coupon?.code}

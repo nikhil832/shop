@@ -1,5 +1,5 @@
 import { Link, Navigate, useLocation, useParams } from 'react-router';
-import { lineKey } from '../cart.js';
+import { itemKey } from '../cart.js';
 import { useAuth } from '../auth.jsx';
 import { formatAmount, formatDate, formatPrice, hasInvoice, orderNumber } from '../format.js';
 import { useFetch } from '../useFetch.js';
@@ -108,9 +108,10 @@ export default function Invoice({ admin = false }) {
             </thead>
             <tbody>
               {order.items.map((i) => (
-                <tr key={lineKey(i)}>
+                <tr key={itemKey(i)}>
                   <td>
                     {i.title}
+                    {i.bundle && <span className="muted small"> · {i.bundle.name}</span>}
                     {i.brand && <span className="muted small"> · {i.brand}</span>}
                   </td>
                   <td className="num">{formatPrice(i.price)}</td>

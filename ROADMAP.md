@@ -7,9 +7,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                                                                             | Why                                                                                             | To start        |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------- |
-| 1   | **Product bundles**: admins put 2–3 products together at a bundle price ("Mixer + extra jar, save ₹300"), shown on those products' pages and bought in one click | Raises the order value; "frequently bought together" already shows which products sell together | "start bundles" |
+Nothing queued: every idea listed so far is built or set aside. Ask for new ideas ("what should we build next?") and
+they'll be added here.
 
 ## Set aside
 
@@ -106,3 +105,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Cost prices and profit: admin-only cost per product and option, kept on each order item; profit and margin on the dashboard                   | Stage 80 (`git log --grep "Stage 80"`) |
 | Receiving stock: supplier deliveries add stock, show as "Received" in stock history and average into the cost price                           | Stage 81 (`git log --grep "Stage 81"`) |
 | Customer notes and tags: VIP / Wholesale / Watch tags and signed notes on the customer page, shown on their orders and help requests          | Stage 82 (`git log --grep "Stage 82"`) |
+| Product bundles: 2–3 simple products at a bundle price, applied whenever the cart holds the full set, with "Add bundle" on product pages      | Stage 83 (`git log --grep "Stage 83"`) |

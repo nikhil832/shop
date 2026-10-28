@@ -925,6 +925,39 @@ p a:not(.btn) {
   background: #b91c1c;
   color: #ffffff;
 }
+/* Product bundles (stage 83): "Buy together and save" on a product page. */
+.bundle-offers {
+  margin: 16px 0;
+}
+.bundle-offer {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.bundle-name {
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+.bundle-items {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+}
+.bundle-items li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+.bundle-saving {
+  color: var(--success);
+  font-weight: 600;
+}
+.bundle-items img {
+  border-radius: 6px;
+  background: var(--bg);
+}
 /* The account page's store credit history. */
 .credit-history {
   list-style: none;

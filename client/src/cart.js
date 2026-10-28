@@ -20,6 +20,8 @@ const valid = (i) =>
 
 // One line per product, or per variant of a product: works on cart items and on the server's quote lines alike.
 export const lineKey = (i) => (i.variantId ? `${i.productId}.${i.variantId}` : i.productId);
+// An order item's key for lists: an order can hold one product twice, in a bundle and at full price (stage 83).
+export const itemKey = (i) => (i.bundle ? `${lineKey(i)}.${i.bundle.id}` : lineKey(i));
 
 function load() {
   try {

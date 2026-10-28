@@ -49,6 +49,8 @@ const INDEXES = {
     [{ area: 1, at: -1 }],
     [{ 'by.id': 1, at: -1 }],
   ],
+  // Bundles: found by the products in a cart or on a product page.
+  bundles: [[{ productIds: 1, active: 1 }]],
   // Deliveries from suppliers, newest first, by supplier.
   stockReceipts: [[{ createdAt: -1 }], [{ supplier: 1, createdAt: -1 }]],
   // Gift cards: by code (only once paid), by Razorpay order (payments and the webhook), by buyer, the sweep's lists;

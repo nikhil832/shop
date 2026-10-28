@@ -199,7 +199,8 @@ export function gstInvoice(order) {
   const itemValues = order.items.map((i) => i.price * i.qty);
   const itemDiscounts = freeDelivery ? itemValues.map(() => 0) : prorate(order.discount ?? 0, itemValues);
   const lines = order.items.map((item, i) => ({
-    title: item.title,
+    // Bundled units (stage 83) are their own line at the bundle price: the bundle's name tells them apart.
+    title: item.bundle ? `${item.title} (${item.bundle.name})` : item.title,
     hsn: item.hsn ?? '',
     rate: item.gstRate ?? 0,
     qty: item.qty,

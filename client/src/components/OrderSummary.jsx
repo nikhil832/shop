@@ -11,6 +11,9 @@ export default function OrderSummary({
   freeDeliveryMin,
   // Store credit paying part of `total` (stage 72), and what to call the rest ("To pay on delivery").
   creditUsed = 0,
+  // Bundle savings (stage 83): `subtotal` is after them, so Items shows the prices before.
+  bundleSaving = 0,
+  bundles = [],
   dueLabel = 'To pay',
   children,
 }) {
@@ -20,7 +23,16 @@ export default function OrderSummary({
       <h2>Price details</h2>
       <dl>
         <dt>Items ({count})</dt>
-        <dd>{formatPrice(subtotal)}</dd>
+        <dd>{formatPrice(subtotal + bundleSaving)}</dd>
+        {bundleSaving > 0 && (
+          <>
+            <dt>
+              Bundle savings
+              {bundles.length > 0 && <span className="muted small block">{bundles.map((b) => b.name).join(', ')}</span>}
+            </dt>
+            <dd className="free">−{formatPrice(bundleSaving)}</dd>
+          </>
+        )}
         <dt>Delivery</dt>
         <dd className={delivery ? '' : 'free'}>{delivery ? formatPrice(delivery) : 'Free'}</dd>
         {discount > 0 && (

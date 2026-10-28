@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { lineKey } from '../cart.js';
+import { itemKey } from '../cart.js';
 import { Link, Navigate } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
@@ -63,7 +63,7 @@ export default function Orders() {
                 {o.items
                   .slice(0, 3)
                   .map(
-                    (i) => i.image && <img key={lineKey(i)} src={smallImage(i.image)} alt="" width="56" height="56" />,
+                    (i) => i.image && <img key={itemKey(i)} src={smallImage(i.image)} alt="" width="56" height="56" />,
                   )}
               </div>
               <div className="order-card-body">

@@ -14,6 +14,7 @@ import { rememberAddress } from '../addressBook.js';
 import { byOf, CANCEL_REASONS, movedEntry, recordStock } from '../stockHistory.js';
 import { addCredit, amountDue } from '../credit.js';
 import { codAllowed } from '../cod.js';
+import { applyBundles, bundlesFor } from '../bundles.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
 export const FREE_DELIVERY_MIN = 49900;
@@ -135,6 +136,8 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   discount: doc.discount ?? 0,
   coupon: doc.coupon ?? null,
   total: doc.total,
+  // Saved by bundles (stage 83): already in the bundled items' prices, so `subtotal` is after it.
+  bundleSaving: doc.bundleSaving ?? 0,
   // Paid with store credit (stage 72); `total` less this is what was paid, or is to pay, in money.
   creditUsed: doc.creditUsed ?? 0,
   address: doc.address,
@@ -323,8 +326,17 @@ export function ordersRouter(ctx) {
         problem,
       };
     });
-    const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
-    const totals = orderTotals(subtotal);
+    const itemsTotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
+    // Bundles the cart holds a full set of (bundles.js): their saving comes off before delivery and coupons.
+    const buyable = lines.filter((l) => !l.problem);
+    const bundled = applyBundles(
+      buyable,
+      await bundlesFor(
+        db,
+        buyable.map((l) => l.productId),
+      ),
+    );
+    const totals = orderTotals(itemsTotal - bundled.saving);
     // A coupon that can't be used is reported (couponError), not an error: the quote is still useful.
     let coupon = null;
     let couponError = null;
@@ -339,6 +351,10 @@ export function ordersRouter(ctx) {
     }
     res.json({
       items: lines,
+      // `subtotal` (below) is after bundle savings; `itemsTotal` before them.
+      itemsTotal,
+      bundles: bundled.applied,
+      bundleSaving: bundled.saving,
       ...withDiscount(totals, coupon?.discount ?? 0),
       coupon,
       couponError,
@@ -411,6 +427,26 @@ export function ordersRouter(ctx) {
             ...(gst && { gstRate: gst.forCategory(doc.categoryId).rate, hsn: gst.forCategory(doc.categoryId).hsn }),
           });
         }
+        // Bundles (bundles.js): units in a full set become their own items at their bundle prices.
+        const bundled = applyBundles(
+          items.map((i) => ({ productId: i.productId.toString(), variantId: i.variantId, qty: i.qty, price: i.price })),
+          await bundlesFor(
+            db,
+            items.filter((i) => !i.variantId).map((i) => i.productId),
+            session,
+          ),
+        );
+        if (bundled.saving) {
+          const split = items.flatMap((item, n) =>
+            bundled.parts[n].map((part) => ({
+              ...item,
+              qty: part.qty,
+              price: part.price,
+              ...(part.bundle && { bundle: part.bundle, regularPrice: part.regularPrice }),
+            })),
+          );
+          items.splice(0, items.length, ...split);
+        }
         const before = orderTotals(items.reduce((sum, i) => sum + i.price * i.qty, 0));
         const orderId = new ObjectId();
         let coupon = null;
@@ -456,6 +492,7 @@ export function ordersRouter(ctx) {
           ...(gst && { gst: { ...gst.store, deliveryRate: Math.max(...items.map((i) => i.gstRate)) } }),
           // Online orders hold their stock while the customer pays; expireUnpaidOrders releases it if they don't.
           ...(body.creditToUse && { creditUsed: body.creditToUse }),
+          ...(bundled.saving && { bundleSaving: bundled.saving }),
           payment: paidByCredit
             ? { method: 'credit' }
             : online

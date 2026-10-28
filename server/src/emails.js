@@ -96,7 +96,7 @@ export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL) {
   const trackUrl = event === 'shipped' ? order.shipment?.trackingUrl || null : null;
   const paragraphs = intro(order, event);
   const items = order.items.map((i) => ({
-    text: `${i.title} × ${i.qty}`,
+    text: `${i.title} × ${i.qty}${i.bundle ? ` (${i.bundle.name})` : ''}`,
     amount: rupees(i.price * i.qty),
     url: `${publicUrl}/p/${i.slug}`,
   }));

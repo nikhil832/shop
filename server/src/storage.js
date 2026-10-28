@@ -23,6 +23,7 @@ const NAMES = {
   searchStats: 'Search insights',
   giftCards: 'Gift cards',
   stockReceipts: 'Deliveries received',
+  bundles: 'Bundles',
   errorReports: 'Error reports',
   carts: 'Saved carts',
   wishlist: 'Wishlists',

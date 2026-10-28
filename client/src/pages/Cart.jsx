@@ -114,6 +114,8 @@ export default function Cart() {
         <OrderSummary
           count={cartCount(quote.items)}
           subtotal={quote.subtotal}
+          bundleSaving={quote.bundleSaving}
+          bundles={quote.bundles}
           delivery={quote.delivery}
           total={quote.total}
           freeDeliveryMin={quote.freeDeliveryMin}

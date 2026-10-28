@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { lineKey } from '../../cart.js';
+import { itemKey } from '../../cart.js';
 import { Link, useParams } from 'react-router';
 import { request } from '../../api.js';
 import OrderSummary from '../../components/OrderSummary.jsx';
@@ -284,9 +284,10 @@ export default function AdminOrder() {
               </thead>
               <tbody>
                 {order.items.map((i) => (
-                  <tr key={lineKey(i)}>
+                  <tr key={itemKey(i)}>
                     <td>
                       {can(user, '*') ? <Link to={`/admin/products/${i.productId}`}>{i.title}</Link> : i.title}
+                      {i.bundle && <span className="muted small"> · {i.bundle.name}</span>}
                       {can(user, 'stock.history') && (
                         <>
                           {' '}
@@ -381,6 +382,7 @@ export default function AdminOrder() {
         <OrderSummary
           count={order.items.reduce((n, i) => n + i.qty, 0)}
           subtotal={order.subtotal}
+          bundleSaving={order.bundleSaving}
           delivery={order.delivery}
           discount={order.discount}
           couponCode={order.coupon?.code}
