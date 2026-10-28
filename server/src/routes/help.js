@@ -184,10 +184,25 @@ export function helpRouter(ctx) {
           .toArray()
       ).map((o) => [o._id.toString(), o.number ?? o._id.toString().slice(-8).toUpperCase()]),
     );
+    // The customers' tags (stage 82), so a VIP or a customer to watch stands out.
+    const tags = new Map(
+      (
+        await db
+          .collection('users')
+          .find({ _id: { $in: docs.map((d) => d.userId).filter(Boolean) } }, { projection: { tags: 1 } })
+          .toArray()
+      ).map((u) => [u._id.toString(), u.tags ?? []]),
+    );
     res.json({
       items: docs.map((d) => ({
         ...toRequest(d),
-        customer: { id: d.userId?.toString() ?? null, name: d.name, email: d.email, guest: !d.userId },
+        customer: {
+          id: d.userId?.toString() ?? null,
+          name: d.name,
+          email: d.email,
+          guest: !d.userId,
+          tags: (d.userId && tags.get(d.userId.toString())) || [],
+        },
         orderNumber: d.orderId ? (numbers.get(d.orderId.toString()) ?? null) : null,
       })),
       total,

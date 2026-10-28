@@ -54,6 +54,7 @@ test('a customer asks about an order; admins are emailed and answer; the custome
     name: 'Asha Rao',
     email: 'asha@example.com',
     guest: false,
+    tags: [],
   });
   assert.equal(inbox.items[0].orderNumber, order.number);
   assert.equal((await admin('GET', '/admin/dashboard')).body.helpWaiting, 1);

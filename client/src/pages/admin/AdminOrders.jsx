@@ -7,6 +7,7 @@ import Pager from '../../components/Pager.jsx';
 import { StatusBadge } from '../Orders.jsx';
 import { useAuth } from '../../auth.jsx';
 import { can } from '../../permissions.js';
+import CustomerTags from '../../components/CustomerTags.jsx';
 
 export default function AdminOrders() {
   const { user } = useAuth();
@@ -171,6 +172,7 @@ export default function AdminOrders() {
                   <td>{formatDate(o.createdAt)}</td>
                   <td>
                     {o.customer?.name ?? 'Deleted account'}
+                    <CustomerTags tags={o.customer?.tags} />
                     <span className="muted small block">{o.customer?.email}</span>
                   </td>
                   <td className="num">{o.items.reduce((n, i) => n + i.qty, 0)}</td>

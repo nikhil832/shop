@@ -14,6 +14,7 @@ import { useFetch } from '../../useFetch.js';
 import NotFound from '../NotFound.jsx';
 import { StatusBadge } from '../Orders.jsx';
 import { CreditBox } from './AdminHelp.jsx';
+import CustomerTags, { CUSTOMER_TAGS } from '../../components/CustomerTags.jsx';
 
 const ROLES = { user: 'Customer', admin: 'Admin', packer: 'Packer', support: 'Support' };
 const CREDIT_REASONS = {
@@ -24,6 +25,113 @@ const CREDIT_REASONS = {
   spent: 'Paid for an order',
   gift_card: 'Gift card redeemed',
 };
+
+// Tags (stage 82): ticked boxes, saved as soon as one changes.
+function TagEditor({ customer, onSaved }) {
+  const [state, setState] = useState({ busy: false, error: null });
+  async function toggle(tag, on) {
+    const tags = on ? [...customer.tags, tag] : customer.tags.filter((t) => t !== tag);
+    setState({ busy: true, error: null });
+    try {
+      await request(`/admin/customers/${customer.id}/tags`, { method: 'PUT', body: { tags } });
+      setState({ busy: false, error: null });
+      onSaved();
+    } catch (err) {
+      setState({ busy: false, error: err.message });
+    }
+  }
+  return (
+    <fieldset className="customer-tag-editor">
+      <legend>Tags</legend>
+      {Object.entries(CUSTOMER_TAGS).map(([tag, label]) => (
+        <label key={tag} className="check">
+          <input
+            type="checkbox"
+            checked={customer.tags.includes(tag)}
+            disabled={state.busy}
+            onChange={(e) => toggle(tag, e.target.checked)}
+          />
+          {label}
+        </label>
+      ))}
+      {state.error && <p className="error small">{state.error}</p>}
+    </fieldset>
+  );
+}
+
+// Notes about the customer (stage 82): shown on their orders too. They're in the customer's own data download.
+function Notes({ customer, onChange }) {
+  const [state, setState] = useState({ busy: false, error: null });
+  const [formKey, setFormKey] = useState(0);
+  async function run(action) {
+    setState({ busy: true, error: null });
+    try {
+      await action();
+      setState({ busy: false, error: null });
+      onChange();
+      return true;
+    } catch (err) {
+      setState({ busy: false, error: err.message });
+      return false;
+    }
+  }
+  return (
+    <section className="panel" aria-labelledby="customer-notes">
+      <h2 id="customer-notes">Notes</h2>
+      {customer.notes.length > 0 && (
+        <ul className="plain-list">
+          {customer.notes.map((n) => (
+            <li key={n.id}>
+              {n.text}
+              <span className="muted small block">
+                {n.by ?? 'Admin'} · {formatDate(n.at)} ·{' '}
+                <button
+                  type="button"
+                  className="link danger"
+                  disabled={state.busy}
+                  onClick={() =>
+                    run(() => request(`/admin/customers/${customer.id}/notes/${n.id}`, { method: 'DELETE' }))
+                  }
+                >
+                  Remove<span className="sr-only"> the note “{n.text}”</span>
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form
+        key={formKey}
+        className="review-form"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const text = new FormData(e.currentTarget).get('text');
+          const done = await run(() =>
+            request(`/admin/customers/${customer.id}/notes`, { method: 'POST', body: { text } }),
+          );
+          if (done) setFormKey((k) => k + 1);
+        }}
+      >
+        <label>
+          Add a note
+          <textarea name="text" rows={2} minLength={2} maxLength={500} required />
+        </label>
+        <p className="muted small">
+          Seen by admins and staff on this customer&apos;s orders. The customer sees notes too if they download their
+          data, so keep them factual.
+        </p>
+        {state.error && (
+          <p className="error" role="alert">
+            {state.error}
+          </p>
+        )}
+        <button type="submit" className="btn small" disabled={state.busy}>
+          Add note
+        </button>
+      </form>
+    </section>
+  );
+}
 
 // One account on Admin → Customers (stage 74): details, totals, the latest orders, returns and help requests, and store
 // credit with its history and the form to give some.
@@ -47,7 +155,10 @@ export default function AdminCustomer() {
 
       <section className="panel">
         <div className="admin-head">
-          <h1>{c.name}</h1>
+          <h1>
+            {c.name}
+            <CustomerTags tags={c.tags} />
+          </h1>
           <span className="muted">{ROLES[c.role] ?? c.role}</span>
         </div>
         <p>
@@ -99,7 +210,10 @@ export default function AdminCustomer() {
             </ul>
           </>
         )}
+        <TagEditor customer={c} onSaved={() => setVersion((v) => v + 1)} />
       </section>
+
+      <Notes customer={c} onChange={() => setVersion((v) => v + 1)} />
 
       {(data.cod.refused > 0 || !data.cod.allowed) && (
         <section className="panel" aria-labelledby="customer-cod">

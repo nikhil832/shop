@@ -6,6 +6,7 @@ import { useAuth } from '../../auth.jsx';
 import { can } from '../../permissions.js';
 import { HELP_STATUS, HELP_TOPICS, formatDate, formatPrice, formatTime } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
+import CustomerTags from '../../components/CustomerTags.jsx';
 
 const FILTERS = [
   ['waiting', 'Waiting'],
@@ -101,7 +102,7 @@ function RequestCard({ item, onChange }) {
         ) : (
           r.customer.name
         )}{' '}
-        ({r.customer.email}){r.customer.guest && ' · not logged in'}
+        <CustomerTags tags={r.customer.tags} /> ({r.customer.email}){r.customer.guest && ' · not logged in'}
         {r.orderId && (
           <>
             {' '}

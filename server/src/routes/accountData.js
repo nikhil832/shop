@@ -94,6 +94,9 @@ export function accountDataRouter(ctx) {
         twoStepLogin: hasTwoStep(u),
         emails: { priceDrops: u.priceDropEmails !== false, cartReminders: u.cartReminderEmails !== false },
         addresses: (u.addresses ?? []).map(toAddress),
+        // What the store's staff noted about this account (stage 82).
+        storeTags: u.tags ?? [],
+        storeNotes: (u.adminNotes ?? []).map((n) => ({ text: n.text, at: n.at })),
       },
       orders: orders.map((o) => toOrder(o)),
       returns: returns.map(toReturn),

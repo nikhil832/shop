@@ -1,8 +1,11 @@
 import express from 'express';
+import { ObjectId } from 'mongodb';
 import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
 import { escapeRegex, HttpError, parse, parseObjectId } from '../http.js';
 import { toAddress } from '../addressBook.js';
+import { logActivity } from '../activity.js';
+import { MAX_NOTES, TAGS, toAdminNote } from '../customerTags.js';
 import { grantBody, grantCredit, toCreditEntry } from '../credit.js';
 import { REFUNDED_RETURNS, SOLD } from './dashboard.js';
 import { toRequest } from './help.js';
@@ -15,6 +18,16 @@ import { codAllowed, refusedCodOrders } from '../cod.js';
 // orders' totals (placed, shipped, delivered) less refunds of approved returns.
 
 export const PAGE = 25;
+// Tags and notes about a customer (stage 82), admins only to write. Tags are a fixed set so the list can be filtered
+// by them; notes are dated and signed, at most MAX_NOTES. Both are on users (`tags`, `adminNotes` [{ _id, text, by,
+// at }]); they're in the customer's own data download (it's data about them), so they should stay factual.
+const tagsBody = z.object({
+  tags: z
+    .array(z.enum(Object.keys(TAGS), 'Choose a tag'))
+    .max(Object.keys(TAGS).length)
+    .transform((tags) => [...new Set(tags)]),
+});
+const noteBody = z.object({ text: z.string().trim().min(2, 'Write the note').max(500, 'At most 500 characters') });
 const SORTS = {
   recent: { createdAt: -1, _id: -1 },
   spent: { spent: -1, _id: -1 },
@@ -22,6 +35,7 @@ const SORTS = {
 };
 const listQuery = z.object({
   q: z.string().trim().max(100).optional(),
+  tag: z.enum(Object.keys(TAGS)).optional(),
   sort: z.enum(Object.keys(SORTS)).default('recent'),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
@@ -73,6 +87,7 @@ const toRow = (u) => ({
   spent: u.spent,
   lastOrderAt: u.lastOrderAt,
   credit: u.credit ?? 0,
+  tags: u.tags ?? [],
 });
 
 const toOrderRow = (o) => ({
@@ -99,6 +114,7 @@ export function customersRouter(ctx) {
       const pattern = { $regex: escapeRegex(query.q), $options: 'i' };
       match.$or = [{ name: pattern }, { email: pattern }];
     }
+    if (query.tag) match.tags = query.tag;
     const [result] = await users
       .aggregate([
         { $match: match },
@@ -138,6 +154,7 @@ export function customersRouter(ctx) {
       customer: {
         ...toRow(user),
         twoStep: Boolean(user.totp?.enabledAt),
+        notes: [...(user.adminNotes ?? [])].reverse().map(toAdminNote),
         addresses: (user.addresses ?? []).map(toAddress),
         emails: { priceDrops: user.priceDropEmails !== false, cartReminders: user.cartReminderEmails !== false },
       },
@@ -161,6 +178,63 @@ export function customersRouter(ctx) {
       // Cash on Delivery: COD orders that came back for a reason that was theirs, and whether they may still use it.
       cod: { refused: await refusedCodOrders(db, user), allowed: (await codAllowed(db, user)).allowed },
     });
+  });
+
+  router.put('/admin/customers/:id/tags', async (req, res) => {
+    const _id = parseObjectId(req.params.id, 'customer id');
+    const { tags } = parse(tagsBody, req.body);
+    const before = await users.findOneAndUpdate({ _id }, { $set: { tags } }, { projection: { name: 1, tags: 1 } });
+    if (!before) throw new HttpError(404, 'Customer not found');
+    const label = (list) => (list?.length ? list.map((t) => TAGS[t]).join(', ') : '(none)');
+    if (label(before.tags) !== label(tags)) {
+      await logActivity(db, req.user, {
+        area: 'accounts',
+        action: 'Changed customer tags',
+        target: { label: before.name, path: `/admin/customers/${_id}` },
+        changes: [{ field: 'Tags', from: label(before.tags), to: label(tags) }],
+      });
+    }
+    res.json({ tags });
+  });
+
+  router.post('/admin/customers/:id/notes', async (req, res) => {
+    const _id = parseObjectId(req.params.id, 'customer id');
+    const { text } = parse(noteBody, req.body);
+    const note = { _id: new ObjectId(), text, by: { id: req.user._id, name: req.user.name }, at: new Date() };
+    const doc = await users.findOneAndUpdate(
+      { _id, [`adminNotes.${MAX_NOTES - 1}`]: { $exists: false } },
+      { $push: { adminNotes: note } },
+      { projection: { name: 1 } },
+    );
+    if (!doc) {
+      if (await users.findOne({ _id }, { projection: { _id: 1 } })) {
+        throw new HttpError(409, `At most ${MAX_NOTES} notes: remove an old one first`);
+      }
+      throw new HttpError(404, 'Customer not found');
+    }
+    await logActivity(db, req.user, {
+      area: 'accounts',
+      action: 'Added a customer note',
+      target: { label: doc.name, path: `/admin/customers/${_id}` },
+    });
+    res.status(201).json(toAdminNote(note));
+  });
+
+  router.delete('/admin/customers/:id/notes/:noteId', async (req, res) => {
+    const _id = parseObjectId(req.params.id, 'customer id');
+    const noteId = parseObjectId(req.params.noteId, 'note id');
+    const doc = await users.findOneAndUpdate(
+      { _id, 'adminNotes._id': noteId },
+      { $pull: { adminNotes: { _id: noteId } } },
+      { projection: { name: 1 } },
+    );
+    if (!doc) throw new HttpError(404, 'Note not found');
+    await logActivity(db, req.user, {
+      area: 'accounts',
+      action: 'Removed a customer note',
+      target: { label: doc.name, path: `/admin/customers/${_id}` },
+    });
+    res.status(204).end();
   });
 
   // Their balance, for the credit form (shared with help requests, which have the same pair of routes).

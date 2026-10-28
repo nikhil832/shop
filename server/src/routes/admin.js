@@ -17,6 +17,7 @@ import { changeRating, inTransaction, toReview } from './reviews.js';
 import { byOf, recordStock, savedEntries } from '../stockHistory.js';
 import { logActivity, orderTarget, productChanges, productTarget, rupees, yesNo } from '../activity.js';
 import { RTO_REASONS } from '../cod.js';
+import { toAdminNote } from '../customerTags.js';
 
 const hexId = (what) => z.string().regex(/^[0-9a-f]{24}$/, `Choose a ${what}`);
 
@@ -613,9 +614,11 @@ export function adminRouter(ctx) {
 
   async function withCustomers(docs) {
     const people = await users
-      .find({ _id: { $in: [...new Set(docs.map((o) => o.userId))] } }, { projection: { name: 1, email: 1 } })
+      .find({ _id: { $in: [...new Set(docs.map((o) => o.userId))] } }, { projection: { name: 1, email: 1, tags: 1 } })
       .toArray();
-    const byId = new Map(people.map((u) => [u._id.toString(), { id: u._id.toString(), name: u.name, email: u.email }]));
+    const byId = new Map(
+      people.map((u) => [u._id.toString(), { id: u._id.toString(), name: u.name, email: u.email, tags: u.tags ?? [] }]),
+    );
     return docs.map((o) => ({ ...toOrder(o, { admin: true }), customer: byId.get(o.userId.toString()) ?? null }));
   }
 
@@ -668,7 +671,13 @@ export function adminRouter(ctx) {
   router.get('/admin/orders/:id', async (req, res) => {
     const doc = await orders.findOne({ _id: parseObjectId(req.params.id, 'order id') });
     if (!doc) throw new HttpError(404, 'Order not found');
-    res.json((await withCustomers([doc]))[0]);
+    const [order] = await withCustomers([doc]);
+    // The customer's own notes (stage 82, Admin → Customers), newest first, for whoever handles the order.
+    if (order.customer) {
+      const user = await users.findOne({ _id: doc.userId }, { projection: { adminNotes: 1 } });
+      order.customer.notes = [...(user?.adminNotes ?? [])].reverse().map(toAdminNote);
+    }
+    res.json(order);
   });
 
   // Moves an order on to `status` (shipped, delivered or cancelled): the step's checks, the customer's email and the

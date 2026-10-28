@@ -3,6 +3,7 @@ import { query } from '../../api.js';
 import Pager from '../../components/Pager.jsx';
 import { formatDate, formatPrice } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
+import CustomerTags, { CUSTOMER_TAGS } from '../../components/CustomerTags.jsx';
 
 const SORTS = { recent: 'Newest accounts', spent: 'Most spent', last_order: 'Latest order' };
 const ROLES = { admin: 'Admin', packer: 'Packer', support: 'Support' };
@@ -12,12 +13,13 @@ export default function AdminCustomers() {
   const [params, setParams] = useSearchParams();
   const q = params.get('q') ?? '';
   const sort = params.get('sort') ?? 'recent';
+  const tag = params.get('tag') ?? '';
   const page = Math.max(1, Number(params.get('page')) || 1);
   const { data, error, loading } = useFetch(
-    `/admin/customers${query({ q, sort: sort === 'recent' ? '' : sort, page: page > 1 ? page : '' })}`,
+    `/admin/customers${query({ q, tag, sort: sort === 'recent' ? '' : sort, page: page > 1 ? page : '' })}`,
   );
   const update = (changes) => {
-    const next = { q, sort: sort === 'recent' ? '' : sort, ...changes };
+    const next = { q, tag, sort: sort === 'recent' ? '' : sort, ...changes };
     setParams(query({ ...next, page: changes.page > 1 ? changes.page : '' }).slice(1));
   };
 
@@ -45,6 +47,14 @@ export default function AdminCustomers() {
             Search
           </button>
         </form>
+        <select aria-label="Tag" value={tag} onChange={(e) => update({ tag: e.target.value })}>
+          <option value="">Any tag</option>
+          {Object.entries(CUSTOMER_TAGS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
         <select aria-label="Sort by" value={sort} onChange={(e) => update({ sort: e.target.value })}>
           {Object.entries(SORTS).map(([value, label]) => (
             <option key={value} value={value}>
@@ -74,6 +84,7 @@ export default function AdminCustomers() {
                 <tr key={c.id}>
                   <td>
                     <Link to={`/admin/customers/${c.id}`}>{c.name}</Link>
+                    <CustomerTags tags={c.tags} />
                     {ROLES[c.role] && <span className="status small"> {ROLES[c.role]}</span>}
                     <span className="muted small block">{c.email}</span>
                   </td>

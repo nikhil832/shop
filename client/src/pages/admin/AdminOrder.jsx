@@ -22,6 +22,7 @@ import { StatusBadge } from '../Orders.jsx';
 import { OrderHelpRequests } from './AdminHelp.jsx';
 import { useAuth } from '../../auth.jsx';
 import { can } from '../../permissions.js';
+import CustomerTags from '../../components/CustomerTags.jsx';
 
 // The next steps an admin can take from each status (the server enforces the same rules). Cancelling needs an admin
 // (it can refund); delivering, like shipping, needs `orders.ship`.
@@ -344,9 +345,24 @@ export default function AdminOrder() {
                 ) : (
                   (customer?.name ?? 'Deleted account')
                 )}
+                <CustomerTags tags={customer?.tags} />
                 <br />
                 <span className="muted">{customer?.email}</span>
               </p>
+              {customer?.notes?.length > 0 && (
+                <ul className="customer-notes small" aria-label="Notes about this customer">
+                  {customer.notes.slice(0, 3).map((n) => (
+                    <li key={n.id}>
+                      {n.text} <span className="muted">· {n.by ?? 'Admin'}</span>
+                    </li>
+                  ))}
+                  {customer.notes.length > 3 && (
+                    <li>
+                      <Link to={`/admin/customers/${customer.id}`}>{customer.notes.length - 3} more</Link>
+                    </li>
+                  )}
+                </ul>
+              )}
             </div>
             <div>
               <h2>Deliver to</h2>

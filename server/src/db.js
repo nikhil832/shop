@@ -101,7 +101,8 @@ const INDEXES = {
     [{ brand: 1 }],
     [{ 'sale.id': 1 }, { partialFilterExpression: { 'sale.id': { $exists: true } } }],
   ],
-  users: [[{ email: 1 }, { unique: true }]],
+  // Admin → Customers filters by tag (stage 82).
+  users: [[{ email: 1 }, { unique: true }], [{ tags: 1 }]],
   // MongoDB deletes sessions once expiresAt has passed.
   sessions: [
     [{ tokenHash: 1 }, { unique: true }],

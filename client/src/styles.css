@@ -889,6 +889,42 @@ p a:not(.btn) {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
+/* Customer tags (stage 82): small badges beside a name in the admin panel. */
+.customer-tags {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.customer-tag {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+/* "Watch" stands out, in the danger button's fixed red (enough contrast in both themes behind white). */
+.customer-tag-editor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  border: 0;
+  padding: 0;
+  margin: 12px 0 0;
+}
+.customer-tag-editor legend {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.customer-notes {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+.customer-tag.watch {
+  background: #b91c1c;
+  color: #ffffff;
+}
 /* The account page's store credit history. */
 .credit-history {
   list-style: none;
