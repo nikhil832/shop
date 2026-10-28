@@ -11,6 +11,8 @@ import {
   orderNumber,
   paymentLabel,
   returnStatusLabel,
+  dueLabel,
+  refundText,
 } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 import NotFound from '../NotFound.jsx';
@@ -268,7 +270,7 @@ export default function AdminOrder() {
                   <p>
                     {r.items.map((i) => `${i.title} × ${i.qty}`).join(', ')}
                     <span className="muted small block">
-                      {formatDate(r.createdAt)} · {r.reasonText} · refund {formatPrice(r.refund)}
+                      {formatDate(r.createdAt)} · {r.reasonText} · refund {refundText(r)}
                     </span>
                   </p>
                   <span className={`status return-${r.status}`}>{returnStatusLabel(r, { admin: true })}</span>
@@ -317,6 +319,8 @@ export default function AdminOrder() {
           discount={order.discount}
           couponCode={order.coupon?.code}
           total={order.total}
+          creditUsed={order.creditUsed}
+          dueLabel={dueLabel(order)}
         >
           <div className="muted small payment-info">
             <p>Payment: {paymentLabel(payment, { admin: true })}</p>

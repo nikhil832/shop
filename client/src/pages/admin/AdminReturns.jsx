@@ -36,12 +36,19 @@ export default function AdminReturns() {
       setAction({ busy: false, error: err.message });
     }
   }
-  const approve = (r) =>
-    window.confirm(
-      r.refundMethod === 'razorpay'
-        ? `Approve this return? The stock goes back and ${formatPrice(r.refund)} is refunded to the customer's payment.`
-        : `Approve this return? The stock goes back; then pay the customer ${formatPrice(r.refund)} and mark it refunded.`,
-    ) && run(`/admin/returns/${r.id}/approve`);
+  const approve = (r) => {
+    const money = r.refund - r.refundCredit;
+    const credit = r.refundCredit ? ` ${formatPrice(r.refundCredit)} goes to their store credit at once.` : '';
+    return (
+      window.confirm(
+        r.refundMethod === 'credit'
+          ? `Approve this return? The stock goes back and${credit}`
+          : r.refundMethod === 'razorpay'
+            ? `Approve this return? The stock goes back and ${formatPrice(money)} is refunded to the customer's payment.${credit}`
+            : `Approve this return? The stock goes back; then pay the customer ${formatPrice(money)} and mark it refunded.${credit}`,
+      ) && run(`/admin/returns/${r.id}/approve`)
+    );
+  };
   function decline(r) {
     const reason = window.prompt('Why is this return declined? The customer sees this.');
     if (reason?.trim()) run(`/admin/returns/${r.id}/decline`, { reason: reason.trim() });
@@ -111,7 +118,8 @@ export default function AdminReturns() {
                   <td className="num">
                     {formatPrice(r.refund)}
                     <span className="muted small block">
-                      {r.refundMethod === 'razorpay' ? 'Online' : 'Cash on Delivery'}
+                      {{ razorpay: 'Online', manual: 'Cash on Delivery', credit: 'Store credit' }[r.refundMethod]}
+                      {r.refundCredit > 0 && r.refundMethod !== 'credit' && ` + ${formatPrice(r.refundCredit)} credit`}
                     </span>
                   </td>
                   <td>

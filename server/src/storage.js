@@ -19,6 +19,7 @@ const NAMES = {
   activity: 'Activity log',
   stockHistory: 'Stock history',
   announcements: 'Announcements',
+  creditLedger: 'Store credit',
   errorReports: 'Error reports',
   carts: 'Saved carts',
   wishlist: 'Wishlists',

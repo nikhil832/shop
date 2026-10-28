@@ -29,6 +29,7 @@ export const ORDER_STATUS = {
 // to return the money, so a refund it accepted is "started", not done.
 export function paymentLabel(payment, { admin = false } = {}) {
   if (payment.method === 'cod') return 'Cash on Delivery';
+  if (payment.method === 'credit') return 'Store credit';
   return {
     pending: 'Online · not paid',
     paid: 'Paid online',
@@ -100,3 +101,22 @@ export function saleEndsIn(endsAt, now = Date.now()) {
 // The small version of an uploaded product photo (stage 68), for cards, carts and lists; drawings stay as they are.
 // The server sends the photo itself when it has no small version.
 export const smallImage = (src) => (src?.startsWith('/api/images/') ? `${src}?size=small` : src);
+
+// What to call the part of an order store credit didn't pay (OrderSummary's last line).
+export const dueLabel = (order) =>
+  order.payment.method === 'razorpay'
+    ? order.payment.status === 'pending'
+      ? 'To pay online'
+      : 'Paid online'
+    : order.deliveredAt
+      ? 'Paid on delivery'
+      : 'To pay on delivery';
+
+// How a return's refund is paid (stage 72): "₹349 as store credit", or "₹49 online + ₹300 as store credit".
+export function refundText(r) {
+  const credit = r.refundCredit ?? 0;
+  const money = r.refund - credit;
+  const how = r.refundMethod === 'razorpay' ? 'online' : 'by the store';
+  if (!money) return `${formatPrice(credit)} as store credit`;
+  return credit ? `${formatPrice(money)} ${how} + ${formatPrice(credit)} as store credit` : formatPrice(money);
+}

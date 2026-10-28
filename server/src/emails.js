@@ -7,6 +7,9 @@ import { variantTitle } from './variants.js';
 const DEFAULT_PUBLIC_URL = 'http://localhost:5173';
 
 const rupees = (paise) => `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+// What an order costs in money once store credit paid its part (credit.js has the same; this module imports nothing
+// from it, to keep imports one-way).
+const due = (order) => order.total - (order.creditUsed ?? 0);
 const orderNumber = (order) => order.number ?? order._id.toString().slice(-8).toUpperCase();
 const escapeHtml = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -42,9 +45,10 @@ const CANCELLED_BY = {
 function intro(order, event) {
   const online = order.payment?.method === 'razorpay';
   if (event === 'placed') {
+    if (!due(order)) return ['Thanks for your order! It is paid in full with your store credit.'];
     return online
-      ? [`Thanks for your order! We've received your payment of ${rupees(order.total)}.`]
-      : [`Thanks for your order! You'll pay ${rupees(order.total)} in cash when it arrives.`];
+      ? [`Thanks for your order! We've received your payment of ${rupees(due(order))}.`]
+      : [`Thanks for your order! You'll pay ${rupees(due(order))} in cash when it arrives.`];
   }
   if (event === 'shipped') {
     const { courier, trackingNumber } = order.shipment ?? {};
@@ -61,13 +65,14 @@ function intro(order, event) {
   const refund = order.payment?.status;
   if (refund === 'refunded' || refund === 'refunding') {
     lines.push(
-      `We've started a refund of ${rupees(order.total)} to your original payment method. It usually reaches you in 5–7 working days.`,
+      `We've started a refund of ${rupees(due(order))} to your original payment method. It usually reaches you in 5–7 working days.`,
     );
   } else if (refund === 'refund_failed') {
-    lines.push(`Your refund of ${rupees(order.total)} is being processed. We'll take care of it.`);
+    lines.push(`Your refund of ${rupees(due(order))} is being processed. We'll take care of it.`);
   } else if (online) {
     lines.push('Nothing was charged.');
   }
+  if (order.creditUsed) lines.push(`The ${rupees(order.creditUsed)} of store credit you used is back in your account.`);
   return lines;
 }
 
@@ -91,6 +96,12 @@ export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL) {
           ['Delivery', order.delivery ? rupees(order.delivery) : 'Free'],
           ...(order.discount ? [[`Coupon ${order.coupon?.code ?? ''}`.trim(), `−${rupees(order.discount)}`]] : []),
           ['Total', rupees(order.total)],
+          ...(order.creditUsed
+            ? [
+                ['Paid with store credit', `−${rupees(order.creditUsed)}`],
+                [order.payment?.method === 'razorpay' ? 'Paid online' : 'To pay on delivery', rupees(due(order))],
+              ]
+            : []),
         ]
       : [];
   const a = order.address;
@@ -386,7 +397,7 @@ ${button('Open my account', url)}`,
   return { subject, text, html };
 }
 
-const PAYMENT_NAMES = { cod: 'Cash on Delivery', razorpay: 'Paid online' };
+const PAYMENT_NAMES = { cod: 'Cash on Delivery', razorpay: 'Paid online', credit: 'Paid with store credit' };
 
 // "New order" for the admins: who ordered, what, the total and how it's paid, and a link to it in the admin panel.
 // `customer` is { name, email }, or null if the account is gone.
@@ -401,6 +412,7 @@ export function newOrderEmail(order, customer, publicUrl = DEFAULT_PUBLIC_URL) {
     ['Delivery', order.delivery ? rupees(order.delivery) : 'Free'],
     ...(order.discount ? [[`Coupon ${order.coupon?.code ?? ''}`.trim(), `−${rupees(order.discount)}`]] : []),
     ['Total', rupees(order.total)],
+    ...(order.creditUsed ? [['Store credit used', `−${rupees(order.creditUsed)}`]] : []),
   ];
   const lines = [`${who} placed an order. ${payment}.`, `Deliver to ${a.city}, ${a.state} ${a.pincode}.`];
 
@@ -665,12 +677,21 @@ export function returnDecisionEmail(ret, order, user, publicUrl = DEFAULT_PUBLIC
   const firstName = user.name.split(/\s+/)[0];
   const orderUrl = `${publicUrl}/orders/${order._id}`;
   const online = ret.refundMethod === 'razorpay';
+  const credit = ret.refundCredit ?? 0;
+  const money = ret.refund - credit;
   const lines = approved
     ? [
         "We've accepted your return.",
-        online
-          ? `We've started a refund of ${rupees(ret.refund)} to your original payment method. It usually reaches you in 5–7 working days.`
-          : `You paid in cash, so we'll refund ${rupees(ret.refund)} to you directly (UPI or bank transfer) and get in touch for the details.`,
+        ...(credit ? [`${rupees(credit)} is back in your account as store credit, ready to use at checkout.`] : []),
+        ...(!money
+          ? []
+          : online
+            ? [
+                `We've started a refund of ${rupees(money)} to your original payment method. It usually reaches you in 5–7 working days.`,
+              ]
+            : [
+                `You paid in cash, so we'll refund ${rupees(money)} to you directly (UPI or bank transfer) and get in touch for the details.`,
+              ]),
       ]
     : ["We're sorry: we can't accept your return.", ...(ret.declineReason ? [`Why: ${ret.declineReason}`] : [])];
   const items = returnLines(ret);
@@ -729,4 +750,25 @@ export async function sendOrderEmail(ctx, order, event) {
   } catch (err) {
     console.error(`Could not send the ${event} email for order ${order._id}:`, err.message);
   }
+}
+
+// For a customer given store credit by the store (credit.js): how much, why, and what they now have.
+export function creditAddedEmail(user, { amount, note, balance }, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = user.name.split(/\s+/)[0];
+  const subject = `${rupees(amount)} of store credit for you`;
+  const url = `${publicUrl}/account#credit`;
+  const lines = [
+    `We've added ${rupees(amount)} of store credit to your Bazaar account.`,
+    `Why: ${note}`,
+    `You now have ${rupees(balance)} to use at checkout. It doesn't expire.`,
+  ];
+  const text = [`Hi ${firstName},`, ...lines, `See it in your account: ${url}`, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+${button('See my store credit', url)}`,
+    "You're getting this email because the store added credit to your account.",
+  );
+  return { subject, text, html };
 }

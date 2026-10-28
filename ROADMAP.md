@@ -7,10 +7,9 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                                                            | Why                                                                                                    | To start             |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------- |
-| 1   | **Store credit**: refunds and goodwill paid as credit on the account, used at checkout before paying; admins can add credit from a help request | Cheaper and faster than bank refunds for small amounts, and a way to say sorry that keeps the customer | "start store credit" |
-| 2   | **Compare products**: tick up to three products in a category to see price, rating, highlights, options and stock side by side                  | Choosing between similar phones or shoes now means flipping between tabs                               | "start compare"      |
+| #   | Idea                                                                                                                           | Why                                                                      | To start        |
+| --- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ | --------------- |
+| 1   | **Compare products**: tick up to three products in a category to see price, rating, highlights, options and stock side by side | Choosing between similar phones or shoes now means flipping between tabs | "start compare" |
 
 ## Set aside
 
@@ -96,3 +95,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Security headers: a Content Security Policy (the store and Razorpay only), no framing, HTTPS-only, strict referrers                           | Stage 69 (`git log --grep "Stage 69"`) |
 | Stock history: every stock change with its reason (order, cancellation, release, return, edit, import), per product and variant               | Stage 70 (`git log --grep "Stage 70"`) |
 | Announcement bar: a short message across the top of the shop between two times, with an optional link into the store                          | Stage 71 (`git log --grep "Stage 71"`) |
+| Store credit: refunds of returns as credit (the customer's choice), goodwill from help requests, spent at checkout before paying              | Stage 72 (`git log --grep "Stage 72"`) |

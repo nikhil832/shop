@@ -13,6 +13,8 @@ import {
   paymentLabel,
   returnStatusLabel,
   smallImage,
+  dueLabel,
+  refundText,
 } from '../format.js';
 import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
@@ -222,7 +224,7 @@ export default function Order() {
                   <p>
                     {r.items.map((i) => `${i.title} × ${i.qty}`).join(', ')}
                     <span className="muted small block">
-                      Asked on {formatDate(r.createdAt)} · {r.reasonText} · refund {formatPrice(r.refund)}
+                      Asked on {formatDate(r.createdAt)} · {r.reasonText} · refund {refundText(r)}
                     </span>
                   </p>
                   <span className={`status return-${r.status}`}>{returnStatusLabel(r)}</span>
@@ -272,6 +274,8 @@ export default function Order() {
           discount={order.discount}
           couponCode={order.coupon?.code}
           total={order.total}
+          creditUsed={order.creditUsed}
+          dueLabel={dueLabel(order)}
         >
           <p className="muted small">Payment: {paymentLabel(order.payment)}</p>
           {hasInvoice(order) && (

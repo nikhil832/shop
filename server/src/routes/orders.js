@@ -12,6 +12,7 @@ import { deliveryFor } from './delivery.js';
 import { findState, gstForOrders, gstInvoice } from '../gst.js';
 import { rememberAddress } from '../addressBook.js';
 import { byOf, CANCEL_REASONS, movedEntry, recordStock } from '../stockHistory.js';
+import { addCredit, amountDue } from '../credit.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
 export const FREE_DELIVERY_MIN = 49900;
@@ -104,6 +105,8 @@ const orderBody = z.object({
   expectedTotal: z.number().int().min(0),
   paymentMethod: z.enum(['cod', 'razorpay']).default('cod'),
   couponCode: z.string().trim().max(40).optional(),
+  // Store credit to spend, in paise, as the customer was shown (stage 72): refused if their balance is lower now.
+  creditToUse: z.number().int().min(0).default(0),
   // A new address goes into the customer's address book unless they unticked "Save it" (a saved one is never changed).
   saveAddress: z.boolean().default(true),
 });
@@ -129,6 +132,8 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   discount: doc.discount ?? 0,
   coupon: doc.coupon ?? null,
   total: doc.total,
+  // Paid with store credit (stage 72); `total` less this is what was paid, or is to pay, in money.
+  creditUsed: doc.creditUsed ?? 0,
   address: doc.address,
   // Orders from before online payments stored just 'cod'.
   payment: typeof doc.payment === 'string' ? { method: doc.payment } : withoutRefundError(doc.payment, admin),
@@ -207,6 +212,16 @@ export async function cancelOrder(ctx, filter, { from, by, user = null, notify =
       }
       await recordStock(db, entries, session);
       if (order.coupon) await releaseCoupon(db, order._id, session);
+      // Store credit spent on it goes back to the account; money paid goes back by refund, below.
+      if (order.creditUsed) {
+        await addCredit(
+          db,
+          order.userId,
+          order.creditUsed,
+          { reason: 'cancelled', orderId: order._id, orderNumber: order.number ?? null, by: byOf(user) },
+          session,
+        );
+      }
     });
   } finally {
     await session.endSession();
@@ -391,6 +406,9 @@ export function ordersRouter(ctx) {
         if (totals.total !== body.expectedTotal) {
           throw new HttpError(409, 'Prices have changed since you loaded the page. Please review your order.');
         }
+        if (body.creditToUse > totals.total) throw new HttpError(400, 'creditToUse: More than the order costs');
+        // All paid with credit: nothing to pay online or on delivery.
+        const paidByCredit = body.creditToUse === totals.total;
         // Taken inside the transaction: a failed order gives its number back, so numbers have no gaps or repeats.
         const counter = await db
           .collection('counters')
@@ -411,13 +429,26 @@ export function ordersRouter(ctx) {
           // Delivery goes with the goods, so it's taxed at the order's highest rate.
           ...(gst && { gst: { ...gst.store, deliveryRate: Math.max(...items.map((i) => i.gstRate)) } }),
           // Online orders hold their stock while the customer pays; expireUnpaidOrders releases it if they don't.
-          payment: online ? { method: 'razorpay', status: 'pending' } : { method: 'cod' },
-          status: online ? 'awaiting_payment' : 'placed',
-          ...(online && { expiresAt: new Date(now.getTime() + PAYMENT_WINDOW_MS) }),
+          ...(body.creditToUse && { creditUsed: body.creditToUse }),
+          payment: paidByCredit
+            ? { method: 'credit' }
+            : online
+              ? { method: 'razorpay', status: 'pending' }
+              : { method: 'cod' },
+          status: online && !paidByCredit ? 'awaiting_payment' : 'placed',
+          ...(online && !paidByCredit && { expiresAt: new Date(now.getTime() + PAYMENT_WINDOW_MS) }),
           createdAt: now,
           updatedAt: now,
         };
         await orders.insertOne(order, { session });
+        // The balance check is in the update, so two orders at once can't spend the same credit.
+        await addCredit(
+          db,
+          req.user._id,
+          -body.creditToUse,
+          { reason: 'spent', orderId, orderNumber: order.number },
+          session,
+        );
         await recordStock(
           db,
           moved.map((m) => ({ ...m, orderId, orderNumber: order.number })),
@@ -428,7 +459,7 @@ export function ordersRouter(ctx) {
     } finally {
       await session.endSession();
     }
-    if (!online) {
+    if (order.status === 'placed') {
       await sendOrderEmail(ctx, order, 'placed');
       await sendNewOrderAlert(ctx, order);
       return res.status(201).json({ ...toOrder(order), checkout: null });
@@ -437,7 +468,7 @@ export function ordersRouter(ctx) {
     // Outside the transaction: a network call. If Razorpay can't take the order, ours is cancelled and stock returned.
     try {
       const rzpOrder = await razorpay.createOrder({
-        amount: order.total,
+        amount: amountDue(order),
         receipt: `order_${order.number}`,
         notes: { orderId: order._id.toString() },
       });

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Navigate, useLocation } from 'react-router';
+import { Link, Navigate, useLocation } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import AccountNav from '../components/AccountNav.jsx';
 import AddressFields from '../components/AddressFields.jsx';
 import TwoStepSection from '../components/TwoStepSection.jsx';
-import { MAX_ADDRESSES, addressLine } from '../format.js';
+import { MAX_ADDRESSES, addressLine, formatDate, formatPrice, orderNumber } from '../format.js';
 import { forgetCart } from '../cart.js';
 import { useFetch } from '../useFetch.js';
 
@@ -156,6 +156,49 @@ function AddressBook({ user, setUser }) {
 }
 
 // "Your data" (stage 65): download everything the store holds about you, or close the account (password, and a two-step
+const CREDIT_REASONS = {
+  goodwill: 'Added by the store',
+  taken: 'Taken back by the store',
+  returned: 'Return refunded as credit',
+  cancelled: 'Back from a cancelled order',
+  spent: 'Paid for an order',
+};
+
+// Store credit (stage 72, #credit): the balance and every change, newest first. Shown once there is any history.
+function StoreCredit({ user }) {
+  const { data } = useFetch('/account/credit');
+  if (!data?.items.length) return null;
+  return (
+    <section className="panel account-section" id="credit" aria-labelledby="credit-heading">
+      <h2 id="credit-heading">Store credit</h2>
+      <p>
+        You have <strong>{formatPrice(user.credit)}</strong>, used at checkout before you pay. It doesn&apos;t expire.
+      </p>
+      <ul className="credit-history">
+        {data.items.map((e) => (
+          <li key={e.id}>
+            <span>
+              {CREDIT_REASONS[e.reason] ?? e.reason}
+              {e.order && (
+                <>
+                  {' · '}
+                  <Link to={`/orders/${e.order.id}`}>Order #{orderNumber(e.order)}</Link>
+                </>
+              )}
+              {e.note && <span className="muted small block">{e.note}</span>}
+              <span className="muted small block">{formatDate(e.at)}</span>
+            </span>
+            <span className="num">
+              {e.change > 0 ? '+' : '−'}
+              {formatPrice(Math.abs(e.change))}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 // code when that's on). Closing calls `onClosed`, which logs this browser out.
 function YourData({ user, onClosed }) {
   const [state, setState] = useState({ busy: false, error: null });
@@ -195,6 +238,7 @@ function YourData({ user, onClosed }) {
             customer&rdquo;. Past orders are kept for tax records, without your name, phone or street. It can&apos;t be
             undone, but you can make a new account any time. You can&apos;t close it while an order is on its way or a
             return is open.
+            {user.credit > 0 && <strong> Your {formatPrice(user.credit)} of store credit would be lost.</strong>}
           </p>
           <label>
             Your password
@@ -406,6 +450,7 @@ export default function Account() {
         <p className="muted small">This logs you out on your other devices.</p>
       </form>
 
+      <StoreCredit user={user} />
       <TwoStepSection />
       <YourData
         user={user}

@@ -7,7 +7,8 @@ import { StatusBadge } from '../Orders.jsx';
 // What the packer needs to know about payment: how much to collect for Cash on Delivery.
 function paymentNote(order) {
   if (order.payment.method === 'razorpay') return 'Paid online: nothing to collect.';
-  return `Cash on Delivery: collect ${formatPrice(order.total)}.`;
+  if (order.payment.method === 'credit') return 'Paid with store credit: nothing to collect.';
+  return `Cash on Delivery: collect ${formatPrice(order.total - order.creditUsed)}.`;
 }
 
 // One packing slip per order (/admin/orders/slips?ids=…, from the orders list): where it goes and what goes in the box,

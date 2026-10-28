@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { query, request } from '../../api.js';
 import Pager from '../../components/Pager.jsx';
-import { HELP_STATUS, HELP_TOPICS, formatDate, formatTime } from '../../format.js';
+import { useAuth } from '../../auth.jsx';
+import { can } from '../../permissions.js';
+import { HELP_STATUS, HELP_TOPICS, formatDate, formatPrice, formatTime } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 
 const FILTERS = [
@@ -11,9 +13,70 @@ const FILTERS = [
   ['closed', 'Closed'],
 ];
 
+// Store credit for a request's customer (stage 72, admins only): their balance, and goodwill to add (or a minus amount
+// to take back a mistake). Mounted when opened, so the inbox doesn't ask for every card's balance.
+function CreditBox({ request: r }) {
+  const [version, setVersion] = useState(0);
+  const { data } = useFetch(`/admin/help/${r.id}/credit`, version);
+  const [state, setState] = useState({ busy: false, error: null, done: null });
+  const [formKey, setFormKey] = useState(0);
+
+  async function submit(e) {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.currentTarget));
+    const amount = Math.round(Number(f.amount) * 100);
+    setState({ busy: true, error: null, done: null });
+    try {
+      const res = await request(`/admin/help/${r.id}/credit`, { method: 'POST', body: { amount, note: f.note } });
+      setState({
+        busy: false,
+        error: null,
+        done: `${amount > 0 ? 'Added' : 'Took back'} ${formatPrice(Math.abs(amount))}. ${r.customer.name} now has ${formatPrice(res.balance)}.`,
+      });
+      setFormKey((k) => k + 1);
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setState({ busy: false, error: err.message, done: null });
+    }
+  }
+
+  return (
+    <form key={formKey} className="review-form" onSubmit={submit}>
+      <p className="small">
+        {data ? `${r.customer.name} has ${formatPrice(data.balance)} of store credit.` : 'Loading…'} It&apos;s spent at
+        checkout and never expires.
+      </p>
+      <div className="address-grid">
+        <label>
+          Amount (₹)
+          <input name="amount" type="number" step="1" min="-10000" max="10000" required />
+        </label>
+        <label>
+          Why (the customer sees this)
+          <input name="note" minLength={3} maxLength={200} required placeholder="Sorry about the late delivery" />
+        </label>
+      </div>
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
+      {state.done && <p role="status">{state.done}</p>}
+      <div className="form-actions">
+        <button type="submit" className="btn small" disabled={state.busy}>
+          Give credit
+        </button>
+        <span className="muted small">They&apos;re emailed. A minus amount takes credit back.</span>
+      </div>
+    </form>
+  );
+}
+
 // One help request: who, about what (and which order), the conversation, a reply box, and close/reopen.
 function RequestCard({ item, onChange }) {
+  const { user } = useAuth();
   const [state, setState] = useState({ busy: false, error: null });
+  const [creditOpen, setCreditOpen] = useState(false);
   const r = item;
 
   async function send(path, body) {
@@ -81,6 +144,14 @@ function RequestCard({ item, onChange }) {
           <span className="muted small">The reply is emailed to them.</span>
         </div>
       </form>
+      {can(user, '*') && !r.customer.guest && (
+        <details className="credit-details" onToggle={(e) => setCreditOpen(e.currentTarget.open)}>
+          <summary>
+            Store credit<span className="sr-only"> for {r.customer.name}</span>
+          </summary>
+          {creditOpen && <CreditBox request={r} />}
+        </details>
+      )}
     </li>
   );
 }

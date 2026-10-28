@@ -6,15 +6,18 @@ import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
 import { GstLines, GstParties } from '../components/GstDocument.jsx';
 
-// How the order is paid, as of now.
+// How the order is paid, as of now. Store credit is a way of paying (stage 72), so the bill above doesn't change.
 function paymentLine(order) {
-  const { payment } = order;
-  if (payment.method === 'razorpay') {
-    return `Paid online${payment.paidAt ? ` on ${formatDate(payment.paidAt)}` : ''}`;
-  }
-  return order.deliveredAt
-    ? `Cash on Delivery, paid on ${formatDate(order.deliveredAt)}`
-    : `Cash on Delivery: ${formatPrice(order.total)} to pay on delivery`;
+  const { payment, creditUsed = 0 } = order;
+  if (payment.method === 'credit') return 'Paid with store credit';
+  const due = order.total - creditUsed;
+  const money =
+    payment.method === 'razorpay'
+      ? `${creditUsed ? `${formatPrice(due)} paid` : 'Paid'} online${payment.paidAt ? ` on ${formatDate(payment.paidAt)}` : ''}`
+      : order.deliveredAt
+        ? `${creditUsed ? `${formatPrice(due)} by ` : ''}Cash on Delivery, paid on ${formatDate(order.deliveredAt)}`
+        : `Cash on Delivery: ${formatPrice(due)} to pay on delivery`;
+  return creditUsed ? `${formatPrice(creditUsed)} paid with store credit; ${money}` : money;
 }
 
 // A printable bill for one order, for its customer (/orders/:id/invoice) or an admin (/admin/orders/:id/invoice).

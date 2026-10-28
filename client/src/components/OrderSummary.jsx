@@ -9,6 +9,9 @@ export default function OrderSummary({
   couponCode,
   total,
   freeDeliveryMin,
+  // Store credit paying part of `total` (stage 72), and what to call the rest ("To pay on delivery").
+  creditUsed = 0,
+  dueLabel = 'To pay',
   children,
 }) {
   const short = freeDeliveryMin ? freeDeliveryMin - subtotal : 0;
@@ -28,6 +31,14 @@ export default function OrderSummary({
         )}
         <dt className="total">Total</dt>
         <dd className="total">{formatPrice(total)}</dd>
+        {creditUsed > 0 && (
+          <>
+            <dt>Store credit</dt>
+            <dd className="free">−{formatPrice(creditUsed)}</dd>
+            <dt className="total">{dueLabel}</dt>
+            <dd className="total">{formatPrice(total - creditUsed)}</dd>
+          </>
+        )}
       </dl>
       {delivery > 0 && short > 0 && <p className="muted small">Add {formatPrice(short)} more for free delivery.</p>}
       {children}

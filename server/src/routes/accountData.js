@@ -19,6 +19,7 @@ import { toOrder } from './orders.js';
 import { toQuestion } from './questions.js';
 import { toReturn } from './returns.js';
 import { changeRating, inTransaction, toReview } from './reviews.js';
+import { toCreditEntry } from '../credit.js';
 
 // A customer's own data (stage 65), for India's data protection law (DPDP Act 2023): download everything the store
 // holds about them, or close the account.
@@ -38,6 +39,8 @@ const OWN = [
   'loginChallenges',
   'helpRequests',
   'sessions',
+  // Store credit's history; the balance goes with the account (closing gives up any credit left).
+  'creditLedger',
 ];
 
 const closeBody = z.object({
@@ -56,7 +59,7 @@ export function accountDataRouter(ctx) {
   router.get('/account/data', async (req, res) => {
     const u = req.user;
     const userId = u._id;
-    const [orders, returns, reviews, questions, wishlist, alerts, cart, help] = await Promise.all([
+    const [orders, returns, reviews, questions, wishlist, alerts, cart, help, credit] = await Promise.all([
       db.collection('orders').find({ userId }).sort({ createdAt: -1 }).toArray(),
       db.collection('returns').find({ userId }).sort({ createdAt: -1 }).toArray(),
       db.collection('reviews').find({ userId }).toArray(),
@@ -65,6 +68,7 @@ export function accountDataRouter(ctx) {
       db.collection('stockAlerts').find({ userId }).toArray(),
       db.collection('carts').findOne({ _id: userId }),
       db.collection('helpRequests').find({ userId }).toArray(),
+      db.collection('creditLedger').find({ userId }).sort({ at: -1 }).toArray(),
     ]);
     const productIds = [...reviews, ...questions, ...wishlist, ...alerts].map((d) => d.productId);
     const titles = new Map(
@@ -94,6 +98,7 @@ export function accountDataRouter(ctx) {
       backInStockAlerts: alerts.map((a) => ({ product: title(a.productId), createdAt: a.createdAt })),
       savedCart: cart ? { items: cart.items, updatedAt: cart.updatedAt } : null,
       helpRequests: help.map(toRequest),
+      storeCredit: { balance: u.credit ?? 0, history: credit.map(toCreditEntry) },
     };
     res.set(
       'Content-Disposition',

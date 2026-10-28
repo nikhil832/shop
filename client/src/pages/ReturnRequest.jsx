@@ -52,11 +52,11 @@ export default function ReturnRequest() {
 
   async function submit(e) {
     e.preventDefault();
-    const { reason, note } = Object.fromEntries(new FormData(e.currentTarget));
+    const { reason, note, refundTo } = Object.fromEntries(new FormData(e.currentTarget));
     if (!chosen.length) return setState({ busy: false, error: 'Choose at least one item to return' });
     setState({ busy: true, error: null });
     try {
-      await request(`/orders/${id}/returns`, { method: 'POST', body: { items: chosen, reason, note } });
+      await request(`/orders/${id}/returns`, { method: 'POST', body: { items: chosen, reason, note, refundTo } });
       navigate(`/orders/${id}`, { state: { returnRequested: true } });
     } catch (err) {
       setState({ busy: false, error: err.message });
@@ -115,10 +115,31 @@ export default function ReturnRequest() {
       <p>
         Items chosen: <strong>{formatPrice(value)}</strong>
         <span className="muted small block">
-          The refund is this, less the items&rsquo; share of any coupon; delivery isn&rsquo;t refunded. Online payments
-          go back to how you paid; for Cash on Delivery we refund you directly.
+          The refund is this, less the items&rsquo; share of any coupon; delivery isn&rsquo;t refunded.
         </span>
       </p>
+      <fieldset className="payment-options">
+        <legend>Refund to</legend>
+        <label className="payment-option">
+          <input type="radio" name="refundTo" value="credit" />
+          <span>
+            <strong>Store credit</strong>
+            <span className="muted small block">
+              In your account as soon as we accept the return, for your next order. It doesn&rsquo;t expire.
+            </span>
+          </span>
+        </label>
+        <label className="payment-option">
+          <input type="radio" name="refundTo" value="money" defaultChecked />
+          <span>
+            <strong>The way you paid</strong>
+            <span className="muted small block">
+              Online payments go back to your card or UPI in 5–7 working days; for Cash on Delivery we refund you
+              directly. Any part you paid with store credit comes back as credit.
+            </span>
+          </span>
+        </label>
+      </fieldset>
       {state.error && (
         <p className="error" role="alert">
           {state.error}

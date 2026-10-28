@@ -9,6 +9,7 @@ import { logActivity, rupees } from '../activity.js';
 import { creditNoteNumber, gstCreditNote } from '../gst.js';
 import { toOrder } from './orders.js';
 import { byOf, movedEntry, recordStock } from '../stockHistory.js';
+import { addCredit, amountDue } from '../credit.js';
 
 // Returns: a customer asks to send back some items of a delivered order, within RETURN_DAYS of delivery; an admin
 // approves it once the items are back (stock is put back and the money refunded: through Razorpay for online payments,
@@ -31,6 +32,8 @@ const requestBody = z.object({
     .refine((items) => new Set(items.map((i) => i.index)).size === items.length, 'Each item can be listed once'),
   reason: z.enum(Object.keys(RETURN_REASONS), 'Choose a reason'),
   note: z.string().trim().max(500).default(''),
+  // Store credit (at once when approved) or money back the way it was paid (stage 72).
+  refundTo: z.enum(['credit', 'money']).default('money'),
 });
 const listQuery = z.object({
   status: z.enum(RETURN_STATUSES).optional(),
@@ -62,6 +65,8 @@ export const toReturn = (doc) => ({
   reasonText: RETURN_REASONS[doc.reason],
   note: doc.note,
   refund: doc.refund,
+  // The part refunded as store credit (stage 72); the rest goes back as money by `refundMethod`.
+  refundCredit: doc.refundCredit ?? 0,
   refundMethod: doc.refundMethod,
   status: doc.status,
   declineReason: doc.declineReason ?? null,
@@ -80,6 +85,21 @@ function returnableQty(order, returns) {
   }
   return order.items.map((line, index) => line.qty - (taken.get(index) ?? 0));
 }
+// How a return's `refund` is paid: `refundCredit` paise as store credit, the rest as money, which can't be more than
+// the order took in money (its total less the credit used) less the money earlier returns refund. A customer who
+// chose credit gets all of it as credit. `refundMethod` is how the money part goes: 'razorpay', 'manual' (paid in
+// cash, refunded by the admin) or 'credit' (no money part).
+export function refundSplit(order, refund, earlier, refundTo) {
+  const moneyOut = earlier
+    .filter((r) => OPEN.includes(r.status))
+    .reduce((s, r) => s + r.refund - (r.refundCredit ?? 0), 0);
+  const money = refundTo === 'credit' ? 0 : Math.min(refund, Math.max(0, amountDue(order) - moneyOut));
+  return {
+    refundCredit: refund - money,
+    refundMethod: money === 0 ? 'credit' : order.payment?.method === 'razorpay' ? 'razorpay' : 'manual',
+  };
+}
+
 const refundedSoFar = (returns) => returns.filter((r) => OPEN.includes(r.status)).reduce((s, r) => s + r.refund, 0);
 
 export function returnsRouter(ctx) {
@@ -141,6 +161,7 @@ export function returnsRouter(ctx) {
         }
       }
       const now = new Date();
+      const refund = returnRefund(order, body.items, refundedSoFar(earlier));
       const ret = {
         orderId,
         orderNumber: order.number ?? null,
@@ -158,8 +179,8 @@ export function returnsRouter(ctx) {
         }),
         reason: body.reason,
         note: body.note,
-        refund: returnRefund(order, body.items, refundedSoFar(earlier)),
-        refundMethod: order.payment?.method === 'razorpay' ? 'razorpay' : 'manual',
+        refund,
+        ...refundSplit(order, refund, earlier, body.refundTo),
         status: 'requested',
         createdAt: now,
         updatedAt: now,
@@ -236,7 +257,7 @@ export function returnsRouter(ctx) {
     try {
       if (!ctx.razorpay) throw new Error('Online payments are not configured on this server');
       const refund = await ctx.razorpay.refund(order.payment.razorpayPaymentId, {
-        amount: claimed.refund,
+        amount: claimed.refund - (claimed.refundCredit ?? 0),
         notes: { order: String(order.number), return: String(claimed._id) },
       });
       result = {
@@ -244,7 +265,12 @@ export function returnsRouter(ctx) {
         $unset: { refundError: '' },
       };
     } catch (err) {
-      result = { $set: { status: 'refund_failed', refundError: refundErrorText(err, claimed.refund) } };
+      result = {
+        $set: {
+          status: 'refund_failed',
+          refundError: refundErrorText(err, claimed.refund - (claimed.refundCredit ?? 0)),
+        },
+      };
     }
     return returns.findOneAndUpdate(
       { _id: ret._id },
@@ -320,6 +346,26 @@ export function returnsRouter(ctx) {
         }
       }
       await recordStock(db, entries, session);
+      if (doc.refundCredit) {
+        await addCredit(
+          db,
+          doc.userId,
+          doc.refundCredit,
+          {
+            reason: 'returned',
+            orderId: doc.orderId,
+            orderNumber: order?.number ?? null,
+            returnId: _id,
+            by: byOf(req.user),
+          },
+          session,
+        );
+      }
+      // All of it as credit: refunded already.
+      if (doc.refundMethod === 'credit') {
+        Object.assign(doc, { status: 'refunded', refundedAt: now });
+        await returns.updateOne({ _id }, { $set: { status: 'refunded', refundedAt: now } }, { session });
+      }
       return doc;
     });
     if (ret.refundMethod === 'razorpay') ret = await refundOnline(ret);

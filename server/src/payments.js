@@ -1,9 +1,10 @@
 import { sendNewOrderAlert, sendOrderEmail } from './emails.js';
 import { HttpError } from './http.js';
+import { amountDue } from './credit.js';
 
 // Online payments (Razorpay, test mode). An online order is created as `awaiting_payment` with its stock already
 // reserved; it becomes `placed` once Razorpay confirms the payment, or is cancelled (stock returned) when the
-// payment window runs out. order.payment is { method: 'cod' } or
+// payment window runs out. order.payment is { method: 'cod' }, { method: 'credit' } (all paid with store credit) or
 // { method: 'razorpay', status: 'pending' | 'paid' | 'refunding' | 'refunded' | 'refund_failed', razorpayOrderId,
 //   razorpayPaymentId, paidAt, refundId, refundedAt, refundError }.
 
@@ -13,7 +14,8 @@ export const PAYMENT_WINDOW_MS = 30 * 60_000;
 export const checkoutParams = (razorpay, order, user) => ({
   keyId: razorpay.keyId,
   orderId: order.payment.razorpayOrderId,
-  amount: order.total,
+  // What's left after store credit (stage 72).
+  amount: amountDue(order),
   currency: 'INR',
   expiresAt: order.expiresAt,
   prefill: { name: user.name, email: user.email, contact: order.address.phone },
@@ -26,7 +28,7 @@ export async function confirmPayment(ctx, order, payment) {
   const orders = db.collection('orders');
   if (payment.order_id !== order.payment?.razorpayOrderId)
     throw new HttpError(400, 'This payment is for another order');
-  if (payment.amount !== order.total) throw new HttpError(400, 'The payment amount does not match the order');
+  if (payment.amount !== amountDue(order)) throw new HttpError(400, 'The payment amount does not match the order');
   if (payment.status === 'authorized') payment = await razorpay.capture(payment.id, payment.amount);
   if (payment.status !== 'captured') throw new HttpError(400, 'The payment did not go through. You can try again.');
 
@@ -92,7 +94,7 @@ export async function refundPayment({ db, razorpay }, order) {
   try {
     if (!razorpay) throw new Error('Online payments are not configured on this server');
     const refund = await razorpay.refund(claimed.payment.razorpayPaymentId, {
-      amount: claimed.total,
+      amount: amountDue(claimed),
       notes: { order: String(claimed.number) },
     });
     result = {
@@ -101,7 +103,7 @@ export async function refundPayment({ db, razorpay }, order) {
     };
   } catch (err) {
     result = {
-      $set: { 'payment.status': 'refund_failed', 'payment.refundError': refundErrorText(err, claimed.total) },
+      $set: { 'payment.status': 'refund_failed', 'payment.refundError': refundErrorText(err, amountDue(claimed)) },
     };
   }
   return orders.findOneAndUpdate({ _id: order._id }, result, { returnDocument: 'after' });

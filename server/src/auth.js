@@ -189,4 +189,6 @@ export const toUser = (doc) => ({
   priceDropEmails: doc.priceDropEmails !== false,
   // One reminder for a cart left for a day; on unless switched off.
   cartReminderEmails: doc.cartReminderEmails !== false,
+  // Store credit in paise (credit.js), spent at checkout.
+  credit: doc.credit ?? 0,
 });

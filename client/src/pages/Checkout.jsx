@@ -133,6 +133,8 @@ export default function Checkout() {
   const [state, setState] = useState({ busy: false, error: null, version: 0 });
   // The coupon code being tried; the quote says whether it applies (quote.coupon) or why not (quote.couponError).
   const [coupon, setCoupon] = useState('');
+  // Store credit is used unless the customer unticks it (stage 72).
+  const [useCredit, setUseCredit] = useState(true);
   const couponInput = useRef(null);
   const { data: options } = useFetch('/payments/options');
   const {
@@ -151,6 +153,9 @@ export default function Checkout() {
   if (!items.length && !state.busy) return <Navigate to="/cart" replace />;
   if (error) return <p className="error">{error.message}</p>;
   if (!quote) return <p className="muted">Loading…</p>;
+  const balance = user.credit ?? 0;
+  const creditToUse = useCredit ? Math.min(balance, quote.total) : 0;
+  const due = quote.total - creditToUse;
 
   async function submit(e) {
     e.preventDefault();
@@ -174,16 +179,24 @@ export default function Checkout() {
           expectedTotal: quote.total,
           paymentMethod,
           couponCode: quote.coupon?.code,
+          creditToUse,
         },
       });
     } catch (err) {
       if (err.status === 401) return setUser(null);
+      // The balance may have changed in another tab: load it again.
+      if (err.status === 409) {
+        request('/auth/me').then(
+          ({ user }) => user && setUser(user),
+          () => {},
+        );
+      }
       // Stock or prices changed: show why and load the current quote.
       return setState((s) => ({ busy: false, error: err.message, version: s.version + (err.status === 409 ? 1 : 0) }));
     }
     // The order exists now (with its stock reserved), so the cart is done with either way.
     // A new address may have gone into the address book.
-    if (!saved)
+    if (!saved || creditToUse)
       request('/auth/me').then(
         ({ user }) => user && setUser(user),
         () => {},
@@ -210,7 +223,20 @@ export default function Checkout() {
           <legend>
             <h2>Payment</h2>
           </legend>
-          {options?.online && (
+          {balance > 0 && (
+            <label className="payment-option">
+              <input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} />
+              <span>
+                <strong>Use my store credit</strong>
+                <span className="muted small block">
+                  {formatPrice(balance)} available
+                  {useCredit &&
+                    (due === 0 ? ': pays for the whole order.' : `: ${formatPrice(creditToUse)} of it now.`)}
+                </span>
+              </span>
+            </label>
+          )}
+          {due > 0 && options?.online && (
             <label className="payment-option">
               <input type="radio" name="paymentMethod" value="razorpay" defaultChecked />
               <span>
@@ -219,13 +245,15 @@ export default function Checkout() {
               </span>
             </label>
           )}
-          <label className="payment-option">
-            {options?.online && <input type="radio" name="paymentMethod" value="cod" />}
-            <span>
-              <strong>Cash on Delivery</strong>
-              <span className="muted small block">Pay in cash when your order arrives.</span>
-            </span>
-          </label>
+          {due > 0 && (
+            <label className="payment-option">
+              {options?.online && <input type="radio" name="paymentMethod" value="cod" />}
+              <span>
+                <strong>Cash on Delivery</strong>
+                <span className="muted small block">Pay in cash when your order arrives.</span>
+              </span>
+            </label>
+          )}
         </fieldset>
 
         <section className={`panel ${loading ? 'stale' : ''}`}>
@@ -256,6 +284,7 @@ export default function Checkout() {
         couponCode={quote.coupon?.code}
         total={quote.total}
         freeDeliveryMin={quote.freeDeliveryMin}
+        creditUsed={creditToUse}
       >
         <CouponBox
           applied={quote.coupon}
@@ -279,7 +308,7 @@ export default function Checkout() {
           className="btn primary"
           disabled={state.busy || loading || !quote.canCheckout || !options}
         >
-          {state.busy ? 'Placing order…' : `Place order · ${formatPrice(quote.total)}`}
+          {state.busy ? 'Placing order…' : `Place order · ${formatPrice(due)}`}
         </button>
       </OrderSummary>
     </form>

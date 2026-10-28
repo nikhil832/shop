@@ -44,6 +44,8 @@ export function cell(value, { text = false } = {}) {
   return /[",\r\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
 }
 
+const PAYMENT = { razorpay: 'Online', cod: 'Cash on Delivery', credit: 'Store credit' };
+
 const COLUMNS = [
   'Order',
   'Date (India time)',
@@ -67,6 +69,8 @@ const COLUMNS = [
   'IGST (₹)',
   'Payment',
   'Payment status',
+  // Paid with store credit (stage 72); the total less this was paid in money.
+  'Store credit (₹)',
   'City',
   'State',
   'PIN code',
@@ -227,8 +231,9 @@ export function orderExportRouter({ db }) {
         cell(tax('cgst')),
         cell(tax('sgst')),
         cell(tax('igst')),
-        cell(payment.method === 'razorpay' ? 'Online' : 'Cash on Delivery'),
+        cell(PAYMENT[payment.method] ?? 'Cash on Delivery'),
         cell(payment.status ?? ''),
+        cell(rupees(o.creditUsed ?? 0)),
         cell(o.address.city, { text: true }),
         cell(o.address.state, { text: true }),
         cell(o.address.pincode, { text: true }),
