@@ -11,6 +11,7 @@ import { toProductCard } from './catalog.js';
 import { deliveryFor } from './delivery.js';
 import { findState, gstForOrders, gstInvoice } from '../gst.js';
 import { rememberAddress } from '../addressBook.js';
+import { byOf, CANCEL_REASONS, movedEntry, recordStock } from '../stockHistory.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
 export const FREE_DELIVERY_MIN = 49900;
@@ -156,8 +157,9 @@ export const toOrder = (doc, { admin = false } = {}) => ({
 
 // Cancels the order matching `filter` if its status is one of `from`, and puts its stock back, in one transaction.
 // A paid online order is then refunded. `by` is 'customer', 'admin' or 'system' (unpaid and expired). The customer
-// is emailed unless `notify` is false. Returns the updated order document.
-export async function cancelOrder(ctx, filter, { from, by, notify = true }) {
+// is emailed unless `notify` is false. `user` is the admin cancelling, for the stock history. Returns the updated order
+// document.
+export async function cancelOrder(ctx, filter, { from, by, user = null, notify = true }) {
   const { db, client } = ctx;
   const orders = db.collection('orders');
   // An order still awaiting payment may in fact have been paid: settle that first, so a paid order is refunded.
@@ -179,17 +181,31 @@ export async function cancelOrder(ctx, filter, { from, by, notify = true }) {
         throw new HttpError(409, `This order can't be cancelled (it is ${existing.status})`);
       }
       // Stock goes back to the variant bought and to the product's total; a variant deleted since gets nothing back.
-      await db.collection('products').bulkWrite(
-        order.items.map((i) => ({
-          updateOne: i.variantId
-            ? {
-                filter: { _id: i.productId, 'variants._id': i.variantId },
-                update: { $inc: { stock: i.qty, 'variants.$.stock': i.qty }, $set: { updatedAt: now } },
-              }
-            : { filter: { _id: i.productId }, update: { $inc: { stock: i.qty }, $set: { updatedAt: now } } },
-        })),
-        { session },
-      );
+      const reason = CANCEL_REASONS[by];
+      const entries = [];
+      for (const i of order.items) {
+        const after = await db
+          .collection('products')
+          .findOneAndUpdate(
+            i.variantId ? { _id: i.productId, 'variants._id': i.variantId } : { _id: i.productId },
+            i.variantId
+              ? { $inc: { stock: i.qty, 'variants.$.stock': i.qty }, $set: { updatedAt: now } }
+              : { $inc: { stock: i.qty }, $set: { updatedAt: now } },
+            { session, returnDocument: 'after' },
+          );
+        if (after) {
+          entries.push(
+            movedEntry(after, i.variantId, i.qty, {
+              reason,
+              orderId: order._id,
+              orderNumber: order.number ?? null,
+              by: byOf(user),
+              at: now,
+            }),
+          );
+        }
+      }
+      await recordStock(db, entries, session);
       if (order.coupon) await releaseCoupon(db, order._id, session);
     });
   } finally {
@@ -311,6 +327,7 @@ export function ordersRouter(ctx) {
       await session.withTransaction(async () => {
         const now = new Date();
         const items = [];
+        const moved = []; // stock history, numbered with the order once it has one
         // With GST on, each item remembers its rate and HSN code, and the order the store's details (gst.js).
         const gst = await gstForOrders(db, session);
         for (const { productId, variantId, qty } of body.items) {
@@ -325,7 +342,7 @@ export function ordersRouter(ctx) {
             vid
               ? { $inc: { stock: -qty, 'variants.$.stock': -qty }, $set: { updatedAt: now } }
               : { $inc: { stock: -qty }, $set: { updatedAt: now } },
-            { session },
+            { session, returnDocument: 'after' },
           );
           if (!doc) {
             const current = await products.findOne({ _id, active: true }, { session });
@@ -344,6 +361,7 @@ export function ordersRouter(ctx) {
             );
           }
           const variant = vid ? findVariant(doc, vid) : null;
+          moved.push(movedEntry(doc, vid, -qty, { reason: 'ordered', by: null, at: now }));
           items.push({
             productId: _id,
             ...(variant && { variantId: variant._id, variant: variant.label }),
@@ -400,6 +418,11 @@ export function ordersRouter(ctx) {
           updatedAt: now,
         };
         await orders.insertOne(order, { session });
+        await recordStock(
+          db,
+          moved.map((m) => ({ ...m, orderId, orderNumber: order.number })),
+          session,
+        );
         if (body.saveAddress) await rememberAddress(users, req.user._id, body.address, { session });
       });
     } finally {

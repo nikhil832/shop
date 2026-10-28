@@ -449,9 +449,12 @@ function ProductForm({ product, categories }) {
       <div className="admin-head">
         <h1>{product ? 'Edit product' : 'Add product'}</h1>
         {product && (
-          <Link to={`/p/${product.slug}`} target="_blank" rel="noreferrer">
-            View in store ↗
-          </Link>
+          <div className="admin-head-actions">
+            <Link to={`/admin/products/${product.id}/stock`}>Stock history</Link>
+            <Link to={`/p/${product.slug}`} target="_blank" rel="noreferrer">
+              View in store ↗
+            </Link>
+          </div>
         )}
       </div>
       {product?.sale && (

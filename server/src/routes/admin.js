@@ -14,6 +14,7 @@ import { MAX_OPTIONS, optionsOf, optionsPhrase, toVariant, variantLabel, variant
 import { cancelOrder, ORDER_STATUSES, toOrder } from './orders.js';
 import { sendOrderEmail } from '../emails.js';
 import { changeRating, inTransaction, toReview } from './reviews.js';
+import { byOf, recordStock, savedEntries } from '../stockHistory.js';
 import { logActivity, orderTarget, productChanges, productTarget, rupees, yesNo } from '../activity.js';
 
 const hexId = (what) => z.string().regex(/^[0-9a-f]{24}$/, `Choose a ${what}`);
@@ -374,7 +375,15 @@ export function adminRouter(ctx) {
         updatedAt: now,
       };
       try {
-        const { insertedId } = await products.insertOne(doc);
+        const insertedId = await inTransaction(ctx.client, async (session) => {
+          const { insertedId } = await products.insertOne(doc, { session });
+          await recordStock(
+            db,
+            savedEntries(null, { ...doc, _id: insertedId }, { reason: 'added', by: byOf(req.user), at: now }),
+            session,
+          );
+          return insertedId;
+        });
         await logActivity(db, req.user, {
           area: 'products',
           action: 'Added product',
@@ -444,11 +453,22 @@ export function adminRouter(ctx) {
         update.images ?? fields.images ?? current.images,
       );
     }
-    const doc = await products.findOneAndUpdate(
-      { _id },
-      { $set: update, ...(Object.keys(unset).length && { $unset: unset }) },
-      { returnDocument: 'after' },
-    );
+    // With the product as it really was just before (an order may have taken stock since `current` was read), so the
+    // stock history records exactly what this save changed.
+    const doc = await inTransaction(ctx.client, async (session) => {
+      const before = await products.findOneAndUpdate(
+        { _id },
+        { $set: update, ...(Object.keys(unset).length && { $unset: unset }) },
+        { session },
+      );
+      const after = await products.findOne({ _id }, { session });
+      await recordStock(
+        db,
+        savedEntries(before, after, { reason: 'edited', by: byOf(req.user), at: update.updatedAt }),
+        session,
+      );
+      return after;
+    });
     const names = new Map(
       (await categories.find({ _id: { $in: [current.categoryId, doc.categoryId] } }).toArray()).map((c) => [
         c._id.toString(),
@@ -641,7 +661,7 @@ export function adminRouter(ctx) {
   async function advanceOrder(req, _id, status, shipment) {
     let doc;
     if (status === 'cancelled') {
-      doc = await cancelOrder(ctx, { _id }, { from: NEXT_FROM.cancelled, by: 'admin' });
+      doc = await cancelOrder(ctx, { _id }, { from: NEXT_FROM.cancelled, by: 'admin', user: req.user });
     } else {
       const now = new Date();
       // The expected current status is part of the filter, so two admins clicking at once can't skip a step.

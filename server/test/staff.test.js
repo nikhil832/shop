@@ -50,7 +50,7 @@ test('admins make existing accounts staff; nobody else can, and admin is never g
   assert.equal(added.status, 201);
   assert.deepEqual([added.body.role, added.body.email], ['packer', 'packer@example.com']);
   await admin('POST', '/admin/staff', { email: 'support@example.com', role: 'support' });
-  assert.deepEqual((await me(packer)).permissions, ['orders.view', 'orders.ship', 'orders.notes']);
+  assert.deepEqual((await me(packer)).permissions, ['orders.view', 'orders.ship', 'orders.notes', 'stock.history']);
   assert.deepEqual((await me(support)).permissions, ['orders.view', 'orders.notes', 'reviews', 'questions', 'help']);
   assert.deepEqual((await me(admin)).permissions, ['*']);
   assert.deepEqual((await me(customer)).permissions, []);

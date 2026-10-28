@@ -59,6 +59,11 @@ test('an admin makes someone a packer, who sees only orders and can ship but not
     await page.getByRole('button', { name: 'Mark as shipped' }).click();
     await expect(page.getByRole('button', { name: 'Mark as delivered' })).toBeVisible();
 
+    // Before re-counting a shelf, the packer can see why its stock changed.
+    await page.getByRole('link', { name: `Stock history of ${order.items[0].title}` }).click();
+    await expect(page.getByRole('heading', { name: `Stock history: ${order.items[0].title}` })).toBeVisible();
+    await expect(page.getByRole('link', { name: `Order #${order.number}` })).toBeVisible();
+
     // Admin pages beyond their role are refused by the server.
     const products = await page.request.get('/api/admin/products');
     expect(products.status()).toBe(403);

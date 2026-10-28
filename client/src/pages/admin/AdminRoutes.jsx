@@ -21,6 +21,7 @@ import AdminProducts from './AdminProducts.jsx';
 import AdminQuestions from './AdminQuestions.jsx';
 import AdminReturns from './AdminReturns.jsx';
 import AdminReviews from './AdminReviews.jsx';
+import AdminStockHistory from './AdminStockHistory.jsx';
 import Invoice from '../Invoice.jsx';
 import CreditNote from '../CreditNote.jsx';
 
@@ -48,6 +49,7 @@ export default function AdminRoutes() {
         <Route path="products/new" element={<AdminProduct />} />
         <Route path="products/import" element={<AdminImport />} />
         <Route path="products/:id" element={<AdminProduct />} />
+        <Route path="products/:id/stock" element={<AdminStockHistory />} />
         <Route path="categories" element={<AdminCategories />} />
         <Route path="reviews" element={<AdminReviews />} />
         <Route path="questions" element={<AdminQuestions />} />

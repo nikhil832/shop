@@ -1,6 +1,7 @@
 import { MongoClient } from 'mongodb';
 import { migrateAddresses } from './addressBook.js';
 import { ACTIVITY_DAYS } from './activity.js';
+import { HISTORY_DAYS } from './stockHistory.js';
 import { REPORT_DAYS } from './routes/errorReports.js';
 import { DEVICE_FORGET_DAYS } from './loginAlerts.js';
 import { CACHE_DAYS } from './smartSearch.js';
@@ -46,6 +47,12 @@ const INDEXES = {
     [{ at: 1 }, { expireAfterSeconds: ACTIVITY_DAYS * 86_400 }],
     [{ area: 1, at: -1 }],
     [{ 'by.id': 1, at: -1 }],
+  ],
+  // Stock history: per product (or one variant), newest first; entries go after HISTORY_DAYS (a year).
+  stockHistory: [
+    [{ at: 1 }, { expireAfterSeconds: HISTORY_DAYS * 86_400 }],
+    [{ productId: 1, at: -1 }],
+    [{ productId: 1, variantId: 1, at: -1 }],
   ],
   // Browser error reports: one per problem, listed by latest report, deleted REPORT_DAYS after it.
   errorReports: [

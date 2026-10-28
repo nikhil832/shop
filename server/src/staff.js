@@ -12,7 +12,7 @@ import { HttpError, parse, parseObjectId } from './http.js';
 export const STAFF_ROLES = { packer: 'Packer', support: 'Support' };
 export const PERMISSIONS = {
   admin: ['*'],
-  packer: ['orders.view', 'orders.ship', 'orders.notes'],
+  packer: ['orders.view', 'orders.ship', 'orders.notes', 'stock.history'],
   support: ['orders.view', 'orders.notes', 'reviews', 'questions', 'help'],
 };
 

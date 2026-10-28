@@ -4,7 +4,8 @@ import { useFetch } from '../../useFetch.js';
 
 // What each role may do, for the page's explanation (the server's list is PERMISSIONS in server/src/staff.js).
 const ROLE_NOTES = {
-  packer: 'Packer: sees orders, marks them shipped or delivered, adds tracking and notes, prints packing slips.',
+  packer:
+    'Packer: sees orders, marks them shipped or delivered, adds tracking and notes, prints packing slips, sees stock history.',
   support: 'Support: sees orders and their notes, answers questions and help requests, hides or shows reviews.',
 };
 

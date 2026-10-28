@@ -7,12 +7,11 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                                                                                                 | Why                                                                                                               | To start              |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | --------------------- |
-| 1   | **Stock history**: every stock change recorded with its reason (order, cancellation, return, expiry of an unpaid order, admin edit, CSV import, sale), shown per product and variant | When a count looks wrong there's no way to see why today; packers and admins can check before re-counting shelves | "start stock history" |
-| 2   | **Announcement bar**: a short message across the top of the shop between two dates, e.g. "Orders after 25 Oct ship after Diwali"                                                     | Telling every visitor about delays, holidays or a sale today means editing product descriptions                   | "start announcements" |
-| 3   | **Store credit**: refunds and goodwill paid as credit on the account, used at checkout before paying; admins can add credit from a help request                                      | Cheaper and faster than bank refunds for small amounts, and a way to say sorry that keeps the customer            | "start store credit"  |
-| 4   | **Compare products**: tick up to three products in a category to see price, rating, highlights, options and stock side by side                                                       | Choosing between similar phones or shoes now means flipping between tabs                                          | "start compare"       |
+| #   | Idea                                                                                                                                            | Why                                                                                                    | To start              |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------- |
+| 1   | **Announcement bar**: a short message across the top of the shop between two dates, e.g. "Orders after 25 Oct ship after Diwali"                | Telling every visitor about delays, holidays or a sale today means editing product descriptions        | "start announcements" |
+| 2   | **Store credit**: refunds and goodwill paid as credit on the account, used at checkout before paying; admins can add credit from a help request | Cheaper and faster than bank refunds for small amounts, and a way to say sorry that keeps the customer | "start store credit"  |
+| 3   | **Compare products**: tick up to three products in a category to see price, rating, highlights, options and stock side by side                  | Choosing between similar phones or shoes now means flipping between tabs                               | "start compare"       |
 
 ## Set aside
 
@@ -96,3 +95,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Scheduled sales: a percentage off a category or chosen products between two times, prices back by themselves                                  | Stage 67 (`git log --grep "Stage 67"`) |
 | Lighter product photos: shrunk in the browser at upload, with small versions for cards and lists                                              | Stage 68 (`git log --grep "Stage 68"`) |
 | Security headers: a Content Security Policy (the store and Razorpay only), no framing, HTTPS-only, strict referrers                           | Stage 69 (`git log --grep "Stage 69"`) |
+| Stock history: every stock change with its reason (order, cancellation, release, return, edit, import), per product and variant               | Stage 70 (`git log --grep "Stage 70"`) |

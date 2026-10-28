@@ -32,6 +32,7 @@ import { accountDataRouter } from './routes/accountData.js';
 import { staffRouter } from './staff.js';
 import { salesRouter } from './sales.js';
 import { securityHeaders } from './securityHeaders.js';
+import { stockHistoryRouter } from './stockHistory.js';
 
 // Builds the Express app around an injected database. ctx = { db, client, config, razorpay, mail } (razorpay is null
 // when online payments aren't configured; mail sends or logs order emails).
@@ -80,6 +81,7 @@ export function createApp(ctx) {
   api.use(helpRouter(ctx));
   api.use(staffRouter(ctx));
   api.use(salesRouter(ctx));
+  api.use(stockHistoryRouter(ctx));
   // Before adminRouter, whose /admin/orders/:id and /admin/products/:id would take "export" or "import" for an id.
   api.use(orderExportRouter(ctx));
   api.use(productImportRouter(ctx));

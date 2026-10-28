@@ -9,6 +9,7 @@ import { categoryIcon } from './admin.js';
 import { cell } from './orderExport.js';
 import { inTransaction } from './reviews.js';
 import { logActivity, productChanges } from '../activity.js';
+import { byOf, recordStock, savedEntries } from '../stockHistory.js';
 
 // Products from a spreadsheet: download them all as CSV, edit, upload. An upload is checked first (a preview of what
 // each row adds or changes, and the rows with problems), then saved with the same file and the preview's `plan` id:
@@ -407,7 +408,7 @@ export function productImportRouter(ctx) {
       for (const { doc, category } of writes.inserts) {
         const slug = await freeSlug(products, doc.title, taken, session);
         logged.push({ field: doc.title, to: `added in ${category.name}` });
-        await products.insertOne(
+        const { insertedId } = await products.insertOne(
           {
             ...doc,
             slug,
@@ -418,11 +419,24 @@ export function productImportRouter(ctx) {
           },
           { session },
         );
+        const entries = savedEntries(
+          null,
+          { ...doc, _id: insertedId },
+          { reason: 'imported', by: byOf(req.user), at: now },
+        );
+        await recordStock(db, entries, session);
       }
       for (const { product, set, variants } of writes.updates) {
         // Variant stock and the product's totals change together (the variants invariant).
         const $set = { ...set, ...(variants && { variants, ...variantTotals(variants) }), updatedAt: now };
         await products.updateOne({ _id: product._id }, { $set }, { session });
+        // `product` was read in this transaction, so it is exactly what the save changes.
+        const entries = savedEntries(
+          product,
+          { ...product, ...$set },
+          { reason: 'imported', by: byOf(req.user), at: now },
+        );
+        await recordStock(db, entries, session);
         for (const c of productChanges(product, { ...product, ...$set }, categoryName)) {
           logged.push({ ...c, field: `${product.title}: ${c.field}` });
         }

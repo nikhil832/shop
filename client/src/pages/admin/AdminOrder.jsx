@@ -237,7 +237,19 @@ export default function AdminOrder() {
                 {order.items.map((i) => (
                   <tr key={lineKey(i)}>
                     <td>
-                      <Link to={`/admin/products/${i.productId}`}>{i.title}</Link>
+                      {can(user, '*') ? <Link to={`/admin/products/${i.productId}`}>{i.title}</Link> : i.title}
+                      {can(user, 'stock.history') && (
+                        <>
+                          {' '}
+                          <Link
+                            to={`/admin/products/${i.productId}/stock${i.variantId ? `?variant=${i.variantId}` : ''}`}
+                            className="small"
+                            aria-label={`Stock history of ${i.title}`}
+                          >
+                            Stock
+                          </Link>
+                        </>
+                      )}
                     </td>
                     <td className="num">{formatPrice(i.price)}</td>
                     <td className="num">{i.qty}</td>

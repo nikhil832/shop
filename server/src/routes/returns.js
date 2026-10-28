@@ -8,6 +8,7 @@ import { inTransaction } from './reviews.js';
 import { logActivity, rupees } from '../activity.js';
 import { creditNoteNumber, gstCreditNote } from '../gst.js';
 import { toOrder } from './orders.js';
+import { byOf, movedEntry, recordStock } from '../stockHistory.js';
 
 // Returns: a customer asks to send back some items of a delivered order, within RETURN_DAYS of delivery; an admin
 // approves it once the items are back (stock is put back and the money refunded: through Razorpay for online payments,
@@ -282,7 +283,7 @@ export function returnsRouter(ctx) {
       }
       // A return of an order placed with GST on gets a credit note, numbered in its own series inside the transaction
       // (like order numbers), so numbers have no gaps or repeats.
-      const order = await orders.findOne({ _id: doc.orderId }, { session, projection: { gst: 1 } });
+      const order = await orders.findOne({ _id: doc.orderId }, { session, projection: { gst: 1, number: 1 } });
       if (order?.gst) {
         const counter = await db
           .collection('counters')
@@ -294,17 +295,31 @@ export function returnsRouter(ctx) {
         doc.creditNote = { seq: counter.seq, date: now };
         await returns.updateOne({ _id }, { $set: { creditNote: doc.creditNote } }, { session });
       }
-      await db.collection('products').bulkWrite(
-        doc.items.map((i) => ({
-          updateOne: i.variantId
-            ? {
-                filter: { _id: i.productId, 'variants._id': i.variantId },
-                update: { $inc: { stock: i.qty, 'variants.$.stock': i.qty }, $set: { updatedAt: now } },
-              }
-            : { filter: { _id: i.productId }, update: { $inc: { stock: i.qty }, $set: { updatedAt: now } } },
-        })),
-        { session },
-      );
+      const entries = [];
+      for (const i of doc.items) {
+        const after = await db
+          .collection('products')
+          .findOneAndUpdate(
+            i.variantId ? { _id: i.productId, 'variants._id': i.variantId } : { _id: i.productId },
+            i.variantId
+              ? { $inc: { stock: i.qty, 'variants.$.stock': i.qty }, $set: { updatedAt: now } }
+              : { $inc: { stock: i.qty }, $set: { updatedAt: now } },
+            { session, returnDocument: 'after' },
+          );
+        if (after) {
+          entries.push(
+            movedEntry(after, i.variantId, i.qty, {
+              reason: 'returned',
+              orderId: doc.orderId,
+              orderNumber: order?.number ?? null,
+              returnId: _id,
+              by: byOf(req.user),
+              at: now,
+            }),
+          );
+        }
+      }
+      await recordStock(db, entries, session);
       return doc;
     });
     if (ret.refundMethod === 'razorpay') ret = await refundOnline(ret);

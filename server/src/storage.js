@@ -17,6 +17,7 @@ const NAMES = {
   reviews: 'Reviews',
   questions: 'Questions',
   activity: 'Activity log',
+  stockHistory: 'Stock history',
   errorReports: 'Error reports',
   carts: 'Saved carts',
   wishlist: 'Wishlists',
