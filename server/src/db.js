@@ -48,6 +48,8 @@ const INDEXES = {
     [{ area: 1, at: -1 }],
     [{ 'by.id': 1, at: -1 }],
   ],
+  // Announcements: the one showing now is found by its end and start.
+  announcements: [[{ endsAt: 1, startsAt: -1 }]],
   // Stock history: per product (or one variant), newest first; entries go after HISTORY_DAYS (a year).
   stockHistory: [
     [{ at: 1 }, { expireAfterSeconds: HISTORY_DAYS * 86_400 }],

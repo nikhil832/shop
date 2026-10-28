@@ -25,6 +25,7 @@ export const ACTIVITY_AREAS = [
   'errors',
   'help',
   'sales',
+  'announcements',
 ];
 export const ACTIVITY_DAYS = 365;
 const MAX_CHANGES = 100;

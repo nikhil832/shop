@@ -2,6 +2,7 @@ import { Component, Suspense } from 'react';
 import { Link, Outlet, useLocation } from 'react-router';
 import Header from './Header.jsx';
 import AssistantButton from './AssistantButton.jsx';
+import AnnouncementBar from './AnnouncementBar.jsx';
 import { reportError } from '../errorReports.js';
 
 // A page that failed to load or crashed shows this instead of a blank screen, and is reported to the admins; going
@@ -32,6 +33,7 @@ export default function Layout() {
   const { pathname } = useLocation();
   return (
     <>
+      <AnnouncementBar />
       <Header />
       <main className="page">
         {/* Pages loaded on first use (main.jsx) show "Loading…" meanwhile; a new page gets a fresh error boundary. */}

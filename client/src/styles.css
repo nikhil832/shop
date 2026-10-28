@@ -698,6 +698,36 @@ p a:not(.btn) {
 .address-grid input {
   font-weight: 400;
 }
+/* The store's announcement above the header (AnnouncementBar.jsx). */
+.announcement {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--accent-soft);
+  color: var(--text);
+  border-bottom: 1px solid var(--accent);
+  font-size: 0.9rem;
+}
+.announcement p {
+  margin: 0;
+  text-align: center;
+}
+.announcement a {
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+.announcement-close {
+  flex: none;
+  background: none;
+  border: 0;
+  color: var(--text);
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+}
 .notice {
   background: var(--accent-soft);
   border: 1px solid var(--accent);

@@ -18,6 +18,7 @@ const NAMES = {
   questions: 'Questions',
   activity: 'Activity log',
   stockHistory: 'Stock history',
+  announcements: 'Announcements',
   errorReports: 'Error reports',
   carts: 'Saved carts',
   wishlist: 'Wishlists',

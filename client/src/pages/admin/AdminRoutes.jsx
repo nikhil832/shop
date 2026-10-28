@@ -13,6 +13,7 @@ import AdminImport from './AdminImport.jsx';
 import AdminLayout, { ADMIN_TABS } from './AdminLayout.jsx';
 import AdminStaff from './AdminStaff.jsx';
 import AdminSales from './AdminSales.jsx';
+import AdminAnnouncements from './AdminAnnouncements.jsx';
 import AdminOrder from './AdminOrder.jsx';
 import AdminOrders from './AdminOrders.jsx';
 import AdminPackingSlips from './AdminPackingSlips.jsx';
@@ -62,6 +63,7 @@ export default function AdminRoutes() {
         <Route path="help" element={<AdminHelp />} />
         <Route path="staff" element={<AdminStaff />} />
         <Route path="sales" element={<AdminSales />} />
+        <Route path="announcements" element={<AdminAnnouncements />} />
       </Route>
     </Routes>
   );
