@@ -187,7 +187,7 @@ export function helpRouter(ctx) {
     res.json({
       items: docs.map((d) => ({
         ...toRequest(d),
-        customer: { name: d.name, email: d.email, guest: !d.userId },
+        customer: { id: d.userId?.toString() ?? null, name: d.name, email: d.email, guest: !d.userId },
         orderNumber: d.orderId ? (numbers.get(d.orderId.toString()) ?? null) : null,
       })),
       total,

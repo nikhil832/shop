@@ -1,0 +1,208 @@
+import { useState } from 'react';
+import { Link, useParams } from 'react-router';
+import {
+  HELP_STATUS,
+  HELP_TOPICS,
+  addressLine,
+  formatDate,
+  formatPrice,
+  orderNumber,
+  refundText,
+} from '../../format.js';
+import { useFetch } from '../../useFetch.js';
+import NotFound from '../NotFound.jsx';
+import { StatusBadge } from '../Orders.jsx';
+import { CreditBox } from './AdminHelp.jsx';
+
+const ROLES = { user: 'Customer', admin: 'Admin', packer: 'Packer', support: 'Support' };
+const CREDIT_REASONS = {
+  goodwill: 'Added by the store',
+  taken: 'Taken back by the store',
+  returned: 'Return refunded as credit',
+  cancelled: 'Back from a cancelled order',
+  spent: 'Paid for an order',
+};
+
+// One account on Admin → Customers (stage 74): details, totals, the latest orders, returns and help requests, and store
+// credit with its history and the form to give some.
+export default function AdminCustomer() {
+  const { id } = useParams();
+  const [version, setVersion] = useState(0);
+  const { data, error } = useFetch(`/admin/customers/${id}`, version);
+
+  if (error?.status === 404 || error?.status === 400) return <NotFound message="We couldn't find that customer." />;
+  if (error) return <p className="error">{error.message}</p>;
+  if (!data) return <p className="muted">Loading…</p>;
+  const { customer: c, totals, orders, returns, help, credit } = data;
+
+  return (
+    <>
+      <nav className="breadcrumb" aria-label="Breadcrumb">
+        <Link to="/admin/customers">Customers</Link>
+        <span aria-hidden>›</span>
+        <span>{c.name}</span>
+      </nav>
+
+      <section className="panel">
+        <div className="admin-head">
+          <h1>{c.name}</h1>
+          <span className="muted">{ROLES[c.role] ?? c.role}</span>
+        </div>
+        <p>
+          {c.email}
+          <span className="muted small block">
+            Joined {formatDate(c.createdAt)} · two-step login {c.twoStep ? 'on' : 'off'} · price-drop emails{' '}
+            {c.emails.priceDrops ? 'on' : 'off'} · cart reminders {c.emails.cartReminders ? 'on' : 'off'}
+          </span>
+        </p>
+        <dl className="customer-totals">
+          <div>
+            <dt>Spent</dt>
+            <dd>{formatPrice(totals.spent)}</dd>
+          </div>
+          <div>
+            <dt>Orders</dt>
+            <dd>
+              {totals.orders}
+              {totals.allOrders > totals.orders && (
+                <span className="muted small"> (+{totals.allOrders - totals.orders} unpaid or cancelled)</span>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt>Refunded</dt>
+            <dd>{formatPrice(totals.refunded)}</dd>
+          </div>
+          <div>
+            <dt>Store credit</dt>
+            <dd>{formatPrice(c.credit)}</dd>
+          </div>
+          <div>
+            <dt>Reviews · questions · wishlist</dt>
+            <dd>
+              {totals.reviews} · {totals.questions} · {totals.wishlist}
+            </dd>
+          </div>
+        </dl>
+        {c.addresses.length > 0 && (
+          <>
+            <h2>Addresses</h2>
+            <ul className="plain-list small">
+              {c.addresses.map((a, i) => (
+                <li key={a.id}>
+                  {addressLine(a)}
+                  {i === 0 && <span className="muted"> (default)</span>}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
+
+      <section className="panel" aria-labelledby="customer-orders">
+        <h2 id="customer-orders">Orders</h2>
+        {orders.length === 0 ? (
+          <p className="muted">No orders yet.</p>
+        ) : (
+          <div className="table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Date</th>
+                  <th className="num">Items</th>
+                  <th className="num">Total</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((o) => (
+                  <tr key={o.id}>
+                    <td>
+                      <Link to={`/admin/orders/${o.id}`}>#{orderNumber(o)}</Link>
+                    </td>
+                    <td>{formatDate(o.createdAt)}</td>
+                    <td className="num">{o.items}</td>
+                    <td className="num">
+                      {formatPrice(o.total)}
+                      {o.creditUsed > 0 && (
+                        <span className="muted small block">{formatPrice(o.creditUsed)} store credit</span>
+                      )}
+                    </td>
+                    <td>
+                      <StatusBadge status={o.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {totals.allOrders > orders.length && (
+          <p className="small">
+            <Link to={`/admin/orders?q=${encodeURIComponent(c.email)}`}>All {totals.allOrders} orders</Link>
+          </p>
+        )}
+      </section>
+
+      {returns.length > 0 && (
+        <section className="panel" aria-labelledby="customer-returns">
+          <h2 id="customer-returns">Returns</h2>
+          <ul className="plain-list">
+            {returns.map((r) => (
+              <li key={r.id}>
+                <Link to={`/admin/orders/${r.orderId}`}>
+                  Order #{r.orderNumber ?? r.orderId.slice(-8).toUpperCase()}
+                </Link>{' '}
+                · {formatDate(r.createdAt)} · {r.reasonText} · {refundText(r)} · <StatusBadge status={r.status} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {help.length > 0 && (
+        <section className="panel" aria-labelledby="customer-help">
+          <h2 id="customer-help">Help requests</h2>
+          <ul className="plain-list">
+            {help.map((h) => (
+              <li key={h.id}>
+                <Link to={`/admin/help?status=${h.status}`}>Request #{h.number}</Link> · {HELP_TOPICS[h.topic]} ·{' '}
+                {HELP_STATUS[h.status]} · {h.messages} {h.messages === 1 ? 'message' : 'messages'} · last{' '}
+                {formatDate(h.updatedAt)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section className="panel" aria-labelledby="customer-credit">
+        <h2 id="customer-credit">Store credit</h2>
+        {credit.length > 0 && (
+          <ul className="credit-history">
+            {credit.map((e) => (
+              <li key={e.id}>
+                <span>
+                  {CREDIT_REASONS[e.reason] ?? e.reason}
+                  {e.order && (
+                    <>
+                      {' · '}
+                      <Link to={`/admin/orders/${e.order.id}`}>Order #{orderNumber(e.order)}</Link>
+                    </>
+                  )}
+                  {e.note && <span className="muted small block">{e.note}</span>}
+                  <span className="muted small block">{formatDate(e.at)}</span>
+                </span>
+                <span className="num">
+                  {e.change > 0 ? '+' : '−'}
+                  {formatPrice(Math.abs(e.change))}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <CreditBox path={`/admin/customers/${c.id}/credit`} name={c.name} onChange={() => setVersion((v) => v + 1)} />
+      </section>
+    </>
+  );
+}

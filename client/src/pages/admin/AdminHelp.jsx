@@ -13,11 +13,12 @@ const FILTERS = [
   ['closed', 'Closed'],
 ];
 
-// Store credit for a request's customer (stage 72, admins only): their balance, and goodwill to add (or a minus amount
-// to take back a mistake). Mounted when opened, so the inbox doesn't ask for every card's balance.
-function CreditBox({ request: r }) {
+// Store credit for a customer (stage 72, admins only): their balance, and goodwill to add (or a minus amount to take
+// back a mistake). `path` is the pair of routes (GET the balance, POST the credit): a help request's or a customer's
+// (Admin → Customers). On help cards it's mounted when opened, so the inbox doesn't ask for every card's balance.
+export function CreditBox({ path, name, onChange }) {
   const [version, setVersion] = useState(0);
-  const { data } = useFetch(`/admin/help/${r.id}/credit`, version);
+  const { data } = useFetch(path, version);
   const [state, setState] = useState({ busy: false, error: null, done: null });
   const [formKey, setFormKey] = useState(0);
 
@@ -27,14 +28,15 @@ function CreditBox({ request: r }) {
     const amount = Math.round(Number(f.amount) * 100);
     setState({ busy: true, error: null, done: null });
     try {
-      const res = await request(`/admin/help/${r.id}/credit`, { method: 'POST', body: { amount, note: f.note } });
+      const res = await request(path, { method: 'POST', body: { amount, note: f.note } });
       setState({
         busy: false,
         error: null,
-        done: `${amount > 0 ? 'Added' : 'Took back'} ${formatPrice(Math.abs(amount))}. ${r.customer.name} now has ${formatPrice(res.balance)}.`,
+        done: `${amount > 0 ? 'Added' : 'Took back'} ${formatPrice(Math.abs(amount))}. ${name} now has ${formatPrice(res.balance)}.`,
       });
       setFormKey((k) => k + 1);
       setVersion((v) => v + 1);
+      onChange?.();
     } catch (err) {
       setState({ busy: false, error: err.message, done: null });
     }
@@ -43,8 +45,8 @@ function CreditBox({ request: r }) {
   return (
     <form key={formKey} className="review-form" onSubmit={submit}>
       <p className="small">
-        {data ? `${r.customer.name} has ${formatPrice(data.balance)} of store credit.` : 'Loading…'} It&apos;s spent at
-        checkout and never expires.
+        {data ? `${name} has ${formatPrice(data.balance)} of store credit.` : 'Loading…'} It&apos;s spent at checkout
+        and never expires.
       </p>
       <div className="address-grid">
         <label>
@@ -93,8 +95,13 @@ function RequestCard({ item, onChange }) {
   return (
     <li className="panel question-card">
       <div className="muted small">
-        Request #{r.number} · {HELP_TOPICS[r.topic]} · {r.customer.name} ({r.customer.email})
-        {r.customer.guest && ' · not logged in'}
+        Request #{r.number} · {HELP_TOPICS[r.topic]} ·{' '}
+        {r.customer.id && can(user, '*') ? (
+          <Link to={`/admin/customers/${r.customer.id}`}>{r.customer.name}</Link>
+        ) : (
+          r.customer.name
+        )}{' '}
+        ({r.customer.email}){r.customer.guest && ' · not logged in'}
         {r.orderId && (
           <>
             {' '}
@@ -149,7 +156,7 @@ function RequestCard({ item, onChange }) {
           <summary>
             Store credit<span className="sr-only"> for {r.customer.name}</span>
           </summary>
-          {creditOpen && <CreditBox request={r} />}
+          {creditOpen && <CreditBox path={`/admin/help/${r.id}/credit`} name={r.customer.name} />}
         </details>
       )}
     </li>

@@ -77,7 +77,7 @@ export const toCreditEntry = (doc) => ({
   order: doc.orderId ? { id: doc.orderId.toString(), number: doc.orderNumber ?? null } : null,
 });
 
-const grantBody = z.object({
+export const grantBody = z.object({
   // Paise; negative takes credit back (a mistake), never below what the customer has.
   amount: z
     .number('Enter an amount')
@@ -90,8 +90,53 @@ const grantBody = z.object({
 });
 const pageQuery = z.object({ page: z.coerce.number().int().min(1).max(1000).default(1) });
 
-export function creditRouter(ctx) {
+// Goodwill from an admin (`by`) to `customer` (a users document): `amount` paise, negative to take back a mistake (never
+// below zero, 409), with the note the customer sees. Logged (`label` names the customer) and, when adding, emailed.
+// Used from a help request and from the customer's admin page. Returns the new balance.
+export async function grantCredit(ctx, by, customer, { amount, note, helpRequestId, label }) {
   const { db, client, config } = ctx;
+  const balance = await inTransaction(client, (session) =>
+    addCredit(
+      db,
+      customer._id,
+      amount,
+      {
+        reason: amount > 0 ? 'goodwill' : 'taken',
+        note,
+        ...(helpRequestId && { helpRequestId }),
+        by: { id: by._id, name: by.name },
+      },
+      session,
+    ).catch((err) => {
+      if (err.status === 409) throw new HttpError(409, `They have only ${rupees(customer.credit ?? 0)} of credit`);
+      throw err;
+    }),
+  );
+  await logActivity(db, by, {
+    area: 'accounts',
+    action: amount > 0 ? 'Added store credit' : 'Took back store credit',
+    target: { label, path: `/admin/customers/${customer._id}` },
+    changes: [
+      { field: 'Amount', to: rupees(Math.abs(amount)) },
+      { field: 'Balance', to: rupees(balance) },
+      { field: 'Note', to: note },
+    ],
+  });
+  if (amount > 0) {
+    try {
+      await ctx.mail.send({
+        to: { email: customer.email, name: customer.name },
+        ...creditAddedEmail(customer, { amount, note, balance }, config.mail?.publicUrl),
+      });
+    } catch (err) {
+      console.error(`Could not email the store credit to ${customer._id}:`, err.message);
+    }
+  }
+  return balance;
+}
+
+export function creditRouter(ctx) {
+  const { db } = ctx;
   const ledger = db.collection('creditLedger');
   const router = express.Router();
 
@@ -119,43 +164,12 @@ export function creditRouter(ctx) {
     if (!request.userId) throw new HttpError(409, 'This request is from a guest: store credit needs an account');
     const customer = await db.collection('users').findOne({ _id: request.userId });
     if (!customer) throw new HttpError(409, 'This customer closed their account');
-    const balance = await inTransaction(client, (session) =>
-      addCredit(
-        db,
-        customer._id,
-        amount,
-        {
-          reason: amount > 0 ? 'goodwill' : 'taken',
-          note,
-          helpRequestId: _id,
-          by: { id: req.user._id, name: req.user.name },
-        },
-        session,
-      ).catch((err) => {
-        if (err.status === 409) throw new HttpError(409, `They have only ${rupees(customer.credit ?? 0)} of credit`);
-        throw err;
-      }),
-    );
-    await logActivity(db, req.user, {
-      area: 'accounts',
-      action: amount > 0 ? 'Added store credit' : 'Took back store credit',
-      target: { label: `${customer.name} (request #${request.number})`, path: `/admin/help?status=${request.status}` },
-      changes: [
-        { field: 'Amount', to: rupees(Math.abs(amount)) },
-        { field: 'Balance', to: rupees(balance) },
-        { field: 'Note', to: note },
-      ],
+    const balance = await grantCredit(ctx, req.user, customer, {
+      amount,
+      note,
+      helpRequestId: _id,
+      label: `${customer.name} (request #${request.number})`,
     });
-    if (amount > 0) {
-      try {
-        await ctx.mail.send({
-          to: { email: customer.email, name: customer.name },
-          ...creditAddedEmail(customer, { amount, note, balance }, config.mail?.publicUrl),
-        });
-      } catch (err) {
-        console.error(`Could not email the store credit to ${customer._id}:`, err.message);
-      }
-    }
     res.json({ balance });
   });
 

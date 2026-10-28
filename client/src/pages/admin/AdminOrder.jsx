@@ -293,7 +293,11 @@ export default function AdminOrder() {
             <div>
               <h2>Customer</h2>
               <p>
-                {customer?.name ?? 'Deleted account'}
+                {customer && can(user, '*') ? (
+                  <Link to={`/admin/customers/${customer.id}`}>{customer.name}</Link>
+                ) : (
+                  (customer?.name ?? 'Deleted account')
+                )}
                 <br />
                 <span className="muted">{customer?.email}</span>
               </p>

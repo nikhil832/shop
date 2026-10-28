@@ -7,8 +7,12 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Nothing queued: every idea listed so far is built or set aside. Ask for new ideas ("what should we build next?") and
-they'll be added here.
+| #   | Idea                                                                                                                                                                    | Why                                                                                                                                                                | To start                    |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------- |
+| 1   | **Reorder suggestions**: for each product and option, how many days its stock will last at the last 30 days' sales, on the dashboard and in the morning low-stock email | "Low stock" is a fixed 5 units: a bestseller with 8 left runs out first, a slow one with 3 is fine. Stock history (stage 70) and orders already hold what's needed | "start reorder suggestions" |
+| 2   | **Search insights**: the most common searches, and the ones that found nothing, per week (words only, no visitor details)                                               | Shows what customers want that the store doesn't have, or words to add as synonyms, instead of guessing                                                            | "start search insights"     |
+| 3   | **Gift cards**: buy a gift card online (₹500–₹10,000) for someone by email; they redeem the code as store credit                                                        | Builds on store credit (stage 72): a gift option for festivals, and money in before anything ships                                                                 | "start gift cards"          |
+| 4   | **Install as an app**: a web app manifest and icons, so phones offer "Add to home screen" and the store opens full-screen like an app                                   | Cheap (no app store, no new code paths) and brings customers back with an icon on their phone                                                                      | "start install as app"      |
 
 ## Set aside
 
@@ -96,3 +100,4 @@ they'll be added here.
 | Announcement bar: a short message across the top of the shop between two times, with an optional link into the store                          | Stage 71 (`git log --grep "Stage 71"`) |
 | Store credit: refunds of returns as credit (the customer's choice), goodwill from help requests, spent at checkout before paying              | Stage 72 (`git log --grep "Stage 72"`) |
 | Compare products: up to three from one category side by side (price, rating, highlights, options, stock), shareable by link                   | Stage 73 (`git log --grep "Stage 73"`) |
+| Customers page: Admin → Customers with orders, money spent, returns, help requests and store credit per account                               | Stage 74 (`git log --grep "Stage 74"`) |

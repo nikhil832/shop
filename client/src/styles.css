@@ -837,6 +837,31 @@ p a:not(.btn) {
     width: 80px;
   }
 }
+/* Admin → Customers: a customer's totals, and plain lists of their returns, help requests and addresses. */
+.customer-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+.customer-totals dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.customer-totals dd {
+  margin: 2px 0 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.plain-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.plain-list li {
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
 /* The account page's store credit history. */
 .credit-history {
   list-style: none;

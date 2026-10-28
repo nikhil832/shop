@@ -48,7 +48,13 @@ test('a customer asks about an order; admins are emailed and answer; the custome
   // The admin inbox: waiting first, with who and which order.
   const inbox = (await admin('GET', '/admin/help')).body;
   assert.deepEqual(inbox.counts, { waiting: 1, answered: 0, closed: 0 });
-  assert.deepEqual(inbox.items[0].customer, { name: 'Asha Rao', email: 'asha@example.com', guest: false });
+  const asha = await t.db.collection('users').findOne({ email: 'asha@example.com' });
+  assert.deepEqual(inbox.items[0].customer, {
+    id: asha._id.toString(),
+    name: 'Asha Rao',
+    email: 'asha@example.com',
+    guest: false,
+  });
   assert.equal(inbox.items[0].orderNumber, order.number);
   assert.equal((await admin('GET', '/admin/dashboard')).body.helpWaiting, 1);
   assert.equal((await admin('GET', `/admin/help?orderId=${order.id}`)).body.items.length, 1);
