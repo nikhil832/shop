@@ -1398,6 +1398,10 @@ address {
 .admin-columns h2 {
   margin-bottom: 8px;
 }
+/* A wide table inside (Admin → Searches) scrolls in its column rather than widening the page. */
+.admin-columns > * {
+  min-width: 0;
+}
 .admin-columns p {
   margin: 0;
 }

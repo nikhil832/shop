@@ -94,6 +94,7 @@ const ADMIN_PAGES = (o, p) => [
   '/admin/sales',
   '/admin/announcements',
   '/admin/customers',
+  '/admin/searches',
 ];
 
 test('every page passes the accessibility check (light theme)', async ({ browser }) => {

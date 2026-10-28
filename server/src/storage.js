@@ -20,6 +20,7 @@ const NAMES = {
   stockHistory: 'Stock history',
   announcements: 'Announcements',
   creditLedger: 'Store credit',
+  searchStats: 'Search insights',
   errorReports: 'Error reports',
   carts: 'Saved carts',
   wishlist: 'Wishlists',

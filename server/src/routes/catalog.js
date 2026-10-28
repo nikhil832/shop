@@ -3,6 +3,7 @@ import { optionsOf, toVariant } from '../variants.js';
 import { z } from 'zod';
 import { HttpError, escapeRegex, parse } from '../http.js';
 import { imageAltsOf } from '../imageAlts.js';
+import { recordSearch } from '../searchInsights.js';
 
 // Prices are integers in paise (₹1 = 100) everywhere: storage, API and client state.
 
@@ -282,6 +283,18 @@ export function catalogRouter({ db }) {
     ]);
 
     const total = result.total[0]?.n ?? 0;
+    // A plain search (the first page, no filters, the default order) is counted for Admin → Searches; changing the
+    // page, order or filters of a search asks again and isn't a new search.
+    const plain =
+      query.page === 1 &&
+      query.sort === 'relevance' &&
+      !query.category &&
+      !brandList?.length &&
+      query.minPrice === undefined &&
+      query.maxPrice === undefined &&
+      !query.rating &&
+      !query.inStock;
+    if (query.q && plain) await recordSearch(db, query.q, total);
     // Nothing found: a corrected search ("samsng" → "samsung"), offered only if it finds something with the same filters.
     let suggestion = null;
     if (!total && query.q) {

@@ -2,6 +2,7 @@ import { MongoClient } from 'mongodb';
 import { migrateAddresses } from './addressBook.js';
 import { ACTIVITY_DAYS } from './activity.js';
 import { HISTORY_DAYS } from './stockHistory.js';
+import { KEEP_DAYS as SEARCH_KEEP_DAYS } from './searchInsights.js';
 import { REPORT_DAYS } from './routes/errorReports.js';
 import { DEVICE_FORGET_DAYS } from './loginAlerts.js';
 import { CACHE_DAYS } from './smartSearch.js';
@@ -47,6 +48,12 @@ const INDEXES = {
     [{ at: 1 }, { expireAfterSeconds: ACTIVITY_DAYS * 86_400 }],
     [{ area: 1, at: -1 }],
     [{ 'by.id': 1, at: -1 }],
+  ],
+  // Search insights: one per week and search; gone KEEP_DAYS after the last one.
+  searchStats: [
+    [{ week: 1, term: 1 }, { unique: true }],
+    [{ week: 1, count: -1 }],
+    [{ lastAt: 1 }, { expireAfterSeconds: SEARCH_KEEP_DAYS * 86_400 }],
   ],
   // Store credit's history, newest first per customer.
   creditLedger: [[{ userId: 1, at: -1 }]],
