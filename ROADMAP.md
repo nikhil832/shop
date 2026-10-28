@@ -7,11 +7,10 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-| #   | Idea                                                                                                                                                                              | Why                                                                                                            | To start               |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| 1   | **Delivery dates at checkout**: "Arrives by Thu 31 Oct" for the chosen address at checkout, in the order confirmation email and on the order page, from the delivery areas        | Shoppers want to know when it comes before paying; the product page already knows the PIN code's delivery days | "start delivery dates" |
-| 2   | **Refer a friend**: each customer gets a link; a friend's first order gets money off, and the customer earns store credit once that order is delivered and past its return window | Word of mouth is the cheapest way to new customers; paying only for kept orders limits abuse                   | "start referrals"      |
-| 3   | **Size guides**: a size chart per category or product (e.g. shoe sizes UK/EU/cm), linked beside "Choose a size"                                                                   | Fewer wrong sizes means fewer returns, which cost two-way shipping                                             | "start size guides"    |
+| #   | Idea                                                                                                                                                                              | Why                                                                                          | To start            |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------- |
+| 1   | **Refer a friend**: each customer gets a link; a friend's first order gets money off, and the customer earns store credit once that order is delivered and past its return window | Word of mouth is the cheapest way to new customers; paying only for kept orders limits abuse | "start referrals"   |
+| 2   | **Size guides**: a size chart per category or product (e.g. shoe sizes UK/EU/cm), linked beside "Choose a size"                                                                   | Fewer wrong sizes means fewer returns, which cost two-way shipping                           | "start size guides" |
 
 ## Set aside
 
@@ -111,3 +110,4 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 | Product bundles: 2–3 simple products at a bundle price, applied whenever the cart holds the full set, with "Add bundle" on product pages      | Stage 83 (`git log --grep "Stage 83"`) |
 | Checkout without a password: name and email at checkout make the account; the confirmation brings a link to set a password                    | Stage 84 (`git log --grep "Stage 84"`) |
 | Cashback as store credit: a percentage of kept orders, paid as credit after the return window (off until switched on)                         | Stage 85 (`git log --grep "Stage 85"`) |
+| Delivery dates: "Arrives between …" at checkout, kept on the order and in the confirmation; late orders on the dashboard                      | Stage 86 (`git log --grep "Stage 86"`) |

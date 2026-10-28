@@ -16,6 +16,7 @@ import {
   dueLabel,
   refundText,
   RTO_REASONS,
+  arrival,
 } from '../format.js';
 import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
@@ -184,6 +185,9 @@ export default function Order() {
                 <h1>Order #{orderNumber(order)}</h1>
                 <span className="muted small">
                   Ordered on {formatDate(order.createdAt)}
+                  {order.deliveryEstimate &&
+                    (order.status === 'placed' || order.status === 'shipped') &&
+                    ` · should arrive ${arrival(order.deliveryEstimate)}`}
                   {order.shippedAt && ` · shipped on ${formatDate(order.shippedAt)}`}
                   {order.deliveredAt && ` · delivered on ${formatDate(order.deliveredAt)}`}
                   {order.cancelledAt &&

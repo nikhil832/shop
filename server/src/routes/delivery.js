@@ -63,7 +63,8 @@ export async function deliveryFor(db, pin) {
 const ruleText = (r) => (r.deliverable ? `${r.minDays}–${r.maxDays} days` : 'no delivery');
 const zoneText = (z) => `${z.prefix}${z.name ? ` (${z.name})` : ''}, ${ruleText(z)}`;
 
-const istDate = (now, n) => new Date(now.getTime() + IST_OFFSET + n * DAY).toISOString().slice(0, 10);
+// The India-time date `n` days after `now`, as 'YYYY-MM-DD'.
+export const istDate = (now, n) => new Date(now.getTime() + IST_OFFSET + n * DAY).toISOString().slice(0, 10);
 
 export function deliveryRouter({ db }) {
   const zones = db.collection('deliveryZones');

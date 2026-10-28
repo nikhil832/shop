@@ -14,6 +14,7 @@ import {
   dueLabel,
   refundText,
   RTO_REASONS,
+  arrival,
 } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 import NotFound from '../NotFound.jsx';
@@ -239,6 +240,10 @@ export default function AdminOrder() {
 
   const timeline = [
     ['Ordered', order.createdAt],
+    // The delivery date promised at checkout (stage 86), shown while it's on its way.
+    ...(order.deliveryEstimate && (order.status === 'placed' || order.status === 'shipped')
+      ? [[`Should arrive ${arrival(order.deliveryEstimate)}`, null, true]]
+      : []),
     [payment.paidAt && 'Paid', payment.paidAt],
     ['Shipped', order.shippedAt],
     ['Delivered', order.deliveredAt],
@@ -249,7 +254,7 @@ export default function AdminOrder() {
       order.cancelledAt,
     ],
     [payment.refundedAt && 'Refund started', payment.refundedAt],
-  ].filter(([, at]) => at);
+  ].filter(([, at, always]) => at || always);
 
   return (
     <>
@@ -269,7 +274,7 @@ export default function AdminOrder() {
             <ol className="timeline">
               {timeline.map(([label, at]) => (
                 <li key={label}>
-                  <strong>{label}</strong> <span className="muted">{formatDate(at)}</span>
+                  <strong>{label}</strong> {at && <span className="muted">{formatDate(at)}</span>}
                 </li>
               ))}
             </ol>

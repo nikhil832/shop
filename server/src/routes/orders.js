@@ -8,7 +8,7 @@ import { HttpError, parse, parseObjectId } from '../http.js';
 import { checkoutParams, PAYMENT_WINDOW_MS, refundPayment, syncPayment } from '../payments.js';
 import { findVariant, imageFor, variantDescription, variantTitle } from '../variants.js';
 import { toProductCard } from './catalog.js';
-import { deliveryFor } from './delivery.js';
+import { deliveryFor, istDate } from './delivery.js';
 import { findState, gstForOrders, gstInvoice } from '../gst.js';
 import { rememberAddress } from '../addressBook.js';
 import { byOf, CANCEL_REASONS, movedEntry, recordStock } from '../stockHistory.js';
@@ -137,6 +137,8 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   discount: doc.discount ?? 0,
   coupon: doc.coupon ?? null,
   total: doc.total,
+  // { from, to } India-time dates it should arrive between (stage 86); null on older orders.
+  deliveryEstimate: doc.deliveryEstimate ?? null,
   // Saved by bundles (stage 83): already in the bundled items' prices, so `subtotal` is after it.
   bundleSaving: doc.bundleSaving ?? 0,
   // Paid with store credit (stage 72); `total` less this is what was paid, or is to pay, in money.
@@ -373,7 +375,8 @@ export function ordersRouter(ctx) {
     const online = body.paymentMethod === 'razorpay';
     if (online && !razorpay) throw new HttpError(400, 'Online payment is not available. Choose Cash on Delivery.');
     // An address the store doesn't deliver to (Admin → Delivery) is refused before anything is reserved.
-    if (!(await deliveryFor(db, body.address.pincode)).deliverable) {
+    const delivery = await deliveryFor(db, body.address.pincode);
+    if (!delivery.deliverable) {
       throw new HttpError(409, `Sorry, we don't deliver to ${body.address.pincode} yet.`);
     }
     const session = client.startSession();
@@ -498,6 +501,8 @@ export function ordersRouter(ctx) {
           // Online orders hold their stock while the customer pays; expireUnpaidOrders releases it if they don't.
           ...(body.creditToUse && { creditUsed: body.creditToUse }),
           ...(bundled.saving && { bundleSaving: bundled.saving }),
+          // When it should arrive (stage 86), from the delivery area's days, kept as promised at the time.
+          deliveryEstimate: { from: istDate(now, delivery.minDays), to: istDate(now, delivery.maxDays) },
           payment: paidByCredit
             ? { method: 'credit' }
             : online

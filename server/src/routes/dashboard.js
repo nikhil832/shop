@@ -103,6 +103,7 @@ export function dashboardRouter({ db, config }) {
       helpWaiting,
       storage,
       soon,
+      late,
     ] = await Promise.all([
       orders
         .aggregate([
@@ -201,6 +202,11 @@ export function dashboardRouter({ db, config }) {
       db.collection('helpRequests').countDocuments(WAITING),
       storageUse(db, config),
       runningOut(db, now),
+      // Orders not delivered by their promised date (stage 86).
+      orders.countDocuments({
+        status: { $in: ['placed', 'shipped'] },
+        'deliveryEstimate.to': { $lt: isoDay(now.getTime()) },
+      }),
     ]);
     // Profit from cost prices (profit.js), this period and the one before.
     const [profit, profitBefore] = await Promise.all([profitFor(db, from, now), profitFor(db, previousFrom, from)]);
@@ -300,6 +306,7 @@ export function dashboardRouter({ db, config }) {
       storage,
       // Products and options running out within two weeks at their recent sales, with how many to order (reorder.js).
       runningOut: soon,
+      lateOrders: late,
     });
   });
 

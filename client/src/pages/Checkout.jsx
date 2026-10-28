@@ -5,7 +5,7 @@ import { useAuth } from '../auth.jsx';
 import { cartCount, cartQuery, clearCart, lineKey, useCart } from '../cart.js';
 import AddressFields from '../components/AddressFields.jsx';
 import OrderSummary from '../components/OrderSummary.jsx';
-import { MAX_ADDRESSES, addressFields, addressLine, formatPrice } from '../format.js';
+import { MAX_ADDRESSES, addressFields, addressLine, formatPrice, arrival } from '../format.js';
 import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
 
@@ -126,6 +126,18 @@ function DeliveryAddress({ user }) {
   );
 }
 
+// When it would arrive at the PIN code being ordered to (stage 86), from the delivery areas; nothing until there's a
+// 6-digit PIN code.
+function Arrival({ pincode }) {
+  const { data } = useFetch(/^[1-9]\d{5}$/.test(pincode ?? '') ? `/delivery?pincode=${pincode}` : null);
+  if (!data) return null;
+  return (
+    <p className={`small arrival ${data.deliverable ? '' : 'error'}`}>
+      {data.deliverable ? `Arrives ${arrival(data)}` : `Sorry, we don't deliver to ${data.pincode} yet.`}
+    </p>
+  );
+}
+
 // A visitor who isn't logged in (stage 84): no saved addresses yet; the account is made when they order.
 const NEW_CUSTOMER = { name: '', addresses: [] };
 
@@ -164,6 +176,8 @@ export default function Checkout() {
   const [coupon, setCoupon] = useState('');
   // Store credit is used unless the customer unticks it (stage 72).
   const [useCredit, setUseCredit] = useState(true);
+  // The PIN code the order would go to: a saved address's, or what's typed (null: the default address's).
+  const [pin, setPin] = useState(null);
   const couponInput = useRef(null);
   const { data: options } = useFetch('/payments/options');
   const {
@@ -266,7 +280,16 @@ export default function Checkout() {
   }
 
   return (
-    <form className="cart-page" onSubmit={submit}>
+    <form
+      className="cart-page"
+      onSubmit={submit}
+      onChange={(e) => {
+        if (e.target.name === 'pincode') setPin(e.target.value.trim());
+        if (e.target.name === 'addressChoice') {
+          setPin(user?.addresses.find((a) => a.id === e.target.value)?.pincode ?? '');
+        }
+      }}
+    >
       <div className="checkout-main">
         {/* Remounted per user, so another account's choice doesn't carry over. */}
         {!user && <NewCustomerDetails />}
@@ -362,6 +385,7 @@ export default function Checkout() {
           onApply={() => setCoupon(couponInput.current.value.trim())}
           onRemove={() => setCoupon('')}
         />
+        <Arrival pincode={pin ?? user?.addresses[0]?.pincode} />
         {state.error && (
           <p className="error" role="alert">
             {state.error}

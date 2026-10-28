@@ -49,14 +49,28 @@ const CANCELLED_BY = {
   system: "Your order was cancelled because the payment wasn't completed within 30 minutes.",
 };
 
+// "by Thu 31 Oct", or "between Thu 31 Oct and Mon 4 Nov" (stage 86; dates are India-time 'YYYY-MM-DD').
+const arrivalDay = (iso) =>
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  });
+export const arrival = ({ from, to }) =>
+  from === to ? `by ${arrivalDay(to)}` : `between ${arrivalDay(from)} and ${arrivalDay(to)}`;
+
 // The paragraphs that differ by event, as plain text (escaped when put into the HTML).
 function intro(order, event) {
   const online = order.payment?.method === 'razorpay';
   if (event === 'placed') {
-    if (!due(order)) return ['Thanks for your order! It is paid in full with your store credit.'];
-    return online
-      ? [`Thanks for your order! We've received your payment of ${rupees(due(order))}.`]
-      : [`Thanks for your order! You'll pay ${rupees(due(order))} in cash when it arrives.`];
+    const lines = !due(order)
+      ? ['Thanks for your order! It is paid in full with your store credit.']
+      : online
+        ? [`Thanks for your order! We've received your payment of ${rupees(due(order))}.`]
+        : [`Thanks for your order! You'll pay ${rupees(due(order))} in cash when it arrives.`];
+    if (order.deliveryEstimate) lines.push(`It should arrive ${arrival(order.deliveryEstimate)}.`);
+    return lines;
   }
   if (event === 'shipped') {
     const { courier, trackingNumber } = order.shipment ?? {};

@@ -128,3 +128,15 @@ export const RTO_REASONS = {
   address: 'Wrong or incomplete address',
   other: 'Something else',
 };
+
+// When an order should arrive (stage 86): "by Thu, 31 Oct" or "between Thu, 31 Oct and Mon, 4 Nov". The dates are
+// India-time days ('YYYY-MM-DD'), the same wording as the confirmation email.
+const arrivalDay = (iso) =>
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  });
+export const arrival = ({ from, to }) =>
+  from === to ? `by ${arrivalDay(to)}` : `between ${arrivalDay(from)} and ${arrivalDay(to)}`;

@@ -532,6 +532,13 @@ export default function AdminDashboard() {
                   </Link>
                 )}
               </p>
+              {data.lateOrders > 0 && (
+                <p>
+                  <Link to="/admin/orders?status=shipped">
+                    {data.lateOrders} {data.lateOrders === 1 ? 'order is' : 'orders are'} past the delivery date
+                  </Link>
+                </p>
+              )}
               {data.helpWaiting > 0 && (
                 <p>
                   <Link to="/admin/help">
