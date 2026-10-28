@@ -104,7 +104,13 @@ const INDEXES = {
     [{ 'sale.id': 1 }, { partialFilterExpression: { 'sale.id': { $exists: true } } }],
   ],
   // Admin → Customers filters by tag (stage 82).
-  users: [[{ email: 1 }, { unique: true }], [{ tags: 1 }]],
+  // Referral codes are unique (stage 87); friends are counted by who referred them.
+  users: [
+    [{ email: 1 }, { unique: true }],
+    [{ tags: 1 }],
+    [{ referralCode: 1 }, { unique: true, partialFilterExpression: { referralCode: { $exists: true } } }],
+    [{ referredBy: 1 }],
+  ],
   // MongoDB deletes sessions once expiresAt has passed.
   sessions: [
     [{ tokenHash: 1 }, { unique: true }],

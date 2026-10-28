@@ -7,6 +7,8 @@ export default function OrderSummary({
   delivery,
   discount = 0,
   couponCode,
+  // What the discount is, when not a coupon: a referred friend's welcome (stage 87).
+  discountLabel = null,
   total,
   freeDeliveryMin,
   // Store credit paying part of `total` (stage 72), and what to call the rest ("To pay on delivery").
@@ -37,7 +39,7 @@ export default function OrderSummary({
         <dd className={delivery ? '' : 'free'}>{delivery ? formatPrice(delivery) : 'Free'}</dd>
         {discount > 0 && (
           <>
-            <dt>Coupon{couponCode && ` (${couponCode})`}</dt>
+            <dt>{discountLabel ?? <>Coupon{couponCode && ` (${couponCode})`}</>}</dt>
             <dd className="free">−{formatPrice(discount)}</dd>
           </>
         )}

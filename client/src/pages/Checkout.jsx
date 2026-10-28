@@ -8,6 +8,7 @@ import OrderSummary from '../components/OrderSummary.jsx';
 import { MAX_ADDRESSES, addressFields, addressLine, formatPrice, arrival } from '../format.js';
 import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
+import { referralCode } from '../referral.js';
 
 // Inside the checkout form, so it is not a form itself: Enter applies the code instead of placing the order, and the
 // input has no name, so it isn't sent as part of the address.
@@ -186,7 +187,7 @@ export default function Checkout() {
     loading,
   } = useFetch(
     user !== undefined && items.length
-      ? `/cart?items=${cartQuery(items)}${coupon ? `&coupon=${encodeURIComponent(coupon)}` : ''}`
+      ? `/cart?items=${cartQuery(items)}${coupon ? `&coupon=${encodeURIComponent(coupon)}` : ''}${!user && referralCode() ? `&ref=${referralCode()}` : ''}`
       : null,
     state.version,
   );
@@ -228,7 +229,7 @@ export default function Checkout() {
       try {
         const made = await request('/auth/quick-account', {
           method: 'POST',
-          body: { name: buyerName, email: buyerEmail },
+          body: { name: buyerName, email: buyerEmail, ...(referralCode() && { ref: referralCode() }) },
         });
         setUser(made.user);
       } catch (err) {
@@ -369,6 +370,7 @@ export default function Checkout() {
         delivery={quote.delivery}
         discount={quote.discount}
         couponCode={quote.coupon?.code}
+        discountLabel={quote.referral ? "Friend's welcome" : null}
         total={quote.total}
         freeDeliveryMin={quote.freeDeliveryMin}
         creditUsed={creditToUse}

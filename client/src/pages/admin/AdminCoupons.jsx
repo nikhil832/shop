@@ -92,6 +92,85 @@ function Cashback() {
   );
 }
 
+// Refer a friend (stage 87): what a referred friend gets off their first order and what the referrer earns when it's
+// kept. Off until switched on.
+function Referrals() {
+  const [version, setVersion] = useState(0);
+  const { data } = useFetch('/admin/referrals', version);
+  const [state, setState] = useState({ busy: false, error: null, done: null });
+  if (!data) return null;
+  const rupees = (v) => Math.round(Number(v) * 100);
+  async function save(e) {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.currentTarget));
+    setState({ busy: true, error: null, done: null });
+    try {
+      await request('/admin/referrals', {
+        method: 'PUT',
+        body: {
+          enabled: f.enabled === 'on',
+          friendDiscount: rupees(f.friendDiscount),
+          minOrder: rupees(f.minOrder),
+          reward: rupees(f.reward),
+          monthlyCap: Number(f.monthlyCap),
+        },
+      });
+      setState({ busy: false, error: null, done: 'Saved.' });
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setState({ busy: false, error: err.message, done: null });
+    }
+  }
+  return (
+    <form key={JSON.stringify(data)} className="panel" onSubmit={save} aria-labelledby="referrals-heading">
+      <h2 id="referrals-heading">Refer a friend</h2>
+      <p className="muted small">
+        Customers share a link from their account page. A friend who makes an account through it gets money off their
+        first order (unless they use a coupon); the customer earns store credit once that order is kept past the return
+        window. {data.joined} referred so far; {data.paid.rewards} rewards paid ({formatPrice(data.paid.total)}).
+      </p>
+      <label className="check">
+        <input name="enabled" type="checkbox" defaultChecked={data.enabled} />
+        Offer referrals
+      </label>
+      <div className="address-grid">
+        <label>
+          Friend&apos;s discount (₹)
+          <input
+            name="friendDiscount"
+            type="number"
+            min="1"
+            step="1"
+            required
+            defaultValue={data.friendDiscount / 100}
+          />
+        </label>
+        <label>
+          On first orders from (₹)
+          <input name="minOrder" type="number" min="0" step="1" required defaultValue={data.minOrder / 100} />
+        </label>
+        <label>
+          Reward (₹ of store credit)
+          <input name="reward" type="number" min="1" step="1" required defaultValue={data.reward / 100} />
+        </label>
+        <label>
+          Rewards per customer a month
+          <input name="monthlyCap" type="number" min="1" max="100" step="1" required defaultValue={data.monthlyCap} />
+        </label>
+      </div>
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
+      {state.done && <p role="status">{state.done}</p>}
+      <button type="submit" className="btn primary" disabled={state.busy}>
+        Save referrals
+      </button>
+    </form>
+  );
+}
+
 export default function AdminCoupons() {
   const [version, setVersion] = useState(0);
   const { data: coupons, error } = useFetch('/admin/coupons', version);
@@ -237,6 +316,7 @@ export default function AdminCoupons() {
         </div>
       </form>
       <Cashback />
+      <Referrals />
     </div>
   );
 }

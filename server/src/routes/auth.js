@@ -22,6 +22,7 @@ import { takeHourlySlot } from '../rateLimit.js';
 import { MAX_WRONG_CODES, checkSecondStep, createLoginTicket, hasTwoStep } from '../twoStep.js';
 import { HttpError, parse } from '../http.js';
 import { noteAdminLogin } from '../loginAlerts.js';
+import { referrerFor } from '../referrals.js';
 
 export const email = z.string().trim().toLowerCase().max(254).pipe(z.email('Enter a valid email'));
 
@@ -31,6 +32,8 @@ const registerBody = z.object({
   name: z.string().trim().min(1, 'Enter your name').max(80),
   email,
   password: newPassword,
+  // The referral code of the friend whose link they came from (stage 87); an unknown one is ignored.
+  ref: z.string().trim().max(20).optional(),
 });
 
 const quickBody = registerBody.omit({ password: true });
@@ -103,6 +106,8 @@ export function authRouter(ctx) {
       role: 'user', // admins are made with `npm run make-admin`, never through the API
       createdAt: new Date(),
     };
+    const referredBy = await referrerFor(db, body.ref);
+    if (referredBy) doc.referredBy = referredBy;
     try {
       const { insertedId } = await users.insertOne(doc);
       doc._id = insertedId;
@@ -125,6 +130,8 @@ export function authRouter(ctx) {
       throw new HttpError(429, 'Too many new accounts from here this hour. Please try again later.');
     }
     const doc = { name: body.name, email: body.email, passwordHash: null, role: 'user', createdAt: new Date() };
+    const referredBy = await referrerFor(db, body.ref);
+    if (referredBy) doc.referredBy = referredBy;
     try {
       const { insertedId } = await users.insertOne(doc);
       doc._id = insertedId;

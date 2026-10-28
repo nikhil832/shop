@@ -19,6 +19,7 @@ import { screenPosts } from './screening.js';
 import { runSales } from './sales.js';
 import { remindGiftCards, sendScheduledGiftCards } from './giftCards.js';
 import { payCashback } from './cashback.js';
+import { payReferrals } from './referrals.js';
 import { loadConfig } from './config.js';
 import { previewRouter } from './preview.js';
 import { checkStorage } from './storage.js';
@@ -58,6 +59,8 @@ const sweeper = setInterval(async () => {
   await remindGiftCards(ctx).catch((err) => console.error(err));
   // Cashback for orders kept past their return window (cashback.js).
   await payCashback(ctx).catch((err) => console.error(err));
+  // Rewards for referring a friend whose first order was kept (referrals.js).
+  await payReferrals(ctx).catch((err) => console.error(err));
 }, 60_000);
 
 // At startup (the free plan sleeps, so hourly runs may not come) and then every hour: delete uploaded photos that no

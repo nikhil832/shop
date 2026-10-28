@@ -391,6 +391,7 @@ export default function AdminOrder() {
           delivery={order.delivery}
           discount={order.discount}
           couponCode={order.coupon?.code}
+          discountLabel={order.referral ? "Friend's welcome" : null}
           total={order.total}
           creditUsed={order.creditUsed}
           dueLabel={dueLabel(order)}

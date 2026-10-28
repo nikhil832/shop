@@ -958,6 +958,16 @@ p a:not(.btn) {
   border-radius: 6px;
   background: var(--bg);
 }
+/* Refer a friend (stage 87): the account page's link with its copy button. */
+.referral-link {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+.referral-link input {
+  flex: 1;
+  min-width: 0;
+}
 /* The account page's store credit history. */
 .credit-history {
   list-style: none;

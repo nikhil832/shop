@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { request } from '../api.js';
 import { safeNext, useAuth } from '../auth.jsx';
+import { referralCode } from '../referral.js';
 
 // One form for both logging in and creating an account. `?next=` says where to go afterwards.
 export default function Login({ mode = 'login' }) {
@@ -22,7 +23,12 @@ export default function Login({ mode = 'login' }) {
     const body = Object.fromEntries(new FormData(e.currentTarget));
     setState({ busy: true, error: null });
     try {
-      const res = await request(register ? '/auth/register' : '/auth/login', { method: 'POST', body });
+      // A friend's referral code from this browser (stage 87) goes with a new account.
+      const ref = register ? referralCode() : null;
+      const res = await request(register ? '/auth/register' : '/auth/login', {
+        method: 'POST',
+        body: { ...body, ...(ref && { ref }) },
+      });
       if (res.twoStep) {
         setTicket(res.ticket);
         return setState({ busy: false, error: null });

@@ -16,6 +16,7 @@ import { addCredit, amountDue } from '../credit.js';
 import { codAllowed } from '../cod.js';
 import { applyBundles, bundlesFor } from '../bundles.js';
 import { cashbackOn, cashbackSettings } from '../cashback.js';
+import { friendDiscount } from '../referrals.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
 export const FREE_DELIVERY_MIN = 49900;
@@ -54,6 +55,8 @@ export const savedCartLines = eachOnce(z.array(cartLine).max(MAX_CART_ITEMS));
 // GET /cart?items=<productId>[.<variantId>]:<qty>,…
 const quoteQuery = z.object({
   coupon: z.string().trim().max(40).optional(),
+  // A friend's referral code (stage 87), for a visitor who'll make their account at checkout.
+  ref: z.string().trim().max(20).optional(),
   items: z
     .string()
     .max(1000)
@@ -139,6 +142,8 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   total: doc.total,
   // { from, to } India-time dates it should arrive between (stage 86); null on older orders.
   deliveryEstimate: doc.deliveryEstimate ?? null,
+  // Whether `discount` is a referred friend's welcome rather than a coupon (stage 87).
+  referral: Boolean(doc.referral),
   // Saved by bundles (stage 83): already in the bundled items' prices, so `subtotal` is after it.
   bundleSaving: doc.bundleSaving ?? 0,
   // Paid with store credit (stage 72); `total` less this is what was paid, or is to pay, in money.
@@ -352,9 +357,14 @@ export function ordersRouter(ctx) {
         couponError = err.message;
       }
     }
+    // A referred friend's first order (stage 87) gets their welcome, unless a coupon is used instead.
+    const referral = coupon
+      ? 0
+      : await friendDiscount(db, { user: req.user, ref: query.ref, subtotal: totals.subtotal });
+    const discount = coupon?.discount ?? referral;
     // Cashback this order would earn (stage 85), when it's on: on the items after bundle and coupon savings.
     const cashback = await cashbackSettings(db);
-    const itemsPaid = totals.subtotal - (coupon && coupon.type !== 'free_delivery' ? coupon.discount : 0);
+    const itemsPaid = totals.subtotal - (coupon?.type === 'free_delivery' ? 0 : discount);
     res.json({
       items: lines,
       cashback: cashback.enabled ? { amount: cashbackOn(itemsPaid, cashback), percent: cashback.percent } : null,
@@ -362,8 +372,9 @@ export function ordersRouter(ctx) {
       itemsTotal,
       bundles: bundled.applied,
       bundleSaving: bundled.saving,
-      ...withDiscount(totals, coupon?.discount ?? 0),
+      ...withDiscount(totals, discount),
       coupon,
+      referral: referral ? { discount: referral } : null,
       couponError,
       freeDeliveryMin: FREE_DELIVERY_MIN,
       canCheckout: lines.every((l) => !l.problem),
@@ -467,6 +478,15 @@ export function ordersRouter(ctx) {
           }));
           await redeemCoupon(db, coupon, { userId: req.user._id, orderId, session });
         }
+        // A referred customer's first order: the friend's welcome (referrals.js), when no coupon is used.
+        let referral = null;
+        if (!coupon) {
+          const welcome = await friendDiscount(db, { user: req.user, subtotal: before.subtotal });
+          if (welcome) {
+            discount = welcome;
+            referral = { by: req.user.referredBy };
+          }
+        }
         const totals = withDiscount(before, discount);
         if (totals.total !== body.expectedTotal) {
           throw new HttpError(409, 'Prices have changed since you loaded the page. Please review your order.');
@@ -501,6 +521,8 @@ export function ordersRouter(ctx) {
           // Online orders hold their stock while the customer pays; expireUnpaidOrders releases it if they don't.
           ...(body.creditToUse && { creditUsed: body.creditToUse }),
           ...(bundled.saving && { bundleSaving: bundled.saving }),
+          // Its discount is a referred friend's welcome (stage 87); the referrer's reward is set later.
+          ...(referral && { referral }),
           // When it should arrive (stage 86), from the delivery area's days, kept as promised at the time.
           deliveryEstimate: { from: istDate(now, delivery.minDays), to: istDate(now, delivery.maxDays) },
           payment: paidByCredit

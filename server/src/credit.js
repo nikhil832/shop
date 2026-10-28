@@ -24,6 +24,7 @@ export const REASONS = {
   spent: 'Paid for an order',
   gift_card: 'Gift card redeemed',
   cashback: 'Cashback',
+  referral: 'Referred a friend',
 };
 export const MAX_GRANT = 1_000_000; // ₹10,000 per goodwill change
 const PAGE = 50;

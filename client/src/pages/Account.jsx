@@ -156,6 +156,46 @@ function AddressBook({ user, setUser }) {
 }
 
 // "Your data" (stage 65): download everything the store holds about you, or close the account (password, and a two-step
+// Refer a friend (stage 87, #referral): the customer's link, what friends and they get, and how it's going. Nothing
+// when referrals are off.
+function ReferFriend() {
+  const { data } = useFetch('/account/referral');
+  const [copied, setCopied] = useState(false);
+  if (!data?.enabled) return null;
+  const link = `${window.location.origin}/?ref=${data.code}`;
+  return (
+    <section className="panel account-section" id="referral" aria-labelledby="referral-heading">
+      <h2 id="referral-heading">Refer a friend</h2>
+      <p>
+        Friends who make an account through your link get {formatPrice(data.friendDiscount)} off their first order
+        {data.minOrder > 0 && ` of ${formatPrice(data.minOrder)} or more`}. When they keep it past the return window,
+        you get {formatPrice(data.reward)} in store credit.
+      </p>
+      <div className="referral-link">
+        <input readOnly value={link} aria-label="Your link" onFocus={(e) => e.target.select()} />
+        <button
+          type="button"
+          className="btn small"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(link);
+              setCopied(true);
+            } catch {
+              // No clipboard (an old browser or no permission): the link can be selected and copied by hand.
+            }
+          }}
+        >
+          {copied ? 'Copied' : 'Copy link'}
+        </button>
+      </div>
+      <p className="muted small">
+        {data.joined} {data.joined === 1 ? 'friend has' : 'friends have'} joined · {data.rewarded}{' '}
+        {data.rewarded === 1 ? 'reward' : 'rewards'} so far ({formatPrice(data.earned)})
+      </p>
+    </section>
+  );
+}
+
 // An account made at checkout (stage 84) has no password yet: it's set from an emailed link (the reset page).
 function SetPassword({ email }) {
   const [state, setState] = useState({ busy: false, sent: false, error: null });
@@ -195,6 +235,7 @@ const CREDIT_REASONS = {
   spent: 'Paid for an order',
   gift_card: 'Gift card redeemed',
   cashback: 'Cashback',
+  referral: 'Referred a friend',
 };
 
 // Store credit (stage 72, #credit): the balance and every change, newest first. Shown once there is any history.
@@ -489,6 +530,7 @@ export default function Account() {
       )}
 
       <StoreCredit user={user} />
+      <ReferFriend />
       <TwoStepSection />
       <YourData
         user={user}

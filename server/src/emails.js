@@ -121,7 +121,14 @@ export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL, {
       ? [
           ['Items', rupees(order.subtotal)],
           ['Delivery', order.delivery ? rupees(order.delivery) : 'Free'],
-          ...(order.discount ? [[`Coupon ${order.coupon?.code ?? ''}`.trim(), `−${rupees(order.discount)}`]] : []),
+          ...(order.discount
+            ? [
+                [
+                  order.referral ? "Friend's welcome" : `Coupon ${order.coupon?.code ?? ''}`.trim(),
+                  `−${rupees(order.discount)}`,
+                ],
+              ]
+            : []),
           ['Total', rupees(order.total)],
           ...(order.creditUsed
             ? [
@@ -442,7 +449,14 @@ export function newOrderEmail(order, customer, publicUrl = DEFAULT_PUBLIC_URL) {
   const items = order.items.map((i) => [`${i.title} × ${i.qty}`, rupees(i.price * i.qty)]);
   const totals = [
     ['Delivery', order.delivery ? rupees(order.delivery) : 'Free'],
-    ...(order.discount ? [[`Coupon ${order.coupon?.code ?? ''}`.trim(), `−${rupees(order.discount)}`]] : []),
+    ...(order.discount
+      ? [
+          [
+            order.referral ? "Friend's welcome" : `Coupon ${order.coupon?.code ?? ''}`.trim(),
+            `−${rupees(order.discount)}`,
+          ],
+        ]
+      : []),
     ['Total', rupees(order.total)],
     ...(order.creditUsed ? [['Store credit used', `−${rupees(order.creditUsed)}`]] : []),
   ];
@@ -951,6 +965,26 @@ export function cashbackEmail(user, order, amount, balance, publicUrl = DEFAULT_
 ${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
 ${button('See my store credit', url)}`,
     "You're getting this email because you ordered from Bazaar.",
+  );
+  return { subject, text, html };
+}
+
+// For a customer whose referred friend kept their first order (stage 87, referrals.js).
+export function referralRewardEmail(user, amount, balance, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = user.name.split(/\s+/)[0];
+  const subject = `${rupees(amount)} for referring a friend`;
+  const url = `${publicUrl}/account#referral`;
+  const lines = [
+    `A friend you invited made their first Bazaar order, so ${rupees(amount)} is now in your account as store credit.`,
+    `You have ${rupees(balance)} to use at checkout. Invite more friends from your account page.`,
+  ];
+  const text = [`Hi ${firstName},`, ...lines, url, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+${button('Invite more friends', url)}`,
+    "You're getting this email because you referred a friend to Bazaar.",
   );
   return { subject, text, html };
 }
