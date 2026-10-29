@@ -5,6 +5,7 @@ import { requireAdmin } from './auth.js';
 import { escapeRegex, HttpError, parse, parseObjectId } from './http.js';
 import { logActivity, rupees } from './activity.js';
 import { byOf, movedEntry, recordStock } from './stockHistory.js';
+import { receiveAgainst } from './purchaseOrders.js';
 
 // Receiving stock (stage 81): a delivery from a supplier, recorded in one transaction: each line's stock goes up (the
 // variant's and the product's total together), each is in the stock history as 'received', and, unless switched off,
@@ -12,7 +13,8 @@ import { byOf, movedEntry, recordStock } from './stockHistory.js';
 // when there was no cost or no stock). Collection `stockReceipts`:
 // { number (counter 'receiptNumber', from 1, no gaps), supplier, reference, note, lines: [{ productId, variantId | null,
 //   title (with the option), qty, unitCost | null, stockBefore, stockAfter, costBefore, costAfter }], updateCost,
-//   by: { id, name }, createdAt }
+//   purchaseOrderId?, purchaseOrderNumber? (the supplier order it was counted towards, stage 93), by: { id, name },
+//   createdAt }
 
 export const MAX_LINES = 100;
 const PAGE = 25;
@@ -40,6 +42,11 @@ const receiptBody = z.object({
       'Each product (and option) once',
     ),
   updateCost: z.boolean().default(true),
+  // The open supplier order it comes against (purchaseOrders.js), if any.
+  purchaseOrderId: z
+    .string()
+    .regex(/^[0-9a-f]{24}$/, 'Choose a supplier order')
+    .optional(),
 });
 const listQuery = z.object({
   supplier: z.string().trim().max(80).optional(),
@@ -67,6 +74,7 @@ const toReceipt = (doc) => ({
   })),
   units: doc.lines.reduce((n, l) => n + l.qty, 0),
   value: doc.lines.every((l) => l.unitCost !== null) ? doc.lines.reduce((s, l) => s + l.qty * l.unitCost, 0) : null,
+  purchaseOrder: doc.purchaseOrderId ? { id: doc.purchaseOrderId.toString(), number: doc.purchaseOrderNumber } : null,
   by: doc.by.name,
   createdAt: doc.createdAt,
 });
@@ -163,9 +171,14 @@ export function stockReceiptsRouter({ db, client }) {
             costAfter,
           });
         }
+        // Counted towards the supplier order in this transaction, so it can't be counted twice or after closing.
+        const po = body.purchaseOrderId
+          ? await receiveAgainst(db, new ObjectId(body.purchaseOrderId), lines, session)
+          : null;
         receipt = {
           _id,
           number: counter.seq,
+          ...(po && { purchaseOrderId: po._id, purchaseOrderNumber: po.number }),
           supplier: body.supplier,
           reference: body.reference,
           note: body.note,

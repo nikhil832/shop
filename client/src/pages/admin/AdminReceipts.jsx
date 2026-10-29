@@ -111,6 +111,12 @@ export function AdminReceipt() {
         <p className="muted small">
           {formatDate(r.createdAt)} · recorded by {r.by}
           {r.reference && ` · supplier's invoice ${r.reference}`}
+          {r.purchaseOrder && (
+            <>
+              {' · for '}
+              <Link to={`/admin/purchase-orders/${r.purchaseOrder.id}`}>supplier order #{r.purchaseOrder.number}</Link>
+            </>
+          )}
           {!r.updateCost && ' · cost prices left as they were'}
         </p>
         {r.note && <p>{r.note}</p>}
@@ -158,13 +164,14 @@ let nextKey = 0;
 
 // "12 in stock · cost now ₹220" for a line's product, or its chosen option.
 function onHand(line) {
+  if (line.fixed) return '';
   const own = line.product.variants.length ? line.product.variants.find((v) => v.id === line.variantId) : line.product;
   if (!own) return '';
   return `${own.stock} in stock${own.cost != null ? ` · cost now ₹${toRupees(own.cost)}` : ''}`;
 }
 
 // Finds products to add to the delivery (title or brand, 2+ characters).
-function ProductSearch({ onPick }) {
+export function ProductSearch({ onPick }) {
   const [q, setQ] = useState('');
   const { data } = useFetch(q.trim().length >= 2 ? `/admin/products${query({ q: q.trim() })}` : null);
   return (
@@ -204,12 +211,32 @@ export function AdminReceiptNew() {
   const { data: list } = useFetch('/admin/stock-receipts');
   const start = params.get('product');
   const { data: first } = useFetch(start ? `/admin/products/${start}` : null);
+  // A delivery against a supplier order (stage 93): its outstanding lines, already filled in.
+  const poId = params.get('po');
+  const { data: po } = useFetch(poId ? `/admin/purchase-orders/${poId}` : null);
   const [lines, setLines] = useState(null);
   const [state, setState] = useState({ busy: false, error: null });
-  // The product the page was opened for is the first line, until the admin changes the list.
+  // The product (or the order's lines) the page was opened for, until the admin changes the list.
+  const fromOrder = po
+    ? po.lines
+        .filter((l) => l.outstanding > 0)
+        .map((l) => ({
+          key: `po:${l.productId}.${l.variantId ?? ''}`,
+          // Fixed to the ordered product and option, so no option to choose.
+          product: { id: l.productId, title: l.title, variants: [] },
+          variantId: l.variantId ?? '',
+          fixed: true,
+          qty: String(l.outstanding),
+          unitCost: l.unitCost === null ? '' : toRupees(l.unitCost),
+        }))
+    : [];
   const shown =
     lines ??
-    (first ? [{ key: 'start', product: first, variantId: params.get('variant') ?? '', qty: '', unitCost: '' }] : []);
+    (po
+      ? fromOrder
+      : first
+        ? [{ key: 'start', product: first, variantId: params.get('variant') ?? '', qty: '', unitCost: '' }]
+        : []);
 
   const set = (key, field, value) => setLines(shown.map((l) => (l.key === key ? { ...l, [field]: value } : l)));
   const add = (p) => setLines([...shown, { key: nextKey++, product: p, variantId: '', qty: '', unitCost: '' }]);
@@ -227,6 +254,7 @@ export function AdminReceiptNew() {
           reference: f.reference,
           note: f.note,
           updateCost: f.updateCost === 'on',
+          ...(po && { purchaseOrderId: po.id }),
           lines: shown.map((l) => ({
             productId: l.product.id,
             ...(l.variantId && { variantId: l.variantId }),
@@ -249,11 +277,25 @@ export function AdminReceiptNew() {
         <span>New delivery</span>
       </nav>
       <h1>Record a delivery</h1>
+      {po && (
+        <p className="notice">
+          For <Link to={`/admin/purchase-orders/${po.id}`}>supplier order #{po.number}</Link> from {po.supplier}: the
+          lines still to come are filled in. Change the numbers to what actually arrived.
+        </p>
+      )}
       <form className="sale-form" onSubmit={submit} aria-label="Record a delivery">
         <div className="address-grid">
           <label>
             Supplier
-            <input name="supplier" required maxLength={80} list="suppliers" autoComplete="off" />
+            <input
+              key={po?.id ?? 'none'}
+              name="supplier"
+              required
+              maxLength={80}
+              list="suppliers"
+              autoComplete="off"
+              defaultValue={po?.supplier ?? ''}
+            />
             <datalist id="suppliers">
               {list?.suppliers.map((s) => (
                 <option key={s} value={s} />

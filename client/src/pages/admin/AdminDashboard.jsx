@@ -658,6 +658,7 @@ export default function AdminDashboard() {
                             </Link>
                             <span className="muted small block">
                               {r.sold} sold in {r.days} days, about {r.perDay} a day
+                              {r.onOrder > 0 && ` · ${r.onOrder} on order`}
                             </span>
                           </td>
                           <td className="num">{r.stock}</td>
@@ -677,8 +678,16 @@ export default function AdminDashboard() {
               <p className="muted small">
                 How long the stock lasts at the last 30 days&apos; sales, and about how many to order for a month.
                 {data.runningOut.total > data.runningOut.items.length &&
-                  ` Showing the ${data.runningOut.items.length} soonest of ${data.runningOut.total}.`}
+                  ` Showing the ${data.runningOut.items.length} soonest of ${data.runningOut.total}.`}{' '}
+                What open supplier orders will bring is taken off.
               </p>
+              {data.runningOut.items.some((r) => r.suggest > 0) && (
+                <p>
+                  <Link to="/admin/purchase-orders/new?suggested=1" className="btn small">
+                    Make a supplier order from these
+                  </Link>
+                </p>
+              )}
               <LowStockEmailSwitch enabled={data.lowStockEmail} />
             </section>
           </div>

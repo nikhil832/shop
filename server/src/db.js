@@ -54,7 +54,7 @@ const INDEXES = {
   // Bundles: found by the products in a cart or on a product page.
   bundles: [[{ productIds: 1, active: 1 }]],
   // Deliveries from suppliers, newest first, by supplier.
-  stockReceipts: [[{ createdAt: -1 }], [{ supplier: 1, createdAt: -1 }]],
+  stockReceipts: [[{ createdAt: -1 }], [{ supplier: 1, createdAt: -1 }], [{ purchaseOrderId: 1 }, { sparse: true }]],
   // Gift cards: by code (only once paid), by Razorpay order (payments and the webhook), by buyer, the sweep's lists;
   // unpaid ones go UNPAID_DAYS after they were started (payBy is unset once paid).
   giftCards: [
@@ -159,6 +159,8 @@ const INDEXES = {
   stockAlerts: [[{ userId: 1, productId: 1, variantId: 1 }, { unique: true }], [{ productId: 1 }]],
   // Returns: an order's (checked when asking for one) and the admin list by status.
   returns: [[{ orderId: 1, createdAt: -1 }], [{ status: 1, createdAt: -1 }]],
+  // Supplier orders (stage 93): the list by status; deliveries by the order they came against.
+  purchaseOrders: [[{ status: 1, createdAt: -1 }], [{ number: 1 }, { unique: true }]],
   // Collections (stage 91): addressed by slug; the home page's live ones in order.
   collections: [[{ slug: 1 }, { unique: true }], [{ onHome: 1, position: 1 }]],
   // Exchanges (stage 89): the same, plus a customer's (closing an account checks for open ones).

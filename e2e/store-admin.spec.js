@@ -217,6 +217,7 @@ test('admin pages fit a phone screen without sideways scrolling', async ({ page 
     '/admin/returns?status=all',
     '/admin/exchanges?status=all',
     '/admin/collections',
+    '/admin/purchase-orders/new?suggested=1',
     '/admin/delivery',
     '/admin/products/new',
   ]) {

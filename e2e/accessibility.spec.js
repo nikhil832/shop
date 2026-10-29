@@ -100,6 +100,8 @@ const ADMIN_PAGES = (o, p) => [
   '/admin/searches',
   '/admin/gift-cards',
   '/admin/stock-receipts',
+  '/admin/purchase-orders?status=all',
+  '/admin/purchase-orders/new?suggested=1',
   '/admin/bundles',
   '/admin/collections',
   '/admin/size-guides',

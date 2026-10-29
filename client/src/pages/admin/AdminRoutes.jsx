@@ -19,6 +19,7 @@ import AdminCustomer from './AdminCustomer.jsx';
 import AdminSearches from './AdminSearches.jsx';
 import AdminGiftCards from './AdminGiftCards.jsx';
 import { AdminReceipt, AdminReceiptNew, AdminReceipts } from './AdminReceipts.jsx';
+import { AdminPurchaseOrder, AdminPurchaseOrderNew, AdminPurchaseOrders } from './AdminPurchaseOrders.jsx';
 import AdminBundles from './AdminBundles.jsx';
 import AdminCollections from './AdminCollections.jsx';
 import AdminSizeGuides from './AdminSizeGuides.jsx';
@@ -84,6 +85,9 @@ export default function AdminRoutes() {
         <Route path="size-guides" element={<AdminSizeGuides />} />
         <Route path="stock-receipts/new" element={<AdminReceiptNew />} />
         <Route path="stock-receipts/:id" element={<AdminReceipt />} />
+        <Route path="purchase-orders" element={<AdminPurchaseOrders />} />
+        <Route path="purchase-orders/new" element={<AdminPurchaseOrderNew />} />
+        <Route path="purchase-orders/:id" element={<AdminPurchaseOrder />} />
       </Route>
     </Routes>
   );

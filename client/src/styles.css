@@ -2416,6 +2416,11 @@ textarea {
   .slips-page {
     gap: 0;
   }
+  .purchase-order {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
 }
 
 /* ---- Mobile ---- */
@@ -3376,4 +3381,15 @@ textarea {
 }
 .stock.soon {
   color: var(--accent-strong);
+}
+
+/* ---- Supplier orders (stage 93) ---- */
+.po-store {
+  margin: 0;
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: var(--brand);
+}
+.purchase-order h1 {
+  margin: 4px 0;
 }
