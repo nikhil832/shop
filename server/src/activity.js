@@ -28,6 +28,7 @@ export const ACTIVITY_AREAS = [
   'announcements',
   'giftCards',
   'bundles',
+  'collections',
 ];
 export const ACTIVITY_DAYS = 365;
 const MAX_CHANGES = 100;

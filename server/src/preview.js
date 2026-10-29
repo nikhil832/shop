@@ -1,4 +1,5 @@
 import express from 'express';
+import { liveFilter } from './collections.js';
 
 // Link previews and search engines. WhatsApp, Instagram, Facebook and the like read a shared link's HTML without running JavaScript, so
 // the built index.html (a blank page the React app fills in) would preview as just "Bazaar". These routes send it with
@@ -131,8 +132,9 @@ export function robotsTxt(origin) {
 const escapeXml = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c]);
 
-// The pages worth finding: the home page, each category's listing and every shown product (with when it last changed).
-export function sitemapXml(origin, { categories, products }) {
+// The pages worth finding: the home page, each category's listing, live collections (stage 91) and every shown
+// product (with when they last changed).
+export function sitemapXml(origin, { categories, products, collections = [] }) {
   const url = (path, lastmod) =>
     `  <url><loc>${escapeXml(origin + path)}</loc>${lastmod ? `<lastmod>${lastmod.toISOString()}</lastmod>` : ''}</url>`;
   return [
@@ -140,6 +142,7 @@ export function sitemapXml(origin, { categories, products }) {
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     url('/'),
     ...categories.map((c) => url(`/search?category=${encodeURIComponent(c.slug)}`)),
+    ...collections.map((c) => url(`/c/${encodeURIComponent(c.slug)}`, c.updatedAt)),
     ...products.map((p) => url(`/p/${encodeURIComponent(p.slug)}`, p.updatedAt)),
     '</urlset>',
     '',
@@ -159,6 +162,17 @@ export function productPreview(product, origin) {
     image: `${origin}${photo ?? DEFAULT_IMAGE}`,
     url: `${origin}/p/${product.slug}`,
     type: 'product',
+  };
+}
+
+// A collection's preview (stage 91): its name, its description (or how many products), and the first uploaded photo
+// of its shown products.
+export function collectionPreview(collection, photo, count, origin) {
+  return {
+    title: `${collection.name} · ${SITE}`,
+    description: collection.description || `${count} ${count === 1 ? 'product' : 'products'} picked by ${SITE}.`,
+    image: `${origin}${photo ?? DEFAULT_IMAGE}`,
+    url: `${origin}/c/${collection.slug}`,
   };
 }
 
@@ -195,6 +209,21 @@ export function previewRouter({ db, config }, page) {
     send(res, 200, withPreview(html, { ...productPreview(product, origin), jsonLd: productJsonLd(product, origin) }));
   });
 
+  // Only live collections (collections.js); others are "not found" here, as for visitors.
+  router.get('/c/:slug', async (req, res) => {
+    const origin = originOf(req);
+    const collection = await db.collection('collections').findOne({ slug: req.params.slug, ...liveFilter(new Date()) });
+    if (!collection) return send(res, 404, withPreview(html, siteTags(req, 'Collection not found · Bazaar')));
+    const shown = await products
+      .find({ _id: { $in: collection.productIds }, active: true }, { projection: { images: 1 } })
+      .toArray();
+    const byId = new Map(shown.map((p) => [p._id.toString(), p]));
+    const photo = collection.productIds
+      .flatMap((id) => byId.get(id.toString())?.images ?? [])
+      .find((src) => UPLOADED.test(src));
+    send(res, 200, withPreview(html, collectionPreview(collection, photo, shown.length, origin)));
+  });
+
   // For search engines. Both name this site's own address, so they're made per request like the previews.
   router.get('/robots.txt', (req, res) => {
     res
@@ -204,7 +233,7 @@ export function previewRouter({ db, config }, page) {
   });
 
   router.get('/sitemap.xml', async (req, res) => {
-    const [categoryDocs, productDocs] = await Promise.all([
+    const [categoryDocs, productDocs, collectionDocs] = await Promise.all([
       db
         .collection('categories')
         .find({}, { projection: { slug: 1 } })
@@ -214,11 +243,18 @@ export function previewRouter({ db, config }, page) {
         .find({ active: true }, { projection: { slug: 1, updatedAt: 1 } })
         .sort({ _id: 1 })
         .toArray(),
+      db
+        .collection('collections')
+        .find(liveFilter(new Date()), { projection: { slug: 1, updatedAt: 1 } })
+        .sort({ position: 1 })
+        .toArray(),
     ]);
     res
       .type('application/xml')
       .set('Cache-Control', 'public, max-age=3600')
-      .send(sitemapXml(originOf(req), { categories: categoryDocs, products: productDocs }));
+      .send(
+        sitemapXml(originOf(req), { categories: categoryDocs, products: productDocs, collections: collectionDocs }),
+      );
   });
 
   router.get('/{*splat}', (req, res) => send(res, 200, withPreview(html, siteTags(req))));

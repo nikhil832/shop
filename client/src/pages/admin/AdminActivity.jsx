@@ -21,6 +21,7 @@ const AREAS = {
   announcements: 'Announcements',
   giftCards: 'Gift cards',
   bundles: 'Bundles',
+  collections: 'Collections',
 };
 
 const personName = (p) => (p ? p.name : 'Command line');

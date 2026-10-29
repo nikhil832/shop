@@ -159,6 +159,8 @@ const INDEXES = {
   stockAlerts: [[{ userId: 1, productId: 1, variantId: 1 }, { unique: true }], [{ productId: 1 }]],
   // Returns: an order's (checked when asking for one) and the admin list by status.
   returns: [[{ orderId: 1, createdAt: -1 }], [{ status: 1, createdAt: -1 }]],
+  // Collections (stage 91): addressed by slug; the home page's live ones in order.
+  collections: [[{ slug: 1 }, { unique: true }], [{ onHome: 1, position: 1 }]],
   // Exchanges (stage 89): the same, plus a customer's (closing an account checks for open ones).
   exchanges: [[{ orderId: 1, createdAt: -1 }], [{ status: 1, createdAt: -1 }], [{ userId: 1, status: 1 }]],
   // Delivery areas by PIN code prefix, one per prefix.

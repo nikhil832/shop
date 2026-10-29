@@ -19,6 +19,7 @@ export const ADMIN_TABS = [
   { to: '/admin/exchanges', label: 'Exchanges', permission: '*' },
   { to: '/admin/sales', label: 'Sales', permission: '*' },
   { to: '/admin/bundles', label: 'Bundles', permission: '*' },
+  { to: '/admin/collections', label: 'Collections', permission: '*' },
   { to: '/admin/announcements', label: 'Announcements', permission: '*' },
   { to: '/admin/gift-cards', label: 'Gift cards', permission: '*' },
   { to: '/admin/coupons', label: 'Coupons', permission: '*' },

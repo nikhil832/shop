@@ -6,6 +6,7 @@ import Layout from './components/Layout.jsx';
 import CartSync from './cartSync.jsx';
 import Home from './pages/Home.jsx';
 import Search from './pages/Search.jsx';
+import Collection from './pages/Collection.jsx';
 import Product from './pages/Product.jsx';
 import Cart from './pages/Cart.jsx';
 import Checkout from './pages/Checkout.jsx';
@@ -101,6 +102,7 @@ Promise.resolve(OPENED_ON?.preload())
                 <Route index element={<Home />} />
                 <Route path="search" element={<Search />} />
                 <Route path="p/:slug" element={<Product />} />
+                <Route path="c/:slug" element={<Collection />} />
                 <Route path="cart" element={<Cart />} />
                 <Route path="checkout" element={<Checkout />} />
                 <Route path="login" element={<Login />} />

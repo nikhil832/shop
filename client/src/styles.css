@@ -3345,3 +3345,26 @@ textarea {
   margin: 6px 0 0;
   padding-left: 18px;
 }
+
+/* ---- Collections (stage 91) ---- */
+.collection-head {
+  margin-bottom: 16px;
+}
+.collection-head h1 {
+  margin: 0 0 6px;
+}
+.collection-head p {
+  margin: 0 0 4px;
+  max-width: 70ch;
+}
+.sale-form > label.check {
+  flex-direction: row;
+  font-weight: normal;
+}
+.collection-chosen li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 8px;
+  overflow-wrap: anywhere;
+}

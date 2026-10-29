@@ -8,6 +8,12 @@ function ListRow({ title, path, moreLink }) {
   return <ProductRow title={title} items={data?.items} error={error} moreLink={moreLink} />;
 }
 
+// Live collections marked for the home page (stage 91), each a row with "View all" to its page.
+function CollectionRows() {
+  const { data } = useFetch('/collections/home');
+  return data?.items.map((c) => <ProductRow key={c.slug} title={c.name} items={c.items} moreLink={`/c/${c.slug}`} />);
+}
+
 export default function Home() {
   const { data: categories, error } = useFetch('/categories');
 
@@ -31,6 +37,7 @@ export default function Home() {
         ))}
       </nav>
 
+      <CollectionRows />
       <RecentlyViewed />
       <ListRow title="Top rated" path="/products?sort=rating&inStock=1&pageSize=8" moreLink="/search?sort=rating" />
       <ListRow title="New arrivals" path="/products?sort=newest&pageSize=8" moreLink="/search?sort=newest" />

@@ -44,6 +44,7 @@ import { giftCardsRouter } from './giftCards.js';
 import { codRouter } from './cod.js';
 import { stockReceiptsRouter } from './stockReceipts.js';
 import { bundlesRouter } from './bundles.js';
+import { collectionsRouter } from './collections.js';
 import { cashbackRouter } from './cashback.js';
 import { referralsRouter } from './referrals.js';
 import { sizeGuidesRouter } from './sizeGuides.js';
@@ -107,6 +108,7 @@ export function createApp(ctx) {
   api.use(codRouter(ctx));
   api.use(stockReceiptsRouter(ctx));
   api.use(bundlesRouter(ctx));
+  api.use(collectionsRouter(ctx));
   api.use(cashbackRouter(ctx));
   api.use(referralsRouter(ctx));
   api.use(sizeGuidesRouter(ctx));

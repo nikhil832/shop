@@ -101,6 +101,7 @@ const ADMIN_PAGES = (o, p) => [
   '/admin/gift-cards',
   '/admin/stock-receipts',
   '/admin/bundles',
+  '/admin/collections',
   '/admin/size-guides',
 ];
 

@@ -7,11 +7,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Suggested on 2026-10-29, in the suggested order (exchanges and address changes, the first two, are built):
+Suggested on 2026-10-29, in the suggested order (exchanges, address changes and collections, the first three, are built):
 
-- **Collections**: hand-picked product lists with their own page and link (e.g. "Diwali gifts", "Under ₹999"), shown
-  on the home page in the chosen order, optionally between two dates like announcements. Good for promotions and
-  social media posts. To start: "start collections".
 - **Coming soon and pre-orders**: show a product before it's in stock with "Coming soon" and a date, let customers ask
   to be told (reusing back-in-stock alerts), and optionally take pre-orders paid online. To start: "start coming soon".
 - **Supplier orders**: from the reorder suggestions, make a purchase order for a supplier (printable or emailed), then
@@ -122,3 +119,4 @@ Suggested on 2026-10-29, in the suggested order (exchanges and address changes, 
 | Size guides: size charts per category (or product), opened from "Size guide" beside a product's options                                                                   | Stage 88 (`git log --grep "Stage 88"`) |
 | Exchanges: another size or colour of the same product at the same price within the return window, set aside at once, approved, shipped and delivered by admins            | Stage 89 (`git log --grep "Stage 89"`) |
 | Change the address before shipping: customers or admins correct it until the order ships, checked against delivery areas, new dates, emails, earlier addresses for admins | Stage 90 (`git log --grep "Stage 90"`) |
+| Collections: hand-picked product lists with their own page and link, optional start and end, up to three as home page rows in the admin's order                           | Stage 91 (`git log --grep "Stage 91"`) |
