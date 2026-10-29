@@ -2054,6 +2054,23 @@ textarea {
   gap: 6px;
   font-size: 0.9rem;
 }
+.return-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.exchange-line {
+  flex-wrap: wrap;
+}
+.exchange-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.exchange-choice select {
+  max-width: 100%;
+}
 .return-row {
   display: flex;
   flex-wrap: wrap;
@@ -2072,7 +2089,8 @@ textarea {
 .return-row > a {
   flex-basis: 100%;
 }
-.status.return-declined {
+.status.return-declined,
+.status.return-cancelled {
   background: var(--bg);
   color: var(--muted);
 }

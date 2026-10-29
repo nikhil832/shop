@@ -63,6 +63,18 @@ export function returnStatusLabel(ret, { admin = false } = {}) {
   }[ret.status];
 }
 
+// An exchange's status in words (stage 89).
+export function exchangeStatusLabel(ex, { admin = false } = {}) {
+  return {
+    requested: 'Waiting for review',
+    approved: admin ? 'Approved · to ship' : 'Approved · new item on its way soon',
+    shipped: 'New item shipped',
+    delivered: 'New item delivered',
+    declined: 'Declined',
+    cancelled: 'Called off',
+  }[ex.status];
+}
+
 // A saved address on one line: "12 MG Road, Near the metro, Bengaluru, Karnataka 560001".
 export const addressLine = (a) => [a.line1, a.line2, a.city, `${a.state} ${a.pincode}`].filter(Boolean).join(', ');
 // The address fields alone, as orders take them (without the address book's id and label).

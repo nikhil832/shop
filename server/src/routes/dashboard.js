@@ -104,6 +104,8 @@ export function dashboardRouter({ db, config }) {
       storage,
       soon,
       late,
+      exchangesToReview,
+      exchangesToShip,
     ] = await Promise.all([
       orders
         .aggregate([
@@ -207,6 +209,9 @@ export function dashboardRouter({ db, config }) {
         status: { $in: ['placed', 'shipped'] },
         'deliveryEstimate.to': { $lt: isoDay(now.getTime()) },
       }),
+      // Exchanges waiting for a decision, and approved ones whose new items aren't sent yet (stage 89).
+      db.collection('exchanges').countDocuments({ status: 'requested' }),
+      db.collection('exchanges').countDocuments({ status: 'approved' }),
     ]);
     // Profit from cost prices (profit.js), this period and the one before.
     const [profit, profitBefore] = await Promise.all([profitFor(db, from, now), profitFor(db, previousFrom, from)]);
@@ -307,6 +312,7 @@ export function dashboardRouter({ db, config }) {
       // Products and options running out within two weeks at their recent sales, with how many to order (reorder.js).
       runningOut: soon,
       lateOrders: late,
+      exchanges: { toReview: exchangesToReview, toShip: exchangesToShip },
     });
   });
 

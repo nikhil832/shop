@@ -539,6 +539,20 @@ export default function AdminDashboard() {
                   </Link>
                 </p>
               )}
+              {data.exchanges?.toReview > 0 && (
+                <p>
+                  <Link to="/admin/exchanges">
+                    {data.exchanges.toReview} {data.exchanges.toReview === 1 ? 'exchange' : 'exchanges'} to review
+                  </Link>
+                </p>
+              )}
+              {data.exchanges?.toShip > 0 && (
+                <p>
+                  <Link to="/admin/exchanges?status=approved">
+                    {data.exchanges.toShip} {data.exchanges.toShip === 1 ? 'exchange' : 'exchanges'} to ship
+                  </Link>
+                </p>
+              )}
               {data.helpWaiting > 0 && (
                 <p>
                   <Link to="/admin/help">

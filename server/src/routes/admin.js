@@ -213,7 +213,7 @@ const reviewVisibility = z.object({ hidden: z.boolean() });
 
 // How a shipped order travels: the courier, its tracking number and (pasted by the admin) the courier's tracking page.
 // All optional, so an order can still be shipped without them and tracking added later.
-const shipmentFields = z
+export const shipmentFields = z
   .object({
     courier: z.string().trim().max(40).default(''),
     trackingNumber: z
@@ -241,7 +241,7 @@ const statusBody = z.object({
   shipment: shipmentFields.optional(),
 });
 // Stored only when something was entered.
-const toShipment = (s) => (s && (s.courier || s.trackingNumber || s.trackingUrl) ? s : null);
+export const toShipment = (s) => (s && (s.courier || s.trackingNumber || s.trackingUrl) ? s : null);
 // Which status each step moves on from. Cancelling also puts the stock back (see cancelOrder).
 const NEXT_FROM = { shipped: ['placed'], delivered: ['shipped'], cancelled: ['awaiting_payment', 'placed', 'shipped'] };
 

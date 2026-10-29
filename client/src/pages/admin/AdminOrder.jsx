@@ -11,6 +11,7 @@ import {
   orderNumber,
   paymentLabel,
   returnStatusLabel,
+  exchangeStatusLabel,
   dueLabel,
   refundText,
   RTO_REASONS,
@@ -87,7 +88,7 @@ const COURIERS = ['India Post', 'Delhivery', 'Blue Dart', 'DTDC', 'Ekart', 'Xpre
 
 // The courier, tracking number and tracking link: filled in when marking a placed order shipped (`onSubmit` ships
 // it), or edited later. All optional.
-function ShipmentForm({ shipment, submitLabel, busy, onSubmit, onCancel }) {
+export function ShipmentForm({ shipment, submitLabel, busy, onSubmit, onCancel }) {
   function submit(e) {
     e.preventDefault();
     onSubmit(Object.fromEntries(new FormData(e.currentTarget)));
@@ -196,6 +197,7 @@ export default function AdminOrder() {
   const { user } = useAuth();
   const { data, error } = useFetch(`/admin/orders/${encodeURIComponent(id)}`);
   const { data: returns } = useFetch(`/admin/orders/${encodeURIComponent(id)}/returns`);
+  const { data: exchanges } = useFetch(`/admin/orders/${encodeURIComponent(id)}/exchanges`);
   const [updated, setUpdated] = useState(null);
   const [action, setAction] = useState({ busy: false, error: null });
   const [editingShipment, setEditingShipment] = useState(false);
@@ -336,6 +338,26 @@ export default function AdminOrder() {
               ))}
               <Link to={`/admin/returns${returns.some((r) => r.status === 'requested') ? '' : '?status=all'}`}>
                 Manage returns
+              </Link>
+            </section>
+          )}
+
+          {exchanges?.length > 0 && (
+            <section className="panel" aria-labelledby="order-exchanges">
+              <h2 id="order-exchanges">Exchanges</h2>
+              {exchanges.map((x) => (
+                <div key={x.id} className="return-row">
+                  <p>
+                    {x.items.map((i) => `${i.title}: ${i.fromLabel} → ${i.toLabel} × ${i.qty}`).join('; ')}
+                    <span className="muted small block">
+                      {formatDate(x.createdAt)} · {x.reasonText}
+                    </span>
+                  </p>
+                  <span className={`status return-${x.status}`}>{exchangeStatusLabel(x, { admin: true })}</span>
+                </div>
+              ))}
+              <Link to={`/admin/exchanges${exchanges.some((x) => x.status === 'requested') ? '' : '?status=all'}`}>
+                Manage exchanges
               </Link>
             </section>
           )}

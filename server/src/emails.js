@@ -822,6 +822,112 @@ export async function sendReturnDecision(ctx, ret, order) {
   }
 }
 
+// Exchanges (stage 89): why a customer wants another option of the same product.
+export const EXCHANGE_REASONS = {
+  fit: "Doesn't fit",
+  look: 'Prefer another colour or style',
+  other: 'Other',
+};
+const exchangeLines = (ex) => ex.items.map((i) => `${i.title}: ${i.fromLabel} → ${i.toLabel} × ${i.qty}`);
+
+// "Exchange requested" for the admins, with a link to the exchanges page.
+export function exchangeRequestedEmail(ex, order, customer, publicUrl = DEFAULT_PUBLIC_URL) {
+  const subject = `Exchange requested for order #${orderNumber(order)}`;
+  const url = `${publicUrl}/admin/exchanges`;
+  const who = customer ? `${customer.name} (${customer.email})` : order.address.name;
+  const lines = [
+    `${who} asked to exchange items from order #${orderNumber(order)}. The new options are set aside until you decide.`,
+    `Reason: ${EXCHANGE_REASONS[ex.reason]}${ex.note ? `: ${ex.note}` : ''}`,
+  ];
+  const items = exchangeLines(ex);
+  const text = [
+    ...lines,
+    items.map((l) => `- ${l}`).join('\n'),
+    `Approve it once the items are back, or decline it: ${url}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const html = layout(
+    subject,
+    `${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+<ul>${items.map((l) => `<li>${escapeHtml(l)}</li>`).join('')}</ul>
+${button('Review the exchange', url)}`,
+    "You're getting this email because you're an admin of the store.",
+  );
+  return { subject, text, html };
+}
+
+// The customer's email when an exchange is approved, declined or its new items are sent.
+export function exchangeUpdateEmail(ex, order, user, publicUrl = DEFAULT_PUBLIC_URL) {
+  const n = orderNumber(order);
+  const subject = {
+    approved: `Your exchange for order #${n} was approved`,
+    declined: `Your exchange for order #${n} was declined`,
+    shipped: `Your exchange for order #${n} is on its way`,
+  }[ex.status];
+  const firstName = user.name.split(/\s+/)[0];
+  const orderUrl = `${publicUrl}/orders/${order._id}`;
+  const { courier, trackingNumber, trackingUrl } = ex.shipment ?? {};
+  const lines = {
+    approved: ["We've got your items back and accepted the exchange. We'll send the new ones soon."],
+    declined: [
+      "We're sorry: we can't accept your exchange.",
+      ...(ex.declineReason ? [`Why: ${ex.declineReason}`] : []),
+    ],
+    shipped: [
+      'Your new items are on their way.',
+      ...(courier
+        ? [`They're travelling with ${courier}${trackingNumber ? `, tracking number ${trackingNumber}` : ''}.`]
+        : []),
+    ],
+  }[ex.status];
+  const items = exchangeLines(ex);
+  const text = [
+    `Hi ${firstName},`,
+    ...lines,
+    items.map((l) => `- ${l}`).join('\n'),
+    ...(trackingUrl && ex.status === 'shipped' ? [`Track your parcel: ${trackingUrl}`] : []),
+    `View your order: ${orderUrl}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+<ul>${items.map((l) => `<li>${escapeHtml(l)}</li>`).join('')}</ul>
+${trackingUrl && ex.status === 'shipped' ? button('Track your parcel', trackingUrl) : ''}
+${button('View your order', orderUrl)}`,
+    "You're getting this email because you asked to exchange items.",
+  );
+  return { subject, text, html };
+}
+
+export async function sendExchangeRequestAlert(ctx, ex, order) {
+  try {
+    const customer = await ctx.db
+      .collection('users')
+      .findOne({ _id: order.userId }, { projection: { name: 1, email: 1 } });
+    await sendToAdmins(
+      ctx,
+      exchangeRequestedEmail(ex, order, customer, ctx.config.mail?.publicUrl),
+      `the exchange alert for ${ex._id}`,
+    );
+  } catch (err) {
+    console.error(`Could not send the exchange alert for ${ex._id}:`, err.message);
+  }
+}
+
+// Never throws: the change it reports is already saved.
+export async function sendExchangeUpdate(ctx, ex, order) {
+  try {
+    const user = await ctx.db.collection('users').findOne({ _id: order.userId }, { projection: { name: 1, email: 1 } });
+    if (!user) return;
+    const email = exchangeUpdateEmail(ex, order, user, ctx.config.mail?.publicUrl);
+    await ctx.mail.send({ to: { email: user.email, name: user.name }, ...email });
+  } catch (err) {
+    console.error(`Could not send the exchange ${ex.status} email for ${ex._id}:`, err.message);
+  }
+}
+
 // Emails the order's customer about `event`. Never throws: the order change it reports is already saved.
 export async function sendOrderEmail(ctx, order, event) {
   try {

@@ -64,6 +64,7 @@ const AdminRoutes = lazyPage(() => import('./pages/admin/AdminRoutes.jsx'));
 const Invoice = lazyPage(() => import('./pages/Invoice.jsx'));
 const CreditNote = lazyPage(() => import('./pages/CreditNote.jsx'));
 const ReturnRequest = lazyPage(() => import('./pages/ReturnRequest.jsx'));
+const ExchangeRequest = lazyPage(() => import('./pages/ExchangeRequest.jsx'));
 const Account = lazyPage(() => import('./pages/Account.jsx'));
 const Help = lazyPage(() => import('./pages/Help.jsx'));
 const HelpRequest = lazyPage(() => import('./pages/HelpRequest.jsx'));
@@ -75,6 +76,7 @@ const OPENED_ON = [
   [/^\/orders\/[^/]+\/invoice$/, Invoice],
   [/^\/orders\/[^/]+\/credit-notes\/[^/]+$/, CreditNote],
   [/^\/orders\/[^/]+\/return$/, ReturnRequest],
+  [/^\/orders\/[^/]+\/exchange$/, ExchangeRequest],
   [/^\/account$/, Account],
   [/^\/help$/, Help],
   [/^\/help\/[^/]+$/, HelpRequest],
@@ -111,6 +113,7 @@ Promise.resolve(OPENED_ON?.preload())
                 <Route path="orders/:id/invoice" element={<Invoice />} />
                 <Route path="orders/:id/credit-notes/:returnId" element={<CreditNote />} />
                 <Route path="orders/:id/return" element={<ReturnRequest />} />
+                <Route path="orders/:id/exchange" element={<ExchangeRequest />} />
                 <Route path="wishlist" element={<Wishlist />} />
                 <Route path="compare" element={<Compare />} />
                 <Route path="gift-cards" element={<GiftCards />} />

@@ -21,6 +21,9 @@ const DAY = 86_400_000;
 const RETURN_STATUSES = ['requested', 'approved', 'refunding', 'refunded', 'refund_failed', 'declined'];
 // Items in these returns can't be returned again.
 const OPEN = ['requested', 'approved', 'refunding', 'refunded', 'refund_failed'];
+// Exchanges (exchanges.js) that hold their items: all but declined and called-off ones. An exchanged item can't be
+// returned or exchanged again.
+export const EXCHANGE_OPEN = ['requested', 'approved', 'shipped', 'delivered'];
 const PAGE = 25;
 
 const requestBody = z.object({
@@ -77,10 +80,14 @@ export const toReturn = (doc) => ({
   creditNote: doc.creditNote ? { number: creditNoteNumber(doc.creditNote), date: doc.creditNote.date } : null,
 });
 
-// For each order line, how many can still be returned (bought, less what is in open returns).
-function returnableQty(order, returns) {
+// For each order line, how many can still be returned or exchanged (bought, less what is in open returns and
+// exchanges).
+export function returnableQty(order, returns, exchanges = []) {
   const taken = new Map();
-  for (const r of returns.filter((x) => OPEN.includes(x.status))) {
+  for (const r of [
+    ...returns.filter((x) => OPEN.includes(x.status)),
+    ...exchanges.filter((x) => EXCHANGE_OPEN.includes(x.status)),
+  ]) {
     for (const i of r.items) taken.set(i.index, (taken.get(i.index) ?? 0) + i.qty);
   }
   return order.items.map((line, index) => line.qty - (taken.get(index) ?? 0));
@@ -119,7 +126,10 @@ export function returnsRouter(ctx) {
   // What can be returned from this order, until when, and its returns so far.
   router.get('/orders/:id/returns', requireUser, async (req, res) => {
     const order = await ownOrder(req);
-    const list = await returns.find({ orderId: order._id }).sort({ createdAt: -1 }).toArray();
+    const [list, exchanges] = await Promise.all([
+      returns.find({ orderId: order._id }).sort({ createdAt: -1 }).toArray(),
+      db.collection('exchanges').find({ orderId: order._id }).toArray(),
+    ]);
     const until = returnableUntil(order);
     const open = until && until > new Date();
     res.json({
@@ -131,7 +141,7 @@ export function returnsRouter(ctx) {
         image: line.image,
         price: line.price,
         qty: line.qty,
-        returnable: open ? returnableQty(order, list)[index] : 0,
+        returnable: open ? returnableQty(order, list, exchanges)[index] : 0,
       })),
       returns: list.map(toReturn),
     });
@@ -148,14 +158,15 @@ export function returnsRouter(ctx) {
       if (!until) throw new HttpError(409, 'Only delivered orders can be returned');
       if (until <= new Date()) throw new HttpError(409, `Returns are accepted for ${RETURN_DAYS} days after delivery`);
       const earlier = await returns.find({ orderId }, { session }).toArray();
-      const left = returnableQty(order, earlier);
+      const exchanges = await db.collection('exchanges').find({ orderId }, { session }).toArray();
+      const left = returnableQty(order, earlier, exchanges);
       for (const i of body.items) {
         if (i.index >= order.items.length) throw new HttpError(400, 'items: No such item in this order');
         if (i.qty > left[i.index]) {
           throw new HttpError(
             409,
             left[i.index] === 0
-              ? `${order.items[i.index].title} is already being returned`
+              ? `${order.items[i.index].title} is already being returned or exchanged`
               : `Only ${left[i.index]} of ${order.items[i.index].title} can be returned`,
           );
         }
@@ -186,7 +197,8 @@ export function returnsRouter(ctx) {
         updatedAt: now,
       };
       const { insertedId } = await returns.insertOne(ret, { session });
-      // Marks the order, so the transaction conflicts with (and retries after) another request for it.
+      // Marks the order, so the transaction conflicts with (and retries after) another request for it, return or
+      // exchange.
       await orders.updateOne({ _id: orderId }, { $set: { lastReturnAt: now } }, { session });
       return { ret: { ...ret, _id: insertedId }, order };
     });

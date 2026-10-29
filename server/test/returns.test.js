@@ -125,7 +125,7 @@ test('only delivered orders, within 7 days, by their own customer, and each item
   const both = await Promise.all([ask(call, order, [{ index: 0, qty: 1 }]), ask(call, order, [{ index: 0, qty: 1 }])]);
   assert.deepEqual(both.map((r) => r.status).sort(), [201, 409]);
   const none = await ask(call, order, [{ index: 0, qty: 1 }]);
-  assert.equal(none.body.error, 'The Quiet Engineer (Paperback) is already being returned');
+  assert.equal(none.body.error, 'The Quiet Engineer (Paperback) is already being returned or exchanged');
 
   // After 7 days, no more.
   const late = await deliveredOrder(call, [[BOOK, 1]]);

@@ -18,6 +18,7 @@ import { toRequest } from './help.js';
 import { toOrder } from './orders.js';
 import { toQuestion } from './questions.js';
 import { toReturn } from './returns.js';
+import { toExchange } from './exchanges.js';
 import { changeRating, inTransaction, toReview } from './reviews.js';
 import { toCreditEntry } from '../credit.js';
 import { toGiftCard } from '../giftCards.js';
@@ -27,10 +28,11 @@ import { toGiftCard } from '../giftCards.js';
 // Closing deletes the account and what's only theirs (sessions, login and reset links, wishlist, alerts, saved cart,
 // reviews (out of the ratings too), unanswered questions, help requests), signs answered questions "A customer", and
 // keeps orders and returns, which tax law needs, with the name, phone and street removed (city, state and PIN stay:
-// GST's place of supply). It's refused while an order is on its way or a return is open, and for admins.
+// GST's place of supply). It's refused while an order is on its way or a return or exchange is open, and for admins.
 
 const ORDER_OPEN = ['awaiting_payment', 'placed', 'shipped'];
 const RETURN_OPEN = ['requested', 'approved', 'refunding', 'refund_failed'];
+const EXCHANGE_OPEN = ['requested', 'approved', 'shipped'];
 // Collections that only hold this customer's own records, by userId.
 const OWN = [
   'wishlist',
@@ -60,21 +62,23 @@ export function accountDataRouter(ctx) {
   router.get('/account/data', async (req, res) => {
     const u = req.user;
     const userId = u._id;
-    const [orders, returns, reviews, questions, wishlist, alerts, cart, help, credit, giftCards] = await Promise.all([
-      db.collection('orders').find({ userId }).sort({ createdAt: -1 }).toArray(),
-      db.collection('returns').find({ userId }).sort({ createdAt: -1 }).toArray(),
-      db.collection('reviews').find({ userId }).toArray(),
-      db.collection('questions').find({ userId }).toArray(),
-      db.collection('wishlist').find({ userId }).toArray(),
-      db.collection('stockAlerts').find({ userId }).toArray(),
-      db.collection('carts').findOne({ _id: userId }),
-      db.collection('helpRequests').find({ userId }).toArray(),
-      db.collection('creditLedger').find({ userId }).sort({ at: -1 }).toArray(),
-      db
-        .collection('giftCards')
-        .find({ buyerId: userId, status: { $ne: 'awaiting_payment' } })
-        .toArray(),
-    ]);
+    const [orders, returns, exchanges, reviews, questions, wishlist, alerts, cart, help, credit, giftCards] =
+      await Promise.all([
+        db.collection('orders').find({ userId }).sort({ createdAt: -1 }).toArray(),
+        db.collection('returns').find({ userId }).sort({ createdAt: -1 }).toArray(),
+        db.collection('exchanges').find({ userId }).sort({ createdAt: -1 }).toArray(),
+        db.collection('reviews').find({ userId }).toArray(),
+        db.collection('questions').find({ userId }).toArray(),
+        db.collection('wishlist').find({ userId }).toArray(),
+        db.collection('stockAlerts').find({ userId }).toArray(),
+        db.collection('carts').findOne({ _id: userId }),
+        db.collection('helpRequests').find({ userId }).toArray(),
+        db.collection('creditLedger').find({ userId }).sort({ at: -1 }).toArray(),
+        db
+          .collection('giftCards')
+          .find({ buyerId: userId, status: { $ne: 'awaiting_payment' } })
+          .toArray(),
+      ]);
     const productIds = [...reviews, ...questions, ...wishlist, ...alerts].map((d) => d.productId);
     const titles = new Map(
       (
@@ -100,6 +104,7 @@ export function accountDataRouter(ctx) {
       },
       orders: orders.map((o) => toOrder(o)),
       returns: returns.map(toReturn),
+      exchanges: exchanges.map(toExchange),
       reviews: reviews.map((r) => ({ product: title(r.productId), ...toReview(r) })),
       questions: questions.map((q) => ({ product: title(q.productId), ...toQuestion(q) })),
       wishlist: wishlist.map((w) => ({ product: title(w.productId), addedAt: w.addedAt })),
@@ -138,6 +143,11 @@ export function accountDataRouter(ctx) {
     }
     if (await db.collection('returns').findOne({ userId, status: { $in: RETURN_OPEN } }, { projection: { _id: 1 } })) {
       throw new HttpError(409, 'You have a return in progress. You can close your account once it is finished.');
+    }
+    if (
+      await db.collection('exchanges').findOne({ userId, status: { $in: EXCHANGE_OPEN } }, { projection: { _id: 1 } })
+    ) {
+      throw new HttpError(409, 'You have an exchange in progress. You can close your account once it is finished.');
     }
 
     await inTransaction(client, async (session) => {

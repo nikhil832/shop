@@ -12,6 +12,7 @@ import {
   orderNumber,
   paymentLabel,
   returnStatusLabel,
+  exchangeStatusLabel,
   smallImage,
   dueLabel,
   refundText,
@@ -89,8 +90,16 @@ export default function Order() {
   const navigate = useNavigate();
   const { data, error } = useFetch(user ? `/orders/${encodeURIComponent(id)}` : null);
   // Returns: for delivered orders, what can be returned and what already is.
+  // Exchanges (stage 89) share the returns' items, so both reload after an exchange is called off.
+  const [exchangeVersion, setExchangeVersion] = useState(0);
   const { data: returnInfo } = useFetch(
     data?.status === 'delivered' ? `/orders/${encodeURIComponent(id)}/returns` : null,
+    exchangeVersion,
+  );
+  // What can be swapped for another option, and the exchanges so far.
+  const { data: exchangeInfo } = useFetch(
+    data?.status === 'delivered' ? `/orders/${encodeURIComponent(id)}/exchanges` : null,
+    exchangeVersion,
   );
   // The order as returned by a cancel or payment, which replaces the loaded one.
   const [updated, setUpdated] = useState(null);
@@ -138,6 +147,14 @@ export default function Order() {
       }
       navigate('/cart', { state: { boughtAgain: { number: orderNumber(order), ...result } } });
     });
+  const callOffExchange = (ex) =>
+    window.confirm('Call off this exchange? You keep the item you have.') &&
+    run(async () => {
+      await request(`/orders/${order.id}/exchanges/${ex.id}/cancel`, { method: 'POST' });
+      setExchangeVersion((v) => v + 1);
+    });
+  const canExchange =
+    exchangeInfo?.canExchange && exchangeInfo.items.some((i) => i.exchangeable > 0 && i.options.length);
   const checkPayment = () => run(() => request(`/orders/${order.id}/payment/check`, { method: 'POST' }));
 
   return (
@@ -151,6 +168,11 @@ export default function Order() {
       {location.state?.returnRequested && (
         <p className="notice" role="status">
           Return requested. We&rsquo;ll email you once we&rsquo;ve looked at it.
+        </p>
+      )}
+      {location.state?.exchangeRequested && (
+        <p className="notice" role="status">
+          Exchange requested. Your new choice is set aside; we&rsquo;ll email you once we&rsquo;ve looked at it.
         </p>
       )}
       {(location.state?.placed || updated) && order.status === 'placed' && (
@@ -230,36 +252,71 @@ export default function Order() {
             </section>
           )}
 
-          {returnInfo && (returnInfo.returns.length > 0 || returnInfo.canReturn) && (
-            <section className="panel" aria-labelledby="returns-heading">
-              <h2 id="returns-heading">Returns</h2>
-              {returnInfo.returns.map((r) => (
-                <div key={r.id} className="return-row">
-                  <p>
-                    {r.items.map((i) => `${i.title} × ${i.qty}`).join(', ')}
-                    <span className="muted small block">
-                      Asked on {formatDate(r.createdAt)} · {r.reasonText} · refund {refundText(r)}
-                    </span>
+          {returnInfo &&
+            (returnInfo.returns.length > 0 || returnInfo.canReturn || exchangeInfo?.exchanges.length > 0) && (
+              <section className="panel" aria-labelledby="returns-heading">
+                <h2 id="returns-heading">Returns and exchanges</h2>
+                {returnInfo.returns.map((r) => (
+                  <div key={r.id} className="return-row">
+                    <p>
+                      {r.items.map((i) => `${i.title} × ${i.qty}`).join(', ')}
+                      <span className="muted small block">
+                        Asked on {formatDate(r.createdAt)} · {r.reasonText} · refund {refundText(r)}
+                      </span>
+                    </p>
+                    <span className={`status return-${r.status}`}>{returnStatusLabel(r)}</span>
+                    {r.status === 'declined' && r.declineReason && (
+                      <p className="muted small">Why: {r.declineReason}</p>
+                    )}
+                    {r.creditNote && (
+                      <Link to={`/orders/${order.id}/credit-notes/${r.id}`} className="small">
+                        Credit note {r.creditNote.number}
+                      </Link>
+                    )}
+                  </div>
+                ))}
+                {exchangeInfo?.exchanges.map((x) => (
+                  <div key={x.id} className="return-row">
+                    <p>
+                      Exchange: {x.items.map((i) => `${i.title}, ${i.fromLabel} → ${i.toLabel} × ${i.qty}`).join('; ')}
+                      <span className="muted small block">
+                        Asked on {formatDate(x.createdAt)} · {x.reasonText}
+                      </span>
+                    </p>
+                    <span className={`status return-${x.status}`}>{exchangeStatusLabel(x)}</span>
+                    {x.status === 'declined' && x.declineReason && (
+                      <p className="muted small">Why: {x.declineReason}</p>
+                    )}
+                    {x.shipment && x.status === 'shipped' && <ShipmentDetails shipment={x.shipment} />}
+                    {x.status === 'requested' && (
+                      <button
+                        type="button"
+                        className="link small"
+                        onClick={() => callOffExchange(x)}
+                        disabled={action.busy}
+                      >
+                        Call off this exchange
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {((returnInfo.canReturn && returnInfo.items.some((i) => i.returnable > 0)) || canExchange) && (
+                  <p className="return-actions">
+                    {returnInfo.items.some((i) => i.returnable > 0) && (
+                      <Link to={`/orders/${order.id}/return`} className="btn">
+                        Return items
+                      </Link>
+                    )}
+                    {canExchange && (
+                      <Link to={`/orders/${order.id}/exchange`} className="btn">
+                        Exchange for another size or colour
+                      </Link>
+                    )}
+                    <span className="muted small">until {formatDate(returnInfo.returnableUntil)}</span>
                   </p>
-                  <span className={`status return-${r.status}`}>{returnStatusLabel(r)}</span>
-                  {r.status === 'declined' && r.declineReason && <p className="muted small">Why: {r.declineReason}</p>}
-                  {r.creditNote && (
-                    <Link to={`/orders/${order.id}/credit-notes/${r.id}`} className="small">
-                      Credit note {r.creditNote.number}
-                    </Link>
-                  )}
-                </div>
-              ))}
-              {returnInfo.canReturn && returnInfo.items.some((i) => i.returnable > 0) && (
-                <p>
-                  <Link to={`/orders/${order.id}/return`} className="btn">
-                    Return items
-                  </Link>{' '}
-                  <span className="muted small">until {formatDate(returnInfo.returnableUntil)}</span>
-                </p>
-              )}
-            </section>
-          )}
+                )}
+              </section>
+            )}
 
           <section className="panel">
             <h2>Delivery address</h2>

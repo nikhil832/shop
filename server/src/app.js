@@ -18,6 +18,7 @@ import { imagesRouter } from './routes/images.js';
 import { reviewsRouter } from './routes/reviews.js';
 import { questionsRouter } from './routes/questions.js';
 import { returnsRouter } from './routes/returns.js';
+import { exchangesRouter } from './routes/exchanges.js';
 import { stockAlertsRouter } from './routes/stockAlerts.js';
 import { wishlistRouter } from './routes/wishlist.js';
 import { savedCartRouter } from './routes/savedCart.js';
@@ -76,6 +77,7 @@ export function createApp(ctx) {
   api.use(reviewsRouter(ctx));
   api.use(questionsRouter(ctx));
   api.use(returnsRouter(ctx));
+  api.use(exchangesRouter(ctx));
   api.use(wishlistRouter(ctx));
   api.use(savedCartRouter(ctx));
   api.use(stockAlertsRouter(ctx));
