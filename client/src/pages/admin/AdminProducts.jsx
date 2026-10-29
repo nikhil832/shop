@@ -225,6 +225,7 @@ export default function AdminProducts() {
                       <span className={`status ${p.active ? 'placed' : 'cancelled'}`}>
                         {p.active ? 'Active' : 'Hidden'}
                       </span>
+                      {p.comingSoon && p.stock === 0 && <span className="muted small">Coming soon</span>}
                       <button type="button" className="link" onClick={() => setActive(p, !p.active)}>
                         {p.active ? 'Hide' : 'Show'}
                         <span className="sr-only"> {p.title}</span>

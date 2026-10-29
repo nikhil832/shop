@@ -14,6 +14,13 @@ function CollectionRows() {
   return data?.items.map((c) => <ProductRow key={c.slug} title={c.name} items={c.items} moreLink={`/c/${c.slug}`} />);
 }
 
+// Products marked "Coming soon" (stage 92); nothing when there are none.
+function ComingSoonRow() {
+  const { data } = useFetch('/products?comingSoon=1&sort=newest&pageSize=8');
+  if (!data?.items.length) return null;
+  return <ProductRow title="Coming soon" items={data.items} />;
+}
+
 export default function Home() {
   const { data: categories, error } = useFetch('/categories');
 
@@ -41,6 +48,7 @@ export default function Home() {
       <RecentlyViewed />
       <ListRow title="Top rated" path="/products?sort=rating&inStock=1&pageSize=8" moreLink="/search?sort=rating" />
       <ListRow title="New arrivals" path="/products?sort=newest&pageSize=8" moreLink="/search?sort=newest" />
+      <ComingSoonRow />
     </>
   );
 }

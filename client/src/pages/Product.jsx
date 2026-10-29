@@ -14,7 +14,7 @@ import SizeGuide from '../components/SizeGuide.jsx';
 import ProductRow from '../components/ProductRow.jsx';
 import RecentlyViewed from '../components/RecentlyViewed.jsx';
 import { rememberViewed } from '../recent.js';
-import { saleEndsIn, smallImage } from '../format.js';
+import { expectedText, saleEndsIn, smallImage } from '../format.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
 
@@ -221,7 +221,13 @@ export default function Product() {
               <SizeGuide key={product.slug} slug={product.slug} />
             </>
           )}
-          <p className={`stock ${stockClass(shown.stock)}`}>{stockText(shown.stock)}</p>
+          {product.comingSoon ? (
+            <p className="stock soon">
+              Coming soon{expectedText(product.comingSoon) && ` · ${expectedText(product.comingSoon)}`}
+            </p>
+          ) : (
+            <p className={`stock ${stockClass(shown.stock)}`}>{stockText(shown.stock)}</p>
+          )}
           {/* Sold out (the whole product, or the chosen variant): ask for an email instead. Remounted when the
               saved alerts change, so its state follows the reloaded product. */}
           {product.stock === 0 || variant?.stock === 0 ? (
@@ -229,6 +235,7 @@ export default function Product() {
               key={`alert-${product.id}:${variant?.id ?? ''}:${product.stockAlert}:${product.stockAlertVariants.join()}`}
               product={product}
               variant={variant}
+              arriving={Boolean(product.comingSoon)}
               onChange={() => setVersion((v) => v + 1)}
             />
           ) : (

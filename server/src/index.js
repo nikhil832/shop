@@ -8,7 +8,7 @@ import { razorpayClient } from './razorpay.js';
 import { mailClient } from './mail.js';
 import { aiClient } from './ai.js';
 import { expireUnpaidOrders } from './routes/orders.js';
-import { sendBackInStockAlerts } from './routes/stockAlerts.js';
+import { clearComingSoon, sendBackInStockAlerts } from './routes/stockAlerts.js';
 import { sendPriceDropEmails } from './routes/wishlist.js';
 import { sendCartReminders } from './routes/savedCart.js';
 import { deleteUnusedImages } from './routes/images.js';
@@ -39,15 +39,17 @@ const ctx = {
 const app = createApp(ctx);
 
 // Every minute: start and end scheduled sales, release the stock of online orders whose 30-minute payment window has
-// passed, then email customers waiting for products that are back in stock (which that release can cause), those whose
-// wishlist got cheaper and those who left a cart a day ago, once a morning the admins' list of products running out,
-// on Mondays their weekly note, rewrite "What customers say" for products whose reviews changed, screen new
-// reviews and questions, and send gift cards whose day has come.
+// passed, then email customers waiting for products that are back in stock (which that release can cause), drop
+// "Coming soon" from products that now have stock, email those whose wishlist got cheaper and those who left a cart a
+// day ago, once a morning the admins' list of products running out, on Mondays their weekly note, rewrite "What
+// customers say" for products whose reviews changed, screen new reviews and questions, and send gift cards whose day
+// has come.
 const sweeper = setInterval(async () => {
   // First, so a sale starting or ending now is in the prices the emails below read.
   await runSales(ctx).catch((err) => console.error(err));
   await expireUnpaidOrders(ctx).catch((err) => console.error(err));
   await sendBackInStockAlerts(ctx).catch((err) => console.error(err));
+  await clearComingSoon(ctx.db).catch((err) => console.error(err));
   await sendPriceDropEmails(ctx).catch((err) => console.error(err));
   await sendCartReminders(ctx).catch((err) => console.error(err));
   await sendLowStockEmail(ctx).catch((err) => console.error(err));

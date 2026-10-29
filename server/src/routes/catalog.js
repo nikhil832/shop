@@ -46,6 +46,8 @@ const listQuery = z.object({
   maxPrice: z.coerce.number().int().min(0).optional(),
   rating: z.coerce.number().min(1).max(5).optional(),
   inStock: z.enum(['1', 'true']).optional(),
+  // Only products marked "Coming soon" (stage 92), for the home page's row.
+  comingSoon: z.enum(['1', 'true']).optional(),
   sort: z.enum(Object.keys(PRODUCT_SORTS)).default('relevance'),
   page: z.coerce.number().int().min(1).max(1000).default(1),
   pageSize: z.coerce.number().int().min(1).max(48).default(24),
@@ -218,6 +220,8 @@ export const toProductCard = (doc) => ({
   priceFrom: Boolean(doc.variants?.some((v) => v.price !== doc.price)),
   // In a running sale (sales.js): its name and end, for the "Sale" tag and "Sale ends in…".
   sale: doc.sale ? { name: doc.sale.name, percent: doc.sale.percent, endsAt: doc.sale.endsAt } : null,
+  // Not in stock yet (stage 92): { expected: 'YYYY-MM-DD' | null }, only while it has none.
+  comingSoon: doc.comingSoon && doc.stock === 0 ? { expected: doc.comingSoon.expected ?? null } : null,
 });
 
 export function catalogRouter({ db }) {
@@ -248,6 +252,7 @@ export function catalogRouter({ db }) {
     }
     if (query.rating) base['rating.avg'] = { $gte: query.rating };
     if (query.inStock) base.stock = { $gt: 0 };
+    if (query.comingSoon) Object.assign(base, { comingSoon: { $type: 'object' }, stock: 0 });
 
     // The brand facet ignores the brand filter itself, so other brands stay selectable.
     const brandList = query.brand
@@ -293,7 +298,8 @@ export function catalogRouter({ db }) {
       query.minPrice === undefined &&
       query.maxPrice === undefined &&
       !query.rating &&
-      !query.inStock;
+      !query.inStock &&
+      !query.comingSoon;
     if (query.q && plain) await recordSearch(db, query.q, total);
     // Nothing found: a corrected search ("samsng" → "samsung"), offered only if it finds something with the same filters.
     let suggestion = null;

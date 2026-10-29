@@ -7,10 +7,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Suggested on 2026-10-29, in the suggested order (exchanges, address changes and collections, the first three, are built):
+Suggested on 2026-10-29, in the suggested order (the first four are built; pre-orders were left out of coming soon by choice):
 
-- **Coming soon and pre-orders**: show a product before it's in stock with "Coming soon" and a date, let customers ask
-  to be told (reusing back-in-stock alerts), and optionally take pre-orders paid online. To start: "start coming soon".
 - **Supplier orders**: from the reorder suggestions, make a purchase order for a supplier (printable or emailed), then
   receive it against that order under Receiving, seeing what's still to come. To start: "start supplier orders".
 - **Photo zoom**: tap or hover to see a product photo larger on the product page, with swipe between photos on phones.
@@ -120,3 +118,4 @@ Suggested on 2026-10-29, in the suggested order (exchanges, address changes and 
 | Exchanges: another size or colour of the same product at the same price within the return window, set aside at once, approved, shipped and delivered by admins            | Stage 89 (`git log --grep "Stage 89"`) |
 | Change the address before shipping: customers or admins correct it until the order ships, checked against delivery areas, new dates, emails, earlier addresses for admins | Stage 90 (`git log --grep "Stage 90"`) |
 | Collections: hand-picked product lists with their own page and link, optional start and end, up to three as home page rows in the admin's order                           | Stage 91 (`git log --grep "Stage 91"`) |
+| Coming soon: products without stock marked with an expected day, a home page row, "Email me when it arrives", cleared once stock comes                                    | Stage 92 (`git log --grep "Stage 92"`) |

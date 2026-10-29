@@ -455,6 +455,8 @@ function ProductForm({ product, categories }) {
         images.filter((src) => src.startsWith('/api/images/')).map((src) => [src, (alts[src] ?? '').trim()]),
       ),
       active: form.get('active') === 'on',
+      // "Coming soon" while it has no stock (stage 92), with the expected day if given.
+      comingSoon: form.get('comingSoon') === 'on' ? { expected: form.get('expected') || null } : null,
       // '' is the category's size guide (stage 88).
       sizeGuide: form.get('sizeGuide') || null,
     };
@@ -562,6 +564,14 @@ function ProductForm({ product, categories }) {
         <label className="check">
           <input name="active" type="checkbox" defaultChecked={product?.active ?? true} />
           Show in store
+        </label>
+        <label className="check">
+          <input name="comingSoon" type="checkbox" defaultChecked={Boolean(product?.comingSoon)} />
+          Coming soon (shown until it has stock)
+        </label>
+        <label>
+          Expected on (optional)
+          <input name="expected" type="date" defaultValue={product?.comingSoon?.expected ?? ''} />
         </label>
         {guides?.items.length > 0 && (
           <label>

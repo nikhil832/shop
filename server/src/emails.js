@@ -215,11 +215,15 @@ ${button('Choose a new password', url)}
 export function backInStockEmail(user, product, publicUrl = DEFAULT_PUBLIC_URL, variant = null) {
   const name = variantTitle(product, variant);
   const { price, stock } = variant ?? product;
-  const subject = `Back in stock: ${name}`;
+  // A product that was "Coming soon" (stage 92) has arrived rather than come back.
+  const arrived = Boolean(product.comingSoon);
+  const subject = `${arrived ? 'Now in stock' : 'Back in stock'}: ${name}`;
   const firstName = user.name.split(/\s+/)[0];
   const url = `${publicUrl}/p/${product.slug}`;
   const lines = [
-    `Good news: ${name} is back in stock at ${rupees(price)}.`,
+    arrived
+      ? `Good news: ${name} has arrived, at ${rupees(price)}.`
+      : `Good news: ${name} is back in stock at ${rupees(price)}.`,
     ...(stock <= 5 ? [`Only ${stock} left, so don't wait too long.`] : []),
     "We only email once. If it sells out again, ask again on the product's page.",
   ];

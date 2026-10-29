@@ -32,6 +32,7 @@ test('lists products with paging and totals', async () => {
   assert.deepEqual(Object.keys(card).sort(), [
     'brand',
     'categoryId',
+    'comingSoon',
     'id',
     'image',
     'mrp',

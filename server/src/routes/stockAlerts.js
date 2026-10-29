@@ -117,3 +117,12 @@ export async function sendBackInStockAlerts(ctx) {
   }
   return sent;
 }
+
+// "Coming soon" (stage 92) lasts only until stock arrives: once a product has some, the mark goes, so selling out
+// later reads "Out of stock" again. Run after the alerts above, whose email says "Now in stock" for such products.
+export async function clearComingSoon(db) {
+  const { modifiedCount } = await db
+    .collection('products')
+    .updateMany({ comingSoon: { $type: 'object' }, stock: { $gt: 0 } }, { $set: { comingSoon: null } });
+  return modifiedCount;
+}

@@ -89,6 +89,10 @@ export function productChanges(before, after, categoryName) {
     changes.push({ field: 'Photo descriptions', to: 'edited' });
   }
   push(changes, 'Shown', yesNo(before.active), yesNo(after.active));
+  // "Coming soon" (stage 92), with its expected day if any.
+  const soon = (doc) =>
+    doc.comingSoon ? `yes${doc.comingSoon.expected ? `, expected ${doc.comingSoon.expected}` : ''}` : 'no';
+  push(changes, 'Coming soon', soon(before), soon(after));
 
   const variantsBefore = before.variants ?? [];
   const variantsAfter = after.variants ?? [];

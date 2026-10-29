@@ -152,3 +152,10 @@ const arrivalDay = (iso) =>
   });
 export const arrival = ({ from, to }) =>
   from === to ? `by ${arrivalDay(to)}` : `between ${arrivalDay(from)} and ${arrivalDay(to)}`;
+
+// A product not in stock yet (stage 92): "Expected Fri, 20 Nov" for a day still ahead (India time), else null.
+export function expectedText(comingSoon) {
+  const day = comingSoon?.expected;
+  const today = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
+  return day && day >= today ? `Expected ${arrivalDay(day)}` : null;
+}

@@ -3368,3 +3368,12 @@ textarea {
   gap: 4px 8px;
   overflow-wrap: anywhere;
 }
+
+/* ---- Coming soon (stage 92) ---- */
+.ribbon.soon {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.stock.soon {
+  color: var(--accent-strong);
+}
