@@ -11,40 +11,13 @@ import CompareToggle from '../components/CompareToggle.jsx';
 import DeliveryCheck from '../components/DeliveryCheck.jsx';
 import BundleOffers from '../components/BundleOffers.jsx';
 import SizeGuide from '../components/SizeGuide.jsx';
+import Gallery from '../components/Gallery.jsx';
 import ProductRow from '../components/ProductRow.jsx';
 import RecentlyViewed from '../components/RecentlyViewed.jsx';
 import { rememberViewed } from '../recent.js';
-import { expectedText, saleEndsIn, smallImage } from '../format.js';
+import { expectedText, saleEndsIn } from '../format.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
-
-// `alts`: descriptions of uploaded photos by address; the title describes the rest.
-function Gallery({ images, title, alts = {} }) {
-  const [selected, setSelected] = useState(0);
-  return (
-    <div className="gallery">
-      <div className="gallery-main">
-        <img src={images[selected]} alt={alts[images[selected]] || title} width="600" height="600" />
-      </div>
-      {images.length > 1 && (
-        <div className="thumbs">
-          {images.map((src, i) => (
-            <button
-              key={src}
-              type="button"
-              className={i === selected ? 'selected' : ''}
-              onClick={() => setSelected(i)}
-              aria-label={`Show image ${i + 1}`}
-              aria-pressed={i === selected}
-            >
-              <img src={smallImage(src)} alt="" width="64" height="64" />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // `variant` is the chosen size/colour of a product that has them (null until chosen); its own stock limits the quantity.
 // `missing` names the options still to choose ("size", or "colour and size").

@@ -7,10 +7,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Suggested on 2026-10-29, in the suggested order (the first five are built; pre-orders were left out of coming soon by choice):
-
-- **Photo zoom**: tap or hover to see a product photo larger on the product page, with swipe between photos on phones.
-  Small and client-only. To start: "start photo zoom".
+Nothing queued: every idea from 2026-10-29 is built (pre-orders were left out of coming soon by choice). Ask for new
+ideas ("what should we build next?") and they'll be added here.
 
 ## Set aside
 
@@ -118,3 +116,4 @@ Suggested on 2026-10-29, in the suggested order (the first five are built; pre-o
 | Collections: hand-picked product lists with their own page and link, optional start and end, up to three as home page rows in the admin's order                           | Stage 91 (`git log --grep "Stage 91"`) |
 | Coming soon: products without stock marked with an expected day, a home page row, "Email me when it arrives", cleared once stock comes                                    | Stage 92 (`git log --grep "Stage 92"`) |
 | Supplier orders: printable orders to suppliers, filled from the reorder suggestions, received against under Receiving, on-order stock taken off the suggestions           | Stage 93 (`git log --grep "Stage 93"`) |
+| Photo zoom: product photos full screen with next/previous, arrow keys and swipes, tap to zoom in where tapped; swipe the page's photo on phones                           | Stage 94 (`git log --grep "Stage 94"`) |

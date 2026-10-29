@@ -610,15 +610,99 @@ p a:not(.btn) {
   gap: 10px;
 }
 .gallery-main {
+  position: relative;
   aspect-ratio: 1;
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--bg);
+  /* Sideways swipes move between photos (Gallery.jsx); the page still scrolls up and down. */
+  touch-action: pan-y;
 }
 .gallery-main img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  cursor: zoom-in;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.gallery-enlarge {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+}
+/* The full-screen photo viewer (stage 94). */
+.photo-viewer {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: #111111;
+  color: #ffffff;
+}
+.photo-viewer[open] {
+  display: flex;
+  flex-direction: column;
+}
+.photo-viewer::backdrop {
+  background: rgb(0 0 0 / 0.8);
+}
+.photo-viewer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px;
+}
+.photo-viewer-bar span {
+  margin-right: auto;
+}
+.photo-viewer-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* All gestures are the viewer's: swipes move between photos, moves look around a zoomed one. */
+  touch-action: none;
+}
+.photo-viewer-stage img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  cursor: zoom-in;
+  transition: transform 0.15s;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.photo-viewer-stage img.zoomed {
+  cursor: zoom-out;
+  transition: none;
+}
+.photo-step {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.9);
+  color: #111111;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.photo-step.prev {
+  left: 12px;
+}
+.photo-step.next {
+  right: 12px;
 }
 .thumbs {
   display: flex;
