@@ -149,6 +149,11 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   // Paid with store credit (stage 72); `total` less this is what was paid, or is to pay, in money.
   creditUsed: doc.creditUsed ?? 0,
   address: doc.address,
+  // When the address was last changed before shipping (stage 90, orderAddress.js); admins also get every earlier one.
+  addressChangedAt: doc.addressChanges?.at(-1)?.at ?? null,
+  ...(admin && {
+    addressChanges: (doc.addressChanges ?? []).map((c) => ({ from: c.from, at: c.at, by: c.by.name, role: c.role })),
+  }),
   // Orders from before online payments stored just 'cod'.
   payment: typeof doc.payment === 'string' ? { method: doc.payment } : withoutRefundError(doc.payment, admin),
   status: doc.status,

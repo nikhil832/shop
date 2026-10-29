@@ -3,6 +3,7 @@ import { itemKey } from '../../cart.js';
 import { Link, useParams } from 'react-router';
 import { request } from '../../api.js';
 import OrderSummary from '../../components/OrderSummary.jsx';
+import ChangeAddress from '../../components/ChangeAddress.jsx';
 import {
   formatDate,
   formatPrice,
@@ -12,6 +13,7 @@ import {
   paymentLabel,
   returnStatusLabel,
   exchangeStatusLabel,
+  addressLine,
   dueLabel,
   refundText,
   RTO_REASONS,
@@ -402,6 +404,31 @@ export default function AdminOrder() {
                 <br />
                 {address.city}, {address.state} {address.pincode}
               </address>
+              {/* Until it ships (stage 90); the earlier addresses for whoever packs it. */}
+              {(order.status === 'placed' || order.status === 'awaiting_payment') && can(user, '*') && (
+                <ChangeAddress
+                  address={address}
+                  save={async (body) =>
+                    setUpdated(await request(`/admin/orders/${order.id}/address`, { method: 'POST', body }))
+                  }
+                />
+              )}
+              {order.addressChanges?.length > 0 && (
+                <details className="address-changes small">
+                  <summary>
+                    Address changed{' '}
+                    {order.addressChanges.length === 1 ? 'once' : `${order.addressChanges.length} times`}
+                  </summary>
+                  <ul>
+                    {order.addressChanges.map((c) => (
+                      <li key={c.at}>
+                        {formatDate(c.at)}, by {c.by} ({c.role === 'admin' ? 'store' : 'customer'}). Was:{' '}
+                        {addressLine(c.from)}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
             </div>
           </section>
         </div>

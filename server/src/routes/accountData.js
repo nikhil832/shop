@@ -170,6 +170,8 @@ export function accountDataRouter(ctx) {
             'address.line2': '',
             customerClosedAt: new Date(),
           },
+          // Earlier delivery addresses (stage 90) hold the same details.
+          $unset: { addressChanges: '' },
         },
         { session },
       );

@@ -3330,3 +3330,18 @@ textarea {
   background: var(--bg);
   color: var(--muted);
 }
+
+/* ---- Changing an order's address (stage 90) ---- */
+.change-address {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+.address-changes {
+  margin-top: 8px;
+}
+.address-changes ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}

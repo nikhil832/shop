@@ -822,6 +822,74 @@ export async function sendReturnDecision(ctx, ret, order) {
   }
 }
 
+// Address changes (stage 90): the address on one line, for emails.
+const addressText = (a) =>
+  [a.name, a.line1, a.line2, a.city, `${a.state} ${a.pincode}`, `Phone ${a.phone}`].filter(Boolean).join(', ');
+
+// The customer's email when an order's delivery address changes (by them or the store), so a change they didn't make
+// doesn't go unnoticed.
+export function addressChangedEmail(order, user, byStore, publicUrl = DEFAULT_PUBLIC_URL) {
+  const subject = `New delivery address for order #${orderNumber(order)}`;
+  const firstName = user.name.split(/\s+/)[0];
+  const orderUrl = `${publicUrl}/orders/${order._id}`;
+  const lines = [
+    byStore
+      ? `We've changed the delivery address of order #${orderNumber(order)}, as you asked. It will now go to:`
+      : `The delivery address of order #${orderNumber(order)} was changed. It will now go to:`,
+    addressText(order.address),
+    ...(order.deliveryEstimate ? [`It should arrive ${arrival(order.deliveryEstimate)}.`] : []),
+    ...(byStore ? [] : ["If you didn't make this change, reply to this email or contact us straight away."]),
+  ];
+  const text = [`Hi ${firstName},`, ...lines, `View your order: ${orderUrl}`, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+${button('View your order', orderUrl)}`,
+    "You're getting this email because the delivery address of your order changed.",
+  );
+  return { subject, text, html };
+}
+
+// For the admins when a customer changes an order's address before it ships: a packing slip may be printed already.
+export function addressChangedAlertEmail(order, previous, publicUrl = DEFAULT_PUBLIC_URL) {
+  const subject = `Order #${orderNumber(order)}: new delivery address`;
+  const url = `${publicUrl}/admin/orders/${order._id}`;
+  const lines = [
+    `The customer changed the delivery address of order #${orderNumber(order)}. If you've printed its packing slip, print it again.`,
+    `Now: ${addressText(order.address)}`,
+    `Before: ${addressText(previous)}`,
+  ];
+  const text = [...lines, `Open the order: ${url}`, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+${button('Open the order', url)}`,
+    "You're getting this email because you're an admin of the store.",
+  );
+  return { subject, text, html };
+}
+
+// Never throws: the new address is already saved.
+export async function sendAddressChanged(ctx, order, previous, byStore) {
+  try {
+    const user = await ctx.db.collection('users').findOne({ _id: order.userId }, { projection: { name: 1, email: 1 } });
+    if (user) {
+      const email = addressChangedEmail(order, user, byStore, ctx.config.mail?.publicUrl);
+      await ctx.mail.send({ to: { email: user.email, name: user.name }, ...email });
+    }
+    if (!byStore) {
+      await sendToAdmins(
+        ctx,
+        addressChangedAlertEmail(order, previous, ctx.config.mail?.publicUrl),
+        `the address alert for order ${order._id}`,
+      );
+    }
+  } catch (err) {
+    console.error(`Could not send the address change emails for order ${order._id}:`, err.message);
+  }
+}
+
 // Exchanges (stage 89): why a customer wants another option of the same product.
 export const EXCHANGE_REASONS = {
   fit: "Doesn't fit",

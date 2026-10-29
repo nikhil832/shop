@@ -4,6 +4,7 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-route
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import OrderSummary from '../components/OrderSummary.jsx';
+import ChangeAddress from '../components/ChangeAddress.jsx';
 import {
   formatDate,
   formatPrice,
@@ -318,8 +319,8 @@ export default function Order() {
               </section>
             )}
 
-          <section className="panel">
-            <h2>Delivery address</h2>
+          <section className="panel" aria-labelledby="address-heading">
+            <h2 id="address-heading">Delivery address</h2>
             <address>
               <strong>{address.name}</strong>
               <br />
@@ -335,6 +336,16 @@ export default function Order() {
               <br />
               Phone {address.phone}
             </address>
+            {order.addressChangedAt && <p className="muted small">Changed on {formatDate(order.addressChangedAt)}</p>}
+            {/* Until it ships (stage 90). */}
+            {(order.status === 'placed' || order.status === 'awaiting_payment') && (
+              <ChangeAddress
+                address={address}
+                save={async (body) =>
+                  setUpdated(await request(`/orders/${order.id}/address`, { method: 'POST', body }))
+                }
+              />
+            )}
           </section>
         </div>
 
