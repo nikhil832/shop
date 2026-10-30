@@ -4446,3 +4446,10 @@ textarea {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+/* Login: "Forgot password?" and the email code beside it (stage 110). */
+.login-alternatives {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}

@@ -18,7 +18,7 @@ import { connectDb } from './db.js';
 const { EJSON } = BSON;
 const FORMAT = 1;
 // Short-lived security records: logins, login attempts and one-time links. Not worth keeping, and better not copied.
-export const NOT_BACKED_UP = ['sessions', 'loginAttempts', 'passwordResets', 'emailChanges'];
+export const NOT_BACKED_UP = ['sessions', 'loginAttempts', 'passwordResets', 'emailChanges', 'loginCodes'];
 const BATCH = 500;
 
 export const defaultBackupDir = () => process.env.BACKUP_DIR?.trim() || join(homedir(), 'Bazaar-backups');

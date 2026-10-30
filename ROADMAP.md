@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-30 (third list), roughly in the order they'd help most. All free (no new services).
 
-- **Log in with an email code**: besides the password, "Email me a code" sends a 6-digit code that logs in for 10
-  minutes (limited tries, like the password). Customers forget passwords, and the checkout-made accounts have none.
-  To start: "start email codes".
 - **Delivery charge by area**: delivery areas (Admin → Delivery) can add an extra charge for far-off PIN codes (the
   North East, islands), shown with the delivery dates and at checkout. Couriers charge more there. To start: "start
   area charges".
@@ -144,3 +141,4 @@ Suggested on 2026-10-30 (third list), roughly in the order they'd help most. All
 | Save for later: cart items moved to the wishlist and back from a "Saved for later" list under the cart                                                                                | Stage 107 (`git log --grep "Stage 107"`) |
 | Track an order without logging in: by order number and delivery PIN code, progress and tracking only                                                                                  | Stage 108 (`git log --grep "Stage 108"`) |
 | Shop by size: a size filter on search (in stock only), with the shopper's sizes remembered                                                                                            | Stage 109 (`git log --grep "Stage 109"`) |
+| Log in with an email code: a 6-digit code by email instead of the password, limited like the password                                                                                 | Stage 110 (`git log --grep "Stage 110"`) |

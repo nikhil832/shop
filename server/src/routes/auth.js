@@ -1,5 +1,5 @@
 import express from 'express';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomInt } from 'node:crypto';
 import { z } from 'zod';
 import {
   SESSION_COOKIE,
@@ -17,7 +17,7 @@ import {
   toUser,
   verifyPassword,
 } from '../auth.js';
-import { passwordResetEmail, RESET_LINK_MINUTES } from '../emails.js';
+import { LOGIN_CODE_MINUTES, loginCodeEmail, passwordResetEmail, RESET_LINK_MINUTES } from '../emails.js';
 import { takeHourlySlot } from '../rateLimit.js';
 import { MAX_WRONG_CODES, checkSecondStep, createLoginTicket, hasTwoStep } from '../twoStep.js';
 import { HttpError, parse } from '../http.js';
@@ -45,6 +45,19 @@ const loginBody = z.object({
 });
 
 const forgotBody = z.object({ email });
+// Logging in with an emailed code (stage 110).
+const emailCodeBody = z.object({
+  email,
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'Enter the 6-digit code from the email'),
+});
+const MAX_CODE_EMAILS_PER_HOUR = 3;
+const MAX_WRONG_EMAIL_CODES = 5;
+// Guesses at codes from one network, whatever the account, per hour.
+const MAX_CODE_TRIES_PER_HOUR = 30;
+const EMAIL_CODE_EXPIRED = 'This code has expired or was replaced by a newer one. Ask for a new code.';
 const codeBody = z.object({
   ticket: z.string().max(100),
   code: z.string().trim().min(1, 'Enter the code').max(20),
@@ -179,6 +192,69 @@ export function authRouter(ctx) {
     await startSession(req, res, user);
     const fresh = await users.findOne({ _id: user._id });
     res.json({ user: toUser(fresh), recoveryCodesLeft: used === 'recovery' ? fresh.totp.recoveryHashes.length : null });
+  });
+
+  // Logging in with a code sent by email (stage 110), instead of the password: for customers who forgot it, and the
+  // accounts made at checkout, which have none. `loginCodes` { userId, codeHash, wrong, createdAt, expiresAt } (TTL)
+  // holds one live code per account: a new one replaces it. Asking always answers 204 and sends in the background, so
+  // neither reveals whether the email has an account (like the reset link); at most MAX_CODE_EMAILS_PER_HOUR an hour.
+  // A code allows MAX_WRONG_EMAIL_CODES wrong tries, each network MAX_CODE_TRIES_PER_HOUR tries an hour, and it works
+  // once. With two-step login on, the code earns a ticket for the authenticator code, like the password.
+  const loginCodes = db.collection('loginCodes');
+  const codeHash = (userId, code) => hashToken(`logincode:${userId}:${code}`);
+
+  async function sendLoginCode(user) {
+    if (!(await takeHourlySlot(db, `loginCode:${user._id}`, MAX_CODE_EMAILS_PER_HOUR))) return;
+    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+    const now = Date.now();
+    await loginCodes.deleteMany({ userId: user._id });
+    await loginCodes.insertOne({
+      userId: user._id,
+      codeHash: codeHash(user._id, code),
+      wrong: 0,
+      createdAt: new Date(now),
+      expiresAt: new Date(now + LOGIN_CODE_MINUTES * 60_000),
+    });
+    await ctx.mail.send({ to: { email: user.email, name: user.name }, ...loginCodeEmail(user, code) });
+  }
+
+  router.post('/auth/email-code', async (req, res) => {
+    const body = parse(forgotBody, req.body);
+    const user = await users.findOne({ email: body.email });
+    if (user) sendLoginCode(user).catch((err) => console.error('Could not send a login code:', err.message));
+    res.status(204).end();
+  });
+
+  router.post('/auth/email-code/login', async (req, res) => {
+    const body = parse(emailCodeBody, req.body);
+    const network = networkOf(clientIp(req, ctx.config));
+    if (!(await takeHourlySlot(db, `loginCodeTry:${hashToken(network)}`, MAX_CODE_TRIES_PER_HOUR))) {
+      throw new HttpError(429, 'Too many tries for now. Please try again in an hour.');
+    }
+    const user = await users.findOne({ email: body.email });
+    const live = user && { userId: user._id, expiresAt: { $gt: new Date() } };
+    const pending = live && (await loginCodes.findOne(live));
+    if (!pending) throw new HttpError(400, EMAIL_CODE_EXPIRED);
+    if (pending.codeHash !== codeHash(user._id, body.code)) {
+      // Counted with the limit in the filter, so tries sent together can't all slip through.
+      const after = await loginCodes.findOneAndUpdate(
+        { _id: pending._id, wrong: { $lt: MAX_WRONG_EMAIL_CODES } },
+        { $inc: { wrong: 1 } },
+        { returnDocument: 'after' },
+      );
+      if (!after || after.wrong >= MAX_WRONG_EMAIL_CODES) {
+        await loginCodes.deleteOne({ _id: pending._id });
+        throw new HttpError(429, 'Too many wrong codes. Ask for a new code.');
+      }
+      throw new HttpError(401, 'That code is wrong');
+    }
+    // Used once, even if it arrives twice at the same moment.
+    if (!(await loginCodes.findOneAndDelete({ _id: pending._id, wrong: { $lt: MAX_WRONG_EMAIL_CODES } }))) {
+      throw new HttpError(400, EMAIL_CODE_EXPIRED);
+    }
+    if (hasTwoStep(user)) return res.json({ user: null, twoStep: true, ticket: await createLoginTicket(db, user._id) });
+    await startSession(req, res, user);
+    res.json({ user: toUser(user) });
   });
 
   router.post('/auth/forgot-password', async (req, res) => {

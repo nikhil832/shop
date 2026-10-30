@@ -40,6 +40,7 @@ const OWN = [
   'passwordResets',
   'emailChanges',
   'loginChallenges',
+  'loginCodes',
   'helpRequests',
   'sessions',
   // Store credit's history; the balance goes with the account (closing gives up any credit left).

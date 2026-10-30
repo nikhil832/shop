@@ -181,6 +181,8 @@ const INDEXES = {
   // Delivery areas by PIN code prefix, one per prefix.
   deliveryZones: [[{ prefix: 1 }, { unique: true }]],
   // Two-step login tickets, between the password and the code.
+  // Emailed login codes (stage 110), one live per account; gone once expired.
+  loginCodes: [[{ userId: 1 }], [{ expiresAt: 1 }, { expireAfterSeconds: 0 }]],
   loginChallenges: [
     [{ tokenHash: 1 }, { unique: true }],
     [{ expiresAt: 1 }, { expireAfterSeconds: 0 }],

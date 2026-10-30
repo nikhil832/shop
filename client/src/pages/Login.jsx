@@ -12,6 +12,8 @@ export default function Login({ mode = 'login' }) {
   const [state, setState] = useState({ busy: false, error: null });
   // Two-step login: the ticket the password earned, while the code is asked for.
   const [ticket, setTicket] = useState(null);
+  // Logging in with an emailed code (stage 110): null, or { email, sent } while asking for and entering it.
+  const [emailCode, setEmailCode] = useState(null);
   const notice = useLocation().state?.notice;
   const next = safeNext(params.get('next'));
   const register = mode === 'register';
@@ -53,6 +55,88 @@ export default function Login({ mode = 'login' }) {
       if (err.status === 400 || err.status === 429) setTicket(null);
       setState({ busy: false, error: err.message });
     }
+  }
+
+  // Sends a code to the email (the answer is the same whether or not it has an account).
+  async function sendCode(email) {
+    setState({ busy: true, error: null });
+    try {
+      await request('/auth/email-code', { method: 'POST', body: { email } });
+      setEmailCode({ email, sent: true });
+      setState({ busy: false, error: null });
+    } catch (err) {
+      setState({ busy: false, error: err.message });
+    }
+  }
+  async function submitEmailCode(e) {
+    e.preventDefault();
+    const { email, code } = Object.fromEntries(new FormData(e.currentTarget));
+    if (!emailCode?.sent) return sendCode(email);
+    setState({ busy: true, error: null });
+    try {
+      const res = await request('/auth/email-code/login', { method: 'POST', body: { email: emailCode.email, code } });
+      if (res.twoStep) {
+        setEmailCode(null);
+        setTicket(res.ticket);
+        return setState({ busy: false, error: null });
+      }
+      setUser(res.user);
+      navigate(next, { replace: true });
+    } catch (err) {
+      setState({ busy: false, error: err.message });
+    }
+  }
+
+  if (emailCode && !ticket) {
+    return (
+      <div className="auth-page">
+        <form className="panel auth-form" onSubmit={submitEmailCode} aria-labelledby="email-code-heading">
+          <h1 id="email-code-heading">Log in with an email code</h1>
+          {emailCode.sent ? (
+            <>
+              <p role="status">
+                If <strong>{emailCode.email}</strong> has an account, we&apos;ve emailed it a 6-digit code. It works for
+                10 minutes.
+              </p>
+              <label>
+                Code
+                <input
+                  name="code"
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  required
+                  maxLength={6}
+                  autoFocus
+                  placeholder="123456"
+                />
+              </label>
+            </>
+          ) : (
+            <label>
+              Email
+              <input name="email" type="email" autoComplete="email" required maxLength={254} autoFocus />
+            </label>
+          )}
+          {state.error && (
+            <p className="error" role="alert">
+              {state.error}
+            </p>
+          )}
+          <button type="submit" className="btn primary" disabled={state.busy}>
+            {emailCode.sent ? 'Log in' : 'Email me a code'}
+          </button>
+          {emailCode.sent && (
+            <button type="button" className="link" onClick={() => sendCode(emailCode.email)} disabled={state.busy}>
+              Send a new code
+            </button>
+          )}
+          <button type="button" className="link" onClick={() => setEmailCode(null)}>
+            Use my password instead
+          </button>
+        </form>
+      </div>
+    );
   }
 
   if (ticket) {
@@ -120,8 +204,11 @@ export default function Login({ mode = 'login' }) {
           {register && <span className="muted small">At least 8 characters</span>}
         </label>
         {!register && (
-          <p className="small">
+          <p className="small login-alternatives">
             <Link to="/forgot-password">Forgot password?</Link>
+            <button type="button" className="link" onClick={() => setEmailCode({ email: '', sent: false })}>
+              Use an email code instead
+            </button>
           </p>
         )}
         {state.error && (

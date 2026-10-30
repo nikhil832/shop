@@ -426,6 +426,30 @@ export async function sendQuestionAnswered(ctx, question, product) {
   }
 }
 
+// A code to log in without the password (stage 110, routes/auth.js). In the subject too, so it can be read from the
+// notification.
+export const LOGIN_CODE_MINUTES = 10;
+export function loginCodeEmail(user, code) {
+  const subject = `${code} is your Bazaar login code`;
+  const firstName = user.name.split(/\s+/)[0];
+  const lines = [
+    `Hi ${firstName},`,
+    `Your code to log in to Bazaar is ${code}. It works once, for ${LOGIN_CODE_MINUTES} minutes.`,
+    "If you didn't ask for it, you can ignore this email: nobody can log in without the code. Don't share it with anyone, even someone saying they're from Bazaar.",
+  ];
+  const text = [...lines, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p>Your code to log in to Bazaar:</p>
+<p style="font-size:28px;font-weight:700;letter-spacing:6px;margin:8px 0 16px">${escapeHtml(code)}</p>
+<p>It works once, for ${LOGIN_CODE_MINUTES} minutes.</p>
+<p style="font-size:13px;color:#6b7280">${escapeHtml(lines[2])}</p>`,
+    "You're getting this email because someone asked to log in to your account with a code.",
+  );
+  return { subject, text, html };
+}
+
 export const EMAIL_CHANGE_HOURS = 24;
 
 // Sent to the new address: the one-time link that confirms it. `url` carries the token.
