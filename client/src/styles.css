@@ -4464,3 +4464,31 @@ textarea {
   font-size: 0.85rem;
   font-weight: 700;
 }
+/* Delivery instructions (stage 113): the checkout field and an order's note. */
+.instructions-field,
+.instructions-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.instructions-field textarea,
+.instructions-form textarea {
+  font-weight: 400;
+}
+.instructions,
+.instructions-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 10px;
+}
+.instructions p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.instructions-form {
+  align-items: stretch;
+}

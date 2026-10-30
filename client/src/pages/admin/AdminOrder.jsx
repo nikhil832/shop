@@ -28,6 +28,7 @@ import { OrderHelpRequests } from './AdminHelp.jsx';
 import { useAuth } from '../../auth.jsx';
 import { can } from '../../permissions.js';
 import GiftDetails from '../../components/GiftDetails.jsx';
+import DeliveryInstructions from '../../components/DeliveryInstructions.jsx';
 import CustomerTags from '../../components/CustomerTags.jsx';
 
 // The next steps an admin can take from each status (the server enforces the same rules). Cancelling needs an admin
@@ -455,6 +456,13 @@ export default function AdminOrder() {
                   </ul>
                 </details>
               )}
+              {/* Delivery instructions (stage 113): what the packer and courier should know. */}
+              <DeliveryInstructions
+                order={order}
+                path={`/admin/orders/${order.id}/instructions`}
+                editable={(order.status === 'placed' || order.status === 'awaiting_payment') && can(user, '*')}
+                onSaved={(changed) => setUpdated({ ...changed, customer: order.customer })}
+              />
             </div>
           </section>
         </div>

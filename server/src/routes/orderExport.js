@@ -81,6 +81,7 @@ const COLUMNS = [
   // Gift options (stage 104), last so earlier columns keep their places.
   'Gift wrapping (₹)',
   'Gift message',
+  'Delivery instructions',
 ];
 
 const GST_COLUMNS = [
@@ -247,6 +248,7 @@ export function orderExportRouter({ db }) {
         cell(o.shipment?.trackingNumber ?? '', { text: true }),
         cell(rupees(o.giftWrap ?? 0)),
         cell(o.gift?.message ?? '', { text: true }),
+        cell(o.deliveryInstructions ?? '', { text: true }),
       ].join(',');
     });
 

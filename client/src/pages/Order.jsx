@@ -26,6 +26,7 @@ import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
 import GiftDetails from '../components/GiftDetails.jsx';
+import DeliveryInstructions from '../components/DeliveryInstructions.jsx';
 import { StatusBadge } from './Orders.jsx';
 
 // Why a past order's line can't go back in the cart, from its cart quote (GET /cart); null when it can.
@@ -354,6 +355,13 @@ export default function Order() {
               Phone {address.phone}
             </address>
             {order.addressChangedAt && <p className="muted small">Changed on {formatDate(order.addressChangedAt)}</p>}
+            {/* Until it ships (stage 113), like the address. */}
+            <DeliveryInstructions
+              order={order}
+              path={`/orders/${order.id}/instructions`}
+              editable={order.status === 'placed' || order.status === 'awaiting_payment'}
+              onSaved={setUpdated}
+            />
             {/* Until it ships (stage 90). */}
             {(order.status === 'placed' || order.status === 'awaiting_payment') && (
               <ChangeAddress

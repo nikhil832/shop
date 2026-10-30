@@ -1,10 +1,11 @@
 import express from 'express';
 import { requireAdmin, requireUser } from '../auth.js';
 import { logActivity } from '../activity.js';
-import { sendAddressChanged } from '../emails.js';
+import { instructionsChangedEmail, sendAddressChanged, sendToAdmins } from '../emails.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
 import { deliveryFor, istDate } from './delivery.js';
-import { address, toOrder } from './orders.js';
+import { address, deliveryInstructions, toOrder } from './orders.js';
+import { z } from 'zod';
 
 // Changing an order's delivery address before it ships (stage 90), by its customer or an admin. The new address must
 // be one the store delivers to; the delivery dates are worked out again from the day the order was placed with the new
@@ -97,6 +98,61 @@ export function orderAddressRouter(ctx) {
       changes: [{ field: 'Address', from: oneLine(previous), to: oneLine(order.address) }],
     });
     await sendAddressChanged(ctx, order, previous, true);
+    res.json(toOrder(order, { admin: true }));
+  });
+
+  // Delivery instructions (stage 113): changed by the customer or an admin until the order ships, like the address.
+  // A customer's change emails the admins (a packing slip may be printed); an admin's is in the activity log.
+  const instructionsBody = z.object({ instructions: deliveryInstructions });
+  async function changeInstructions(filter, instructions) {
+    const orders = db.collection('orders');
+    const order = await orders.findOne(filter);
+    if (!order) throw new HttpError(404, 'Order not found');
+    if (!CHANGEABLE.includes(order.status)) {
+      throw new HttpError(
+        409,
+        `Delivery instructions can only be changed before the order ships; this one is ${order.status}`,
+      );
+    }
+    const after = await orders.findOneAndUpdate(
+      { _id: order._id, status: { $in: CHANGEABLE } },
+      instructions
+        ? { $set: { deliveryInstructions: instructions, updatedAt: new Date() } }
+        : { $unset: { deliveryInstructions: '' }, $set: { updatedAt: new Date() } },
+      { returnDocument: 'after' },
+    );
+    if (!after) throw new HttpError(409, 'The order changed meanwhile. Reload the page and try again.');
+    return { order: after, before: order.deliveryInstructions ?? '' };
+  }
+
+  router.post('/orders/:id/instructions', requireUser, async (req, res) => {
+    const { instructions } = parse(instructionsBody, req.body);
+    const filter = { _id: parseObjectId(req.params.id, 'order id'), userId: req.user._id };
+    const { order, before } = await changeInstructions(filter, instructions);
+    if (before !== instructions) {
+      await sendToAdmins(
+        ctx,
+        instructionsChangedEmail(order, ctx.config.mail?.publicUrl),
+        `the instructions alert for ${order._id}`,
+      );
+    }
+    res.json(toOrder(order));
+  });
+
+  router.post('/admin/orders/:id/instructions', requireAdmin, async (req, res) => {
+    const { instructions } = parse(instructionsBody, req.body);
+    const { order, before } = await changeInstructions({ _id: parseObjectId(req.params.id, 'order id') }, instructions);
+    if (before !== instructions) {
+      await logActivity(db, req.user, {
+        area: 'orders',
+        action: 'Changed delivery instructions',
+        target: {
+          label: `Order #${order.number ?? order._id.toString().slice(-8).toUpperCase()}`,
+          path: `/admin/orders/${order._id}`,
+        },
+        changes: [{ field: 'Delivery instructions', from: before || 'none', to: instructions || 'none' }],
+      });
+    }
     res.json(toOrder(order, { admin: true }));
   });
 

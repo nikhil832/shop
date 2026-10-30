@@ -102,6 +102,11 @@ export default function AdminPackingSlips() {
                   <strong>Note:</strong> {n.text}
                 </p>
               ))}
+            {order.deliveryInstructions && (
+              <p className="slip-note">
+                <strong>Delivery instructions:</strong> {order.deliveryInstructions}
+              </p>
+            )}
             {/* A gift (stage 104): wrap it, and the customer's message to put in. */}
             {order.gift && (
               <div className="slip-gift">

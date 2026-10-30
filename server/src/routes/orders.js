@@ -88,6 +88,15 @@ const quoteQuery = z.object({
 });
 
 // Also used by the account page's saved address.
+// Delivery instructions (stage 113): a short note for the courier and packer, changeable until the order ships
+// (routes/orderAddress.js).
+export const MAX_INSTRUCTIONS = 200;
+export const deliveryInstructions = z
+  .string()
+  .trim()
+  .max(MAX_INSTRUCTIONS, `Delivery instructions can be at most ${MAX_INSTRUCTIONS} characters`)
+  .default('');
+
 export const address = z
   .object({
     name: z.string().trim().min(1, 'Enter the recipient name').max(80),
@@ -144,6 +153,8 @@ const orderBody = z.object({
   saveAddress: z.boolean().default(true),
   // A gift (stage 104): a message for the packing slip and, if offered, wrapping for a fee (giftOptions.js).
   gift: giftBody,
+  // For the courier and packer (stage 113): "Call before coming". Empty for none.
+  instructions: deliveryInstructions,
 });
 
 const withoutRefundError = (payment, admin) => {
@@ -177,6 +188,8 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   bundleSaving: doc.bundleSaving ?? 0,
   // Saved by quantity discounts (stage 99): also already in the items' prices.
   quantitySaving: doc.quantitySaving ?? 0,
+  // For the courier and packer (stage 113); '' for none.
+  deliveryInstructions: doc.deliveryInstructions ?? '',
   // The part of `delivery` that is the area's extra charge (stage 111).
   deliveryExtra: doc.deliveryExtra ?? 0,
   // A gift (stage 104): { message, wrap } or null, and the wrapping fee paid (in `total`, like delivery).
@@ -624,6 +637,7 @@ export function ordersRouter(ctx) {
           ...(quantity.saving && { quantitySaving: quantity.saving }),
           ...(delivery.extraCharge && { deliveryExtra: delivery.extraCharge }),
           ...(body.gift && { gift: body.gift }),
+          ...(body.instructions && { deliveryInstructions: body.instructions }),
           ...(giftWrap && { giftWrap }),
           // Its discount is a referred friend's welcome (stage 87); the referrer's reward is set later.
           ...(referral && { referral }),

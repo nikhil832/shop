@@ -106,14 +106,14 @@ test('downloads the orders in the range as a CSV, one row per order, in India ti
   const [header, ...lines] = rows(res);
   assert.equal(
     header,
-    'Order,Date (India time),Status,Customer,Email,Items,Item details,Items total (₹),Delivery (₹),Discount (₹),Coupon,Total (₹),Refunded (₹),Net total (₹),Place of supply,Taxable value (₹),CGST (₹),SGST (₹),IGST (₹),Payment,Payment status,Store credit (₹),Item cost (₹),City,State,PIN code,Courier,Tracking number,Gift wrapping (₹),Gift message',
+    'Order,Date (India time),Status,Customer,Email,Items,Item details,Items total (₹),Delivery (₹),Discount (₹),Coupon,Total (₹),Refunded (₹),Net total (₹),Place of supply,Taxable value (₹),CGST (₹),SGST (₹),IGST (₹),Payment,Payment status,Store credit (₹),Item cost (₹),City,State,PIN code,Courier,Tracking number,Gift wrapping (₹),Gift message,Delivery instructions',
   );
   assert.equal(lines.length, 2);
   assert.equal(
     lines[0],
     `${first.number},2026-03-01 00:10,placed,Asha Rao,customer@example.com,3,` +
       '"Orbit A14 (4GB RAM, 64GB) × 2; The Quiet Engineer × 1",18347.00,0.00,100.00,WELCOME100,18247.00,0.00,18247.00,,,,,,' +
-      'Online,paid,0.00,,Bengaluru,Karnataka,560001,,,0.00,',
+      'Online,paid,0.00,,Bengaluru,Karnataka,560001,,,0.00,,',
   );
   // Fields with commas are quoted; amounts are rupees with two decimals.
   assert.ok(lines[1].includes(',2026-03-31 23:50,delivered,'));

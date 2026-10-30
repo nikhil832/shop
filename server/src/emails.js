@@ -562,6 +562,8 @@ export function newOrderEmail(order, customer, publicUrl = DEFAULT_PUBLIC_URL) {
   const lines = [
     `${who} placed an order. ${payment}.`,
     `Deliver to ${a.city}, ${a.state} ${a.pincode}.`,
+    // For the courier and packer (stage 113).
+    ...(order.deliveryInstructions ? [`Delivery instructions: "${order.deliveryInstructions}"`] : []),
     // A gift (stage 104): wrap it, and the message for the slip.
     ...(order.gift
       ? [
@@ -1089,6 +1091,25 @@ export async function sendItemsCancelled(ctx, order, entry, byStore) {
   } catch (err) {
     console.error(`Could not send the items cancelled emails for order ${order._id}:`, err.message);
   }
+}
+
+// For the admins when a customer changes an order's delivery instructions before it ships (stage 113): a packing slip
+// may be printed already.
+export function instructionsChangedEmail(order, publicUrl = DEFAULT_PUBLIC_URL) {
+  const subject = `Order #${orderNumber(order)}: new delivery instructions`;
+  const url = `${publicUrl}/admin/orders/${order._id}`;
+  const lines = [
+    `The customer changed the delivery instructions of order #${orderNumber(order)}. If you've printed its packing slip, print it again.`,
+    order.deliveryInstructions ? `Now: "${order.deliveryInstructions}"` : 'Now: none.',
+  ];
+  const text = [...lines, `Open the order: ${url}`, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+${button('Open the order', url)}`,
+    "You're getting this email because you're an admin of the store.",
+  );
+  return { subject, text, html };
 }
 
 // Exchanges (stage 89): why a customer wants another option of the same product.

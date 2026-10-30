@@ -226,6 +226,7 @@ export default function Checkout() {
       saveAddress,
       buyerName,
       buyerEmail,
+      instructions = '',
       ...typed
     } = Object.fromEntries(new FormData(e.currentTarget));
     const saved = user?.addresses.find((a) => a.id === addressChoice);
@@ -256,6 +257,7 @@ export default function Checkout() {
           couponCode: quote.coupon?.code,
           creditToUse,
           gift: gift.on ? { message: gift.message, wrap: gift.wrap && Boolean(quote.giftWrapOffer) } : null,
+          instructions,
         },
       });
     } catch (err) {
@@ -307,6 +309,18 @@ export default function Checkout() {
         {/* Remounted per account with saved addresses, so another account's choice doesn't carry over; a new
             customer's typed address stays when their account is made. */}
         <DeliveryAddress key={user?.addresses.length ? user.id : 'no-addresses'} user={user ?? NEW_CUSTOMER} />
+
+        <section className="panel">
+          <label className="instructions-field">
+            Delivery instructions (optional)
+            <textarea
+              name="instructions"
+              rows={2}
+              maxLength={200}
+              placeholder="e.g. Call before coming, or leave it with the security guard"
+            />
+          </label>
+        </section>
 
         <fieldset className="panel payment-options">
           <legend>

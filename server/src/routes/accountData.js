@@ -189,7 +189,8 @@ export function accountDataRouter(ctx) {
             customerClosedAt: new Date(),
           },
           // Earlier delivery addresses (stage 90) hold the same details.
-          $unset: { addressChanges: '' },
+          // Delivery instructions may hold personal details too (stage 113).
+          $unset: { addressChanges: '', deliveryInstructions: '' },
         },
         { session },
       );
