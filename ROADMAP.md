@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-30 (after the UI rounds), roughly in the order they'd help most. All free (no new services).
 
-- **Buy bar on phones**: on a product page on a phone, the price and Add to cart / Buy now stay at the bottom of the
-  screen while scrolling through photos, details and reviews. The buttons are otherwise easy to scroll past. To start:
-  "start buy bar".
 - **Payment reminders**: an online order not paid within 10 minutes gets one email ("Complete your payment") with a
   link back to the order's Pay now, before its 30 minutes run out and the stock is released. Recovers orders lost to a
   closed tab or a failed UPI app. To start: "start payment reminders".
@@ -141,3 +138,4 @@ Suggested on 2026-10-30 (after the UI rounds), roughly in the order they'd help 
 | A friendlier look, round 2: "Add" on product cards, an always-enabled Add to cart with Buy now, reviews and questions in panels, a full footer                                        | `git log --grep "UI round 2"`            |
 | A friendlier look, round 3: "You save" and a free-delivery bar in the cart and checkout, payment choices as cards, an order progress tracker, arrival dates on the orders list        | `git log --grep "UI round 3"`            |
 | Deals: a Deals link and page (40% off or more, or on sale, biggest discount first), a Deals filter and discount sort on search, a home page row                                       | Stage 101 (`git log --grep "Stage 101"`) |
+| Buy bar on phones: price, Add to cart and Buy now at the bottom of the screen while the product page's own buttons are out of view                                                    | Stage 102 (`git log --grep "Stage 102"`) |

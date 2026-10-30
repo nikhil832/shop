@@ -4205,3 +4205,66 @@ textarea {
 .category-bar a.deals {
   color: #fde68a;
 }
+/* The buy bar (stage 102): phones only, at the bottom while the product page's own buttons are out of view. */
+.buy-bar {
+  display: none;
+}
+@media (max-width: 800px) {
+  .buy-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -6px 20px rgb(0 0 0 / 0.12);
+    animation: buy-bar-in 0.18s ease-out;
+  }
+  /* The price on one line, MRP and discount on the next. */
+  .buy-bar .price-tag {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 6px;
+    min-width: 0;
+  }
+  .buy-bar .price-tag .price {
+    flex-basis: 100%;
+  }
+  .buy-bar .price-tag .mrp,
+  .buy-bar .price-tag .off {
+    font-size: 0.78rem;
+  }
+  .buy-bar-buttons {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .buy-buttons .buy-bar .btn {
+    min-width: 0;
+    padding: 10px 14px;
+  }
+  .buy-bar-shown .assistant-button,
+  .buy-bar-shown .compare-tray {
+    bottom: 84px;
+  }
+  .buy-bar-shown .footer {
+    padding-bottom: 76px;
+  }
+}
+@keyframes buy-bar-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .buy-bar {
+    animation: none;
+  }
+}

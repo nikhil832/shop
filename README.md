@@ -134,6 +134,7 @@ Built in stages. Done so far:
 99. **Quantity discounts**: a product can have "Buy 3 or more, 10% off each" (set in the product form). Every size and colour of it counts, units in a bundle don't. The product page shows the offer, the cart says how many more it needs and then the lower price each, and the order keeps the discounted prices (so invoices, returns and profit follow). Coupons apply after it.
 100. **Product performance**: Admin → Products → Performance shows each product's views, adds to cart, orders and units over 7, 30 or 90 days, with views-to-orders, sortable, and a filter for products looked at 10 times or more but not bought. Views are counted when a product page opens (staff aren't counted); nothing is kept about who looked.
 101. **Deals**: a "Deals" link in the category bar (and the footer) opens the products at least 40% below their MRP or in a running sale, biggest discount first; "Deals" is also a search filter, "Biggest discount" a sort, and the home page has a "Biggest discounts" row.
+102. **Buy bar on phones**: on a phone, once a product page's own buttons scroll out of view, a bar at the bottom of the screen keeps the price, Add to cart and Buy now (or "Choose a size", which takes you back to the sizes).
 
 What's next: see [ROADMAP.md](ROADMAP.md).
 

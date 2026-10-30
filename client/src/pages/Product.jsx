@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { MAX_QTY, addToCart, qtyInCart, useCart } from '../cart.js';
 import PriceTag from '../components/PriceTag.jsx';
@@ -49,8 +49,25 @@ function AddToCart({ product, variant, missing }) {
     if (inCart > 0 || add()) navigate('/checkout');
   }
 
+  // The buy bar (stage 102): on phones (CSS shows it only there), the price and these buttons stay at the bottom of
+  // the screen while the buttons above are out of view. Measured in the observer's callback, not in the effect.
+  const buttons = useRef(null);
+  const [outOfView, setOutOfView] = useState(false);
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => setOutOfView(!entry.isIntersecting));
+    observer.observe(buttons.current);
+    return () => observer.disconnect();
+  }, []);
+  const bar = outOfView && stock > 0;
+  // Lifts the assistant's button and the compare tray above the bar, and makes room for it under the footer.
+  useEffect(() => {
+    document.body.classList.toggle('buy-bar-shown', bar);
+    return () => document.body.classList.remove('buy-bar-shown');
+  }, [bar]);
+  const priced = variant ?? product;
+
   return (
-    <div className="buy-buttons">
+    <div className="buy-buttons" ref={buttons}>
       <button type="button" className="btn primary" disabled={atLimit || stock === 0} onClick={add}>
         {stock === 0 ? 'Out of stock' : atLimit ? 'Maximum quantity in cart' : 'Add to cart'}
       </button>
@@ -70,6 +87,28 @@ function AddToCart({ product, variant, missing }) {
         </p>
       )}
       {full && <p className="error small">Your cart is full. Remove something to add this.</p>}
+      {bar && (
+        <div className="buy-bar" role="region" aria-label="Buy">
+          <PriceTag price={priced.price} mrp={priced.mrp} from={!variant && product.priceFrom} />
+          <div className="buy-bar-buttons">
+            {needsChoice ? (
+              // Focusing the first option scrolls the page up to the choices.
+              <button type="button" className="btn primary" onClick={add}>
+                Choose a {missing}
+              </button>
+            ) : (
+              <>
+                <button type="button" className="btn primary" disabled={atLimit} onClick={add}>
+                  {atLimit ? 'In cart' : 'Add to cart'}
+                </button>
+                <button type="button" className="btn buy-now" onClick={buyNow}>
+                  Buy now
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
