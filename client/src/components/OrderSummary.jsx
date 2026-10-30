@@ -21,6 +21,8 @@ export default function OrderSummary({
   dueLabel = 'To pay',
   // How much less than MRP the items cost (paise), for "You save …" with the other savings; the cart and checkout.
   mrpSaving = 0,
+  // Gift wrapping's fee (stage 104), a charge like delivery.
+  giftWrap = 0,
   children,
 }) {
   const short = freeDeliveryMin ? freeDeliveryMin - subtotal : 0;
@@ -48,6 +50,12 @@ export default function OrderSummary({
         )}
         <dt>Delivery</dt>
         <dd className={delivery ? '' : 'free'}>{delivery ? formatPrice(delivery) : 'Free'}</dd>
+        {giftWrap > 0 && (
+          <>
+            <dt>Gift wrapping</dt>
+            <dd>{formatPrice(giftWrap)}</dd>
+          </>
+        )}
         {discount > 0 && (
           <>
             <dt>{discountLabel ?? <>Coupon{couponCode && ` (${couponCode})`}</>}</dt>

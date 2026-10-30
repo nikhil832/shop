@@ -4268,3 +4268,46 @@ textarea {
     animation: none;
   }
 }
+/* Gift options (stage 104): the checkout panel, an order's gift details and the packing slip's note. */
+.gift-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.gift-options h2,
+.gift-options p {
+  margin: 0;
+}
+.gift-message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.gift-message textarea {
+  font-weight: 400;
+}
+.gift-details blockquote {
+  margin: 8px 0 0;
+  padding: 10px 14px;
+  border-left: 4px solid #fbbf24;
+  background: var(--bg);
+  border-radius: 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.gift-details p {
+  margin: 0;
+}
+.slip-gift {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 2px dashed currentColor;
+  border-radius: 6px;
+}
+.slip-gift p {
+  margin: 4px 0 0;
+  font-style: italic;
+  white-space: pre-wrap;
+}

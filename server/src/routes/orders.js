@@ -16,6 +16,7 @@ import { addCredit, amountDue } from '../credit.js';
 import { codAllowed } from '../cod.js';
 import { applyBundles, bundlesFor } from '../bundles.js';
 import { applyQuantityDiscounts } from '../quantityDiscounts.js';
+import { giftBody, giftSettings, giftWrapFee } from '../giftOptions.js';
 import { cashbackOn, cashbackSettings } from '../cashback.js';
 import { friendDiscount } from '../referrals.js';
 
@@ -56,6 +57,8 @@ export const savedCartLines = eachOnce(z.array(cartLine).max(MAX_CART_ITEMS));
 // GET /cart?items=<productId>[.<variantId>]:<qty>,…
 const quoteQuery = z.object({
   coupon: z.string().trim().max(40).optional(),
+  // Gift wrapping chosen at checkout (stage 104): its fee is added when the store offers it.
+  giftWrap: z.enum(['1']).optional(),
   // A friend's referral code (stage 87), for a visitor who'll make their account at checkout.
   ref: z.string().trim().max(20).optional(),
   items: z
@@ -116,6 +119,8 @@ const orderBody = z.object({
   creditToUse: z.number().int().min(0).default(0),
   // A new address goes into the customer's address book unless they unticked "Save it" (a saved one is never changed).
   saveAddress: z.boolean().default(true),
+  // A gift (stage 104): a message for the packing slip and, if offered, wrapping for a fee (giftOptions.js).
+  gift: giftBody,
 });
 
 const withoutRefundError = (payment, admin) => {
@@ -149,6 +154,9 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   bundleSaving: doc.bundleSaving ?? 0,
   // Saved by quantity discounts (stage 99): also already in the items' prices.
   quantitySaving: doc.quantitySaving ?? 0,
+  // A gift (stage 104): { message, wrap } or null, and the wrapping fee paid (in `total`, like delivery).
+  gift: doc.gift ?? null,
+  giftWrap: doc.giftWrap ?? 0,
   // Paid with store credit (stage 72); `total` less this is what was paid, or is to pay, in money.
   creditUsed: doc.creditUsed ?? 0,
   address: doc.address,
@@ -395,6 +403,10 @@ export function ordersRouter(ctx) {
     // Cashback this order would earn (stage 85), when it's on: on the items after bundle and coupon savings.
     const cashback = await cashbackSettings(db);
     const itemsPaid = totals.subtotal - (coupon?.type === 'free_delivery' ? 0 : discount);
+    // Gift wrapping (stage 104): offered or not, and its fee added to the total when chosen.
+    const gifts = await giftSettings(db);
+    const giftWrap = query.giftWrap && gifts.enabled ? gifts.fee : 0;
+    const priced = withDiscount(totals, discount);
     res.json({
       // `quantityDiscount` is the product's offer, `quantityPrice` the unit price once it applies (else null).
       items: lines.map((l) => ({
@@ -409,7 +421,10 @@ export function ordersRouter(ctx) {
       bundles: bundled.applied,
       bundleSaving: bundled.saving,
       quantitySaving: quantity.saving,
-      ...withDiscount(totals, discount),
+      ...priced,
+      total: priced.total + giftWrap,
+      giftWrap,
+      giftWrapOffer: gifts.enabled ? { fee: gifts.fee } : null,
       coupon,
       referral: referral ? { discount: referral } : null,
       couponError,
@@ -539,6 +554,9 @@ export function ordersRouter(ctx) {
           }
         }
         const totals = withDiscount(before, discount);
+        // Gift wrapping goes on after the discount, like a charge of its own (giftOptions.js).
+        const giftWrap = await giftWrapFee(db, body.gift, session);
+        totals.total += giftWrap;
         if (totals.total !== body.expectedTotal) {
           throw new HttpError(409, 'Prices have changed since you loaded the page. Please review your order.');
         }
@@ -573,6 +591,8 @@ export function ordersRouter(ctx) {
           ...(body.creditToUse && { creditUsed: body.creditToUse }),
           ...(bundled.saving && { bundleSaving: bundled.saving }),
           ...(quantity.saving && { quantitySaving: quantity.saving }),
+          ...(body.gift && { gift: body.gift }),
+          ...(giftWrap && { giftWrap }),
           // Its discount is a referred friend's welcome (stage 87); the referrer's reward is set later.
           ...(referral && { referral }),
           // When it should arrive (stage 86), from the delivery area's days, kept as promised at the time.

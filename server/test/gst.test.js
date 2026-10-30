@@ -226,3 +226,16 @@ test('orders placed with GST on get tax invoices that keep their rates', async (
   assert.equal((await customer('GET', `/orders/${phone.id}`)).body.gstInvoice.lines[0].rate, 18);
   assert.equal((await placeOrder('orbit-a14-4gb-ram-64gb')).gstInvoice, null);
 });
+
+test('gift wrapping is a line of its own at the delivery rate, and the lines still add up to the total', () => {
+  const inv = gstInvoice(order({ giftWrap: 4900, total: 323700 + 4900 }));
+  const wrap = inv.lines.at(-1);
+  assert.equal(wrap.title, 'Gift wrapping');
+  assert.equal(wrap.rate, 5);
+  assert.equal(wrap.value, 4900);
+  assert.equal(wrap.taxable + wrap.tax, 4900);
+  assert.equal(
+    inv.lines.reduce((sum, l) => sum + l.value, 0),
+    323700 + 4900,
+  );
+});

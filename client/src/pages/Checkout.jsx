@@ -7,6 +7,7 @@ import AddressFields from '../components/AddressFields.jsx';
 import OrderSummary from '../components/OrderSummary.jsx';
 import { MAX_ADDRESSES, addressFields, addressLine, formatPrice, arrival, mrpSavingOf, smallImage } from '../format.js';
 import { ShieldIcon } from '../components/Icons.jsx';
+import { GIFT_MESSAGE_MAX } from '../storeFacts.js';
 import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
 import { referralCode } from '../referral.js';
@@ -180,6 +181,10 @@ export default function Checkout() {
   const [useCredit, setUseCredit] = useState(true);
   // The PIN code the order would go to: a saved address's, or what's typed (null: the default address's).
   const [pin, setPin] = useState(null);
+  // Gift options (stage 104): kept here, not as named form fields (those are read as the address).
+  const [gift, setGift] = useState({ on: false, wrap: false, message: '' });
+  // Which payment is chosen, for the gift panel's note about Cash on Delivery.
+  const [method, setMethod] = useState(null);
   const couponInput = useRef(null);
   const { data: options } = useFetch('/payments/options');
   const {
@@ -188,7 +193,7 @@ export default function Checkout() {
     loading,
   } = useFetch(
     user !== undefined && items.length
-      ? `/cart?items=${cartQuery(items)}${coupon ? `&coupon=${encodeURIComponent(coupon)}` : ''}${!user && referralCode() ? `&ref=${referralCode()}` : ''}`
+      ? `/cart?items=${cartQuery(items)}${coupon ? `&coupon=${encodeURIComponent(coupon)}` : ''}${!user && referralCode() ? `&ref=${referralCode()}` : ''}${gift.on && gift.wrap ? '&giftWrap=1' : ''}`
       : null,
     state.version,
   );
@@ -248,6 +253,7 @@ export default function Checkout() {
           paymentMethod,
           couponCode: quote.coupon?.code,
           creditToUse,
+          gift: gift.on ? { message: gift.message, wrap: gift.wrap && Boolean(quote.giftWrapOffer) } : null,
         },
       });
     } catch (err) {
@@ -287,6 +293,7 @@ export default function Checkout() {
       onSubmit={submit}
       onChange={(e) => {
         if (e.target.name === 'pincode') setPin(e.target.value.trim());
+        if (e.target.name === 'paymentMethod') setMethod(e.target.value);
         if (e.target.name === 'addressChoice') {
           setPin(user?.addresses.find((a) => a.id === e.target.value)?.pincode ?? '');
         }
@@ -343,6 +350,45 @@ export default function Checkout() {
           )}
         </fieldset>
 
+        <section className="panel gift-options" aria-labelledby="gift-heading">
+          <h2 id="gift-heading">Gift options</h2>
+          <label className="check">
+            <input type="checkbox" checked={gift.on} onChange={(e) => setGift({ ...gift, on: e.target.checked })} />
+            This is a gift
+          </label>
+          {gift.on && (
+            <>
+              <label className="gift-message">
+                Gift message (optional)
+                <textarea
+                  rows={3}
+                  maxLength={GIFT_MESSAGE_MAX}
+                  value={gift.message}
+                  onChange={(e) => setGift({ ...gift, message: e.target.value })}
+                  placeholder="Happy birthday! With love, Asha"
+                />
+                <span className="muted small">
+                  {GIFT_MESSAGE_MAX - gift.message.length} characters left. Printed on the packing slip, which shows no
+                  item prices.
+                </span>
+              </label>
+              {quote.giftWrapOffer && (
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={gift.wrap}
+                    onChange={(e) => setGift({ ...gift, wrap: e.target.checked })}
+                  />
+                  Gift wrap it (+{formatPrice(quote.giftWrapOffer.fee)})
+                </label>
+              )}
+              {due > 0 && (method ?? (options?.online ? 'razorpay' : 'cod')) === 'cod' && (
+                <p className="muted small">With Cash on Delivery, the person receiving it pays {formatPrice(due)}.</p>
+              )}
+            </>
+          )}
+        </section>
+
         <section className={`panel ${loading ? 'stale' : ''}`}>
           <div className="row-header">
             <h2>Items ({cartCount(items)})</h2>
@@ -377,6 +423,7 @@ export default function Checkout() {
         couponCode={quote.coupon?.code}
         discountLabel={quote.referral ? "Friend's welcome" : null}
         mrpSaving={mrpSavingOf(quote.items)}
+        giftWrap={quote.giftWrap}
         total={quote.total}
         freeDeliveryMin={quote.freeDeliveryMin}
         creditUsed={creditToUse}

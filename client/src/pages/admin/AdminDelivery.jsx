@@ -75,6 +75,57 @@ function CodRules() {
   );
 }
 
+// Gift wrapping (stage 104): offered at checkout for a fee, or not. Gift messages are always free.
+function GiftWrap() {
+  const [version, setVersion] = useState(0);
+  const { data } = useFetch('/admin/gift-wrap', version);
+  const [state, setState] = useState({ busy: false, error: null, done: null });
+  if (!data) return null;
+
+  async function save(e) {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.currentTarget));
+    setState({ busy: true, error: null, done: null });
+    try {
+      await request('/admin/gift-wrap', {
+        method: 'PUT',
+        body: { enabled: f.enabled === 'on', fee: Math.round(Number(f.fee) * 100) },
+      });
+      setState({ busy: false, error: null, done: 'Saved.' });
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setState({ busy: false, error: err.message, done: null });
+    }
+  }
+
+  return (
+    <form key={JSON.stringify(data)} className="panel delivery-rule" onSubmit={save} aria-labelledby="gift-wrap">
+      <h2 id="gift-wrap">Gift wrapping</h2>
+      <p className="muted small">
+        Customers can always mark an order as a gift and add a message for the packing slip. With this on, they can also
+        have it gift wrapped for the fee below, which is added to the order like delivery.
+      </p>
+      <label className="check">
+        <input name="enabled" type="checkbox" defaultChecked={data.enabled} />
+        Offer gift wrapping at checkout
+      </label>
+      <label>
+        Fee (₹)
+        <input name="fee" type="number" min="1" max="500" step="1" required defaultValue={data.fee / 100} />
+      </label>
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
+      {state.done && <p role="status">{state.done}</p>}
+      <button type="submit" className="btn primary" disabled={state.busy}>
+        Save
+      </button>
+    </form>
+  );
+}
+
 // The rule's numbers from a form: delivered in min–max days, or not delivered.
 function ruleFrom(form) {
   const f = Object.fromEntries(new FormData(form));
@@ -256,6 +307,7 @@ export default function AdminDelivery() {
         </div>
       </form>
       <CodRules />
+      <GiftWrap />
     </div>
   );
 }

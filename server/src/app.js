@@ -43,6 +43,7 @@ import { customersRouter } from './routes/customers.js';
 import { searchInsightsRouter } from './searchInsights.js';
 import { giftCardsRouter } from './giftCards.js';
 import { codRouter } from './cod.js';
+import { giftOptionsRouter } from './giftOptions.js';
 import { stockReceiptsRouter } from './stockReceipts.js';
 import { stocktakesRouter } from './stocktakes.js';
 import { productPerformanceRouter } from './productPerformance.js';
@@ -111,6 +112,7 @@ export function createApp(ctx) {
   api.use(searchInsightsRouter(ctx));
   api.use(giftCardsRouter(ctx));
   api.use(codRouter(ctx));
+  api.use(giftOptionsRouter(ctx));
   api.use(stockReceiptsRouter(ctx));
   api.use(stocktakesRouter(ctx));
   api.use(productPerformanceRouter(ctx));

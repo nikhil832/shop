@@ -110,7 +110,15 @@ export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL, {
   const orderUrl = `${publicUrl}/orders/${order._id}`;
   // The courier's own tracking page, when the admin pasted one.
   const trackUrl = event === 'shipped' ? order.shipment?.trackingUrl || null : null;
-  const paragraphs = intro(order, event);
+  const paragraphs = [
+    ...intro(order, event),
+    // A gift (stage 104), in the confirmation: what we'll put in.
+    ...(event === 'placed' && order.gift
+      ? [
+          `It's a gift${order.gift.wrap ? ' and will be gift wrapped' : ''}${order.gift.message ? `, with your message: "${order.gift.message}"` : ''}. Prices are left off the packing slip.`,
+        ]
+      : []),
+  ];
   const items = order.items.map((i) => ({
     text: `${i.title} × ${i.qty}${i.bundle ? ` (${i.bundle.name})` : ''}`,
     amount: rupees(i.price * i.qty),
@@ -121,6 +129,7 @@ export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL, {
       ? [
           ['Items', rupees(order.subtotal)],
           ['Delivery', order.delivery ? rupees(order.delivery) : 'Free'],
+          ...(order.giftWrap ? [['Gift wrapping', rupees(order.giftWrap)]] : []),
           ...(order.discount
             ? [
                 [
@@ -514,6 +523,7 @@ export function newOrderEmail(order, customer, publicUrl = DEFAULT_PUBLIC_URL) {
   const items = order.items.map((i) => [`${i.title} × ${i.qty}`, rupees(i.price * i.qty)]);
   const totals = [
     ['Delivery', order.delivery ? rupees(order.delivery) : 'Free'],
+    ...(order.giftWrap ? [['Gift wrapping', rupees(order.giftWrap)]] : []),
     ...(order.discount
       ? [
           [
@@ -525,7 +535,16 @@ export function newOrderEmail(order, customer, publicUrl = DEFAULT_PUBLIC_URL) {
     ['Total', rupees(order.total)],
     ...(order.creditUsed ? [['Store credit used', `−${rupees(order.creditUsed)}`]] : []),
   ];
-  const lines = [`${who} placed an order. ${payment}.`, `Deliver to ${a.city}, ${a.state} ${a.pincode}.`];
+  const lines = [
+    `${who} placed an order. ${payment}.`,
+    `Deliver to ${a.city}, ${a.state} ${a.pincode}.`,
+    // A gift (stage 104): wrap it, and the message for the slip.
+    ...(order.gift
+      ? [
+          `It's a gift${order.gift.wrap ? ', to be gift wrapped' : ''}.${order.gift.message ? ` Message: "${order.gift.message}"` : ''}`,
+        ]
+      : []),
+  ];
 
   const text = [
     ...lines,

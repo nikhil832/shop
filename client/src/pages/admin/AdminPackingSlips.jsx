@@ -102,6 +102,13 @@ export default function AdminPackingSlips() {
                   <strong>Note:</strong> {n.text}
                 </p>
               ))}
+            {/* A gift (stage 104): wrap it, and the customer's message to put in. */}
+            {order.gift && (
+              <div className="slip-gift">
+                <strong>Gift{order.gift.wrap ? ': gift wrap it' : ''}</strong>
+                {order.gift.message && <p>&ldquo;{order.gift.message}&rdquo;</p>}
+              </div>
+            )}
             <p className="slip-payment">{paymentNote(order)}</p>
           </article>
         );

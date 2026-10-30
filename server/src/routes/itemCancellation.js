@@ -58,7 +58,8 @@ export function cancellationPlan(order, cancel) {
       ? 0
       : Math.round((discount * value) / order.subtotal / 100) * 100;
   const newDiscount = Math.max(0, Math.min(discount - share, subtotal));
-  const total = subtotal + order.delivery - newDiscount;
+  // Delivery and gift wrapping stay as they were.
+  const total = subtotal + order.delivery + (order.giftWrap ?? 0) - newDiscount;
   const creditUsed = order.creditUsed ?? 0;
   // Money already taken for a paid online order; a COD order's money comes on delivery.
   const moneyPaid =

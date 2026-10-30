@@ -25,6 +25,7 @@ import {
 import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
+import GiftDetails from '../components/GiftDetails.jsx';
 import { StatusBadge } from './Orders.jsx';
 
 // Why a past order's line can't go back in the cart, from its cart quote (GET /cart); null when it can.
@@ -260,6 +261,8 @@ export default function Order() {
             )}
           </section>
 
+          {order.gift && <GiftDetails gift={order.gift} />}
+
           {order.shipment && order.status !== 'cancelled' && (
             <section className="panel" aria-labelledby="tracking-heading">
               <h2 id="tracking-heading">Tracking</h2>
@@ -367,6 +370,7 @@ export default function Order() {
           count={count}
           subtotal={order.subtotal}
           bundleSaving={order.bundleSaving}
+          giftWrap={order.giftWrap}
           quantitySaving={order.quantitySaving}
           delivery={order.delivery}
           discount={order.discount}

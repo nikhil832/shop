@@ -27,6 +27,7 @@ import { StatusBadge } from '../Orders.jsx';
 import { OrderHelpRequests } from './AdminHelp.jsx';
 import { useAuth } from '../../auth.jsx';
 import { can } from '../../permissions.js';
+import GiftDetails from '../../components/GiftDetails.jsx';
 import CustomerTags from '../../components/CustomerTags.jsx';
 
 // The next steps an admin can take from each status (the server enforces the same rules). Cancelling needs an admin
@@ -342,6 +343,8 @@ export default function AdminOrder() {
             )}
           </section>
 
+          {order.gift && <GiftDetails gift={order.gift} />}
+
           {returns?.length > 0 && (
             <section className="panel" aria-labelledby="order-returns">
               <h2 id="order-returns">Returns</h2>
@@ -460,6 +463,7 @@ export default function AdminOrder() {
           count={order.items.reduce((n, i) => n + i.qty, 0)}
           subtotal={order.subtotal}
           bundleSaving={order.bundleSaving}
+          giftWrap={order.giftWrap}
           quantitySaving={order.quantitySaving}
           delivery={order.delivery}
           discount={order.discount}

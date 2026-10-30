@@ -129,6 +129,12 @@ export default function Invoice({ admin = false }) {
                 <th colSpan={3}>Delivery</th>
                 <td className="num">{order.delivery ? formatPrice(order.delivery) : 'Free'}</td>
               </tr>
+              {order.giftWrap > 0 && (
+                <tr>
+                  <th colSpan={3}>Gift wrapping</th>
+                  <td className="num">{formatPrice(order.giftWrap)}</td>
+                </tr>
+              )}
               {order.discount > 0 && (
                 <tr>
                   <th colSpan={3}>Coupon{order.coupon?.code && ` (${order.coupon.code})`}</th>

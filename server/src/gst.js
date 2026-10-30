@@ -216,6 +216,16 @@ export function gstInvoice(order) {
       ...split(delivery, order.gst.deliveryRate, supply.intraState),
     });
   }
+  // Gift wrapping (stage 104) goes with the goods too.
+  if (order.giftWrap) {
+    lines.push({
+      title: 'Gift wrapping',
+      hsn: '',
+      rate: order.gst.deliveryRate,
+      qty: 1,
+      ...split(order.giftWrap, order.gst.deliveryRate, supply.intraState),
+    });
+  }
   return { ...supply, ...summarize(lines) };
 }
 
