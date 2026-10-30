@@ -101,3 +101,11 @@ export const BagIcon = (props) => (
     <path d="M9 8V6a3 3 0 0 1 6 0v2" />
   </Icon>
 );
+
+export const GiftIcon = (props) => (
+  <Icon {...props}>
+    <rect x="3" y="8" width="18" height="4" rx="1" />
+    <path d="M12 8v13M5 12v9h14v-9" />
+    <path d="M12 8c-1.5-3-5-3.5-5-1.2C7 8 9 8 12 8zM12 8c1.5-3 5-3.5 5-1.2C17 8 15 8 12 8z" />
+  </Icon>
+);

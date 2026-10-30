@@ -109,6 +109,8 @@ export const PRIVATE_PATHS = [
   '/checkout',
   '/orders',
   '/wishlist',
+  // Shared wishlists (stage 106): for the people they're sent to.
+  '/w/',
   '/login',
   '/register',
   '/forgot-password',

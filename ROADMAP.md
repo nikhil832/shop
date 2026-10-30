@@ -7,11 +7,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Suggested on 2026-10-30 (after the UI rounds), roughly in the order they'd help most. All free (no new services).
-
-- **Share a wishlist**: a link that shows someone's wishlist (read-only, chosen to share, can be switched off) for
-  birthdays and festivals, with "Buy as a gift" adding an item to the visitor's cart. To start: "start shared
-  wishlists".
+Nothing queued: every idea from 2026-10-30 is built. Ask for new ideas ("what should we build next?") and they'll be
+added here.
 
 ## Set aside
 
@@ -134,3 +131,4 @@ Suggested on 2026-10-30 (after the UI rounds), roughly in the order they'd help 
 | Payment reminders: one email for online orders still unpaid after 10 minutes, with a link back to Pay now                                                                             | Stage 103 (`git log --grep "Stage 103"`) |
 | Gift options: a gift message on the packing slip, and gift wrapping for a fee when switched on in Admin → Delivery                                                                    | Stage 104 (`git log --grep "Stage 104"`) |
 | PIN code check: the state filled in from the PIN code, and addresses whose state doesn't match their PIN refused                                                                      | Stage 105 (`git log --grep "Stage 105"`) |
+| Shared wishlists: a link showing the customer's first name and wishlist, for presents, that can be turned off                                                                         | Stage 106 (`git log --grep "Stage 106"`) |

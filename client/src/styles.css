@@ -4318,3 +4318,37 @@ textarea {
   font-weight: 600;
   font-size: 0.9rem;
 }
+/* Shared wishlists (stage 106): the share panel on the wishlist page, and the shared page's heading. */
+.share-wishlist {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.share-wishlist h2,
+.share-wishlist p {
+  margin: 0;
+}
+.share-link {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+.share-link input {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.shared-wishlist-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.shared-wishlist-head h1 {
+  margin: 0 0 4px;
+}
+.shared-wishlist-head p {
+  margin: 0;
+}

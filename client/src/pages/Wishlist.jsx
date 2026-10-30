@@ -75,6 +75,77 @@ function WishRow({ product, onRemoved }) {
   );
 }
 
+// Sharing the wishlist by a link (stage 106): made on request, copied or sent with the phone's share sheet, and
+// stopped at any time (the link then stops working; sharing again makes a new one).
+function ShareWishlist({ name }) {
+  const [version, setVersion] = useState(0);
+  const { data } = useFetch('/wishlist/share', version);
+  const [state, setState] = useState({ busy: false, error: null, copied: false });
+  if (!data) return null;
+  const url = data.share && `${window.location.origin}/w/${data.share.token}`;
+
+  async function change(method) {
+    setState({ busy: true, error: null, copied: false });
+    try {
+      await request('/wishlist/share', { method });
+      setState({ busy: false, error: null, copied: false });
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setState({ busy: false, error: err.message, copied: false });
+    }
+  }
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setState({ ...state, copied: true });
+    } catch {
+      setState({ ...state, error: 'Copying is blocked here: select the link and copy it.' });
+    }
+  }
+
+  return (
+    <section className="panel share-wishlist" aria-labelledby="share-heading">
+      <h2 id="share-heading">Share your wishlist</h2>
+      {url ? (
+        <>
+          <p className="muted small">
+            Anyone with this link sees your first name ({name}) and the products here, nothing else.
+          </p>
+          <div className="share-link">
+            <input readOnly value={url} aria-label="Link to your wishlist" onFocus={(e) => e.target.select()} />
+            <button type="button" className="btn small" onClick={copy}>
+              {state.copied ? 'Copied' : 'Copy link'}
+            </button>
+            {navigator.share && (
+              <button
+                type="button"
+                className="btn small"
+                onClick={() => navigator.share({ title: `${name}'s wishlist`, url }).catch(() => {})}
+              >
+                Share…
+              </button>
+            )}
+            <button type="button" className="btn small" onClick={() => change('DELETE')} disabled={state.busy}>
+              Stop sharing
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="muted small">
+            Send a link to family and friends for birthdays and festivals. They&apos;ll see your first name and the
+            products here, and can buy one as a gift.
+          </p>
+          <button type="button" className="btn primary" onClick={() => change('POST')} disabled={state.busy}>
+            Share my wishlist
+          </button>
+        </>
+      )}
+      {state.error && <p className="error small">{state.error}</p>}
+    </section>
+  );
+}
+
 export default function Wishlist() {
   const { user } = useAuth();
   const [version, setVersion] = useState(0);
@@ -112,6 +183,7 @@ export default function Wishlist() {
           </Link>
         </div>
       )}
+      {items?.length > 0 && <ShareWishlist name={user.name.split(/\s+/)[0]} />}
       <ul className="order-list">
         {items?.map((p) => (
           <WishRow key={p.id} product={p} onRemoved={() => setVersion((v) => v + 1)} />

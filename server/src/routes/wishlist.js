@@ -1,4 +1,5 @@
 import express from 'express';
+import { randomBytes } from 'node:crypto';
 import { requireUser } from '../auth.js';
 import { HttpError, parseObjectId } from '../http.js';
 import { toProductCard } from './catalog.js';
@@ -29,6 +30,53 @@ export function wishlistRouter({ db }) {
       ])
       .toArray();
     res.json(docs.map((d) => ({ ...toProductCard(d.product), addedAt: d.addedAt })));
+  });
+
+  // Sharing (stage 106; before the routes with :productId, which would take "share" as an id): a link anyone can open, showing the customer's first name and their wishlist's shown
+  // products, never anything else about them. `users.wishlistShare` { token, since } holds it: 18 random bytes, so
+  // links can't be guessed. Stopping removes it, so the old link stops working and sharing again makes a new one.
+  const users = db.collection('users');
+  const shareOf = (user) => (user.wishlistShare ? { token: user.wishlistShare.token } : null);
+
+  router.get('/wishlist/share', async (req, res) => {
+    res.json({ share: shareOf(req.user) });
+  });
+
+  router.post('/wishlist/share', async (req, res) => {
+    if (req.user.wishlistShare) return res.json({ share: shareOf(req.user) });
+    const wishlistShare = { token: randomBytes(18).toString('base64url'), since: new Date() };
+    const after = await users.findOneAndUpdate(
+      { _id: req.user._id, wishlistShare: { $exists: false } },
+      { $set: { wishlistShare } },
+      { returnDocument: 'after' },
+    );
+    // Two tabs at once: the other one's link stands.
+    res.json({ share: shareOf(after ?? (await users.findOne({ _id: req.user._id }))) });
+  });
+
+  router.delete('/wishlist/share', async (req, res) => {
+    await users.updateOne({ _id: req.user._id }, { $unset: { wishlistShare: '' } });
+    res.json({ share: null });
+  });
+
+  // The shared list itself, for anyone with the link: the first name and the shown products, newest first.
+  router.get('/shared-wishlists/:token', async (req, res) => {
+    const token = req.params.token;
+    const owner = /^[\w-]{20,40}$/.test(token)
+      ? await users.findOne({ 'wishlistShare.token': token }, { projection: { name: 1 } })
+      : null;
+    if (!owner) throw new HttpError(404, 'This wishlist link has been switched off or never existed');
+    const docs = await wishlist
+      .aggregate([
+        { $match: { userId: owner._id } },
+        { $sort: { addedAt: -1, _id: -1 } },
+        { $limit: WISHLIST_LIMIT },
+        { $lookup: { from: 'products', localField: 'productId', foreignField: '_id', as: 'product' } },
+        { $unwind: '$product' },
+        { $match: { 'product.active': true } },
+      ])
+      .toArray();
+    res.json({ name: owner.name.split(/\s+/)[0], items: docs.map((d) => toProductCard(d.product)) });
   });
 
   router.put('/wishlist/:productId', async (req, res) => {

@@ -115,6 +115,8 @@ export function accountDataRouter(ctx) {
       helpfulVotes: votes,
       questions: questions.map((q) => ({ product: title(q.productId), ...toQuestion(q) })),
       wishlist: wishlist.map((w) => ({ product: title(w.productId), addedAt: w.addedAt })),
+      // Whether it's shared by a link (stage 106); the link itself is on the wishlist page.
+      wishlistShared: Boolean(u.wishlistShare),
       backInStockAlerts: alerts.map((a) => ({ product: title(a.productId), createdAt: a.createdAt })),
       savedCart: cart ? { items: cart.items, updatedAt: cart.updatedAt } : null,
       helpRequests: help.map(toRequest),
