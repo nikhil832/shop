@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
+import { request } from '../api.js';
+import { useAuth } from '../auth.jsx';
 import OrderSummary from '../components/OrderSummary.jsx';
 import PriceTag from '../components/PriceTag.jsx';
-import { MAX_QTY, cartCount, cartQuery, lineKey, removeFromCart, setQty, useCart } from '../cart.js';
+import { MAX_QTY, addToCart, cartCount, cartQuery, lineKey, removeFromCart, setQty, useCart } from '../cart.js';
 import { formatPrice, mrpSavingOf, smallImage } from '../format.js';
 import { CartIcon, ShieldIcon } from '../components/Icons.jsx';
 import RecentlyViewed from '../components/RecentlyViewed.jsx';
@@ -10,7 +13,8 @@ import { useFetch } from '../useFetch.js';
 
 // `qty` comes from the cart itself, so the select changes at once while the new quote loads.
 // `units`: how many of this product the cart holds in all (every size and colour counts towards a quantity discount).
-function CartLine({ line, qty, units }) {
+// `onSave(line)` moves it to the wishlist ("Save for later", stage 107); null for guests, who are asked to log in.
+function CartLine({ line, qty, units, onSave }) {
   // `stock`, `price` and `mrp` are the chosen variant's, or the product's.
   const { product, problem, variant, stock } = line;
   if (!product) {
@@ -75,6 +79,20 @@ function CartLine({ line, qty, units }) {
           <button type="button" className="link" onClick={() => removeFromCart(lineKey(line))}>
             Remove
           </button>
+          {onSave ? (
+            <button
+              type="button"
+              className="link"
+              onClick={() => onSave(line)}
+              aria-label={`Save for later: ${product.title}`}
+            >
+              Save for later
+            </button>
+          ) : (
+            <Link to="/login?next=/cart" className="small">
+              Log in to save for later
+            </Link>
+          )}
         </div>
       </div>
       <span className="line-total">{formatPrice(line.lineTotal)}</span>
@@ -94,10 +112,111 @@ function BoughtAgain({ number, added, skipped }) {
   );
 }
 
+// What the customer saved for later: their wishlist, under the cart (stage 107), the newest first. "Move to cart"
+// puts one in the cart and takes it off the wishlist; products with sizes or colours go to their page to choose one,
+// as the wishlist doesn't keep which.
+const SAVED_SHOWN = 8;
+function SavedForLater({ version, onChange }) {
+  const { data: saved } = useFetch('/wishlist', version);
+  const [error, setError] = useState(null);
+  if (!saved?.length) return null;
+
+  async function move(p) {
+    setError(null);
+    try {
+      if (!addToCart(p.id, p.stock)) throw new Error('Your cart is full. Remove something to add this.');
+      await request(`/wishlist/${p.id}`, { method: 'DELETE' });
+      onChange();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+  async function remove(p) {
+    setError(null);
+    try {
+      await request(`/wishlist/${p.id}`, { method: 'DELETE' });
+      onChange();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  return (
+    <section className="panel saved-for-later" aria-labelledby="saved-heading">
+      <div className="row-header">
+        <h2 id="saved-heading">Saved for later ({saved.length})</h2>
+        {saved.length > SAVED_SHOWN && <Link to="/wishlist">See all in your wishlist</Link>}
+      </div>
+      {error && <p className="error small">{error}</p>}
+      <ul className="saved-list">
+        {saved.slice(0, SAVED_SHOWN).map((p) => (
+          <li key={p.id} className="saved-item">
+            {p.image && <img src={smallImage(p.image)} alt="" width="64" height="64" />}
+            <div className="saved-body">
+              <Link to={`/p/${p.slug}`} className="card-title">
+                {p.title}
+              </Link>
+              <PriceTag price={p.price} mrp={p.mrp} from={p.priceFrom} />
+              <div className="cart-actions">
+                {p.stock === 0 ? (
+                  <span className="stock out">Out of stock</span>
+                ) : p.variantName ? (
+                  <Link
+                    to={`/p/${p.slug}`}
+                    className="btn small"
+                    aria-label={`Choose a ${p.variantName.toLowerCase()}: ${p.title}`}
+                  >
+                    Choose a {p.variantName.toLowerCase()}
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn small"
+                    onClick={() => move(p)}
+                    aria-label={`Move to cart: ${p.title}`}
+                  >
+                    Move to cart
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="link"
+                  onClick={() => remove(p)}
+                  aria-label={`Remove ${p.title} from saved`}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default function Cart() {
   const items = useCart();
   const navigate = useNavigate();
   const boughtAgain = useLocation().state?.boughtAgain;
+  const { user } = useAuth();
+  // Bumped when something moves between the cart and the saved list.
+  const [savedVersion, setSavedVersion] = useState(0);
+  const [saveError, setSaveError] = useState(null);
+  const savedList = user ? (
+    <SavedForLater version={savedVersion} onChange={() => setSavedVersion((v) => v + 1)} />
+  ) : null;
+  // Moves a cart line to the wishlist (the size or colour isn't kept there).
+  async function saveForLater(line) {
+    setSaveError(null);
+    try {
+      await request(`/wishlist/${line.productId}`, { method: 'PUT' });
+      removeFromCart(lineKey(line));
+      setSavedVersion((v) => v + 1);
+    } catch (err) {
+      setSaveError(err.message);
+    }
+  }
   const { data: quote, error, loading } = useFetch(items.length ? `/cart?items=${cartQuery(items)}` : null);
 
   if (!items.length) {
@@ -111,6 +230,7 @@ export default function Cart() {
         <Link to="/search" className="btn primary">
           Shop all products
         </Link>
+        {savedList}
       </div>
     );
   }
@@ -134,6 +254,7 @@ export default function Cart() {
                 line={line}
                 qty={qtyOf.get(lineKey(line))}
                 units={unitsOf(line.productId)}
+                onSave={user ? saveForLater : null}
               />
             ))}
           </ul>
@@ -168,6 +289,12 @@ export default function Cart() {
           </p>
         </OrderSummary>
       </div>
+      {saveError && (
+        <p className="error" role="alert">
+          {saveError}
+        </p>
+      )}
+      {savedList}
       <RecentlyViewed />
     </>
   );

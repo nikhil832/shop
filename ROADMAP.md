@@ -7,8 +7,23 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Nothing queued: every idea from 2026-10-30 is built. Ask for new ideas ("what should we build next?") and they'll be
-added here.
+Suggested on 2026-10-30 (third list), roughly in the order they'd help most. All free (no new services).
+
+- **Track without logging in**: a "Track an order" page that finds an order by its number and the delivery PIN code,
+  showing its progress, dates and tracking link (no prices, address or items beyond the names). Handy for gift
+  recipients and anyone on another device. To start: "start order tracking page".
+- **Shop by size**: a size filter on search for products with sizes ("UK 8", "M", "32"), showing only those with that
+  size in stock, and the size remembered for the next search. Fashion shoppers want to see only what fits. To start:
+  "start size filter".
+- **Log in with an email code**: besides the password, "Email me a code" sends a 6-digit code that logs in for 10
+  minutes (limited tries, like the password). Customers forget passwords, and the checkout-made accounts have none.
+  To start: "start email codes".
+- **Delivery charge by area**: delivery areas (Admin → Delivery) can add an extra charge for far-off PIN codes (the
+  North East, islands), shown with the delivery dates and at checkout. Couriers charge more there. To start: "start
+  area charges".
+- **Lowest price in 30 days**: the store keeps each product's price history from now on and the product page says
+  "Lowest price in 30 days" when it is, or shows the lowest, so discounts can be trusted. To start: "start price
+  history".
 
 ## Set aside
 
@@ -132,3 +147,4 @@ added here.
 | Gift options: a gift message on the packing slip, and gift wrapping for a fee when switched on in Admin → Delivery                                                                    | Stage 104 (`git log --grep "Stage 104"`) |
 | PIN code check: the state filled in from the PIN code, and addresses whose state doesn't match their PIN refused                                                                      | Stage 105 (`git log --grep "Stage 105"`) |
 | Shared wishlists: a link showing the customer's first name and wishlist, for presents, that can be turned off                                                                         | Stage 106 (`git log --grep "Stage 106"`) |
+| Save for later: cart items moved to the wishlist and back from a "Saved for later" list under the cart                                                                                | Stage 107 (`git log --grep "Stage 107"`) |

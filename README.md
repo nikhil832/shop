@@ -139,6 +139,7 @@ Built in stages. Done so far:
 104. **Gift options**: at checkout, "This is a gift" adds a message (up to 200 characters) for the packing slip, which shows no prices, and, when switched on in Admin → Delivery, gift wrapping for a fee (₹49 by default). The fee is added like delivery (its own line on the GST invoice, never refunded by returns or item cancellations); the order pages, emails, packing slip and export show the gift.
 105. **PIN code check**: the address form asks for the PIN code before the city and state, fills in the state when the PIN code has only one, and warns when the typed state isn't one the PIN code is in; the server refuses such addresses everywhere (checkout, address book, address changes), as a wrong state puts the wrong tax on a GST invoice. Worked out from the PIN code's first three digits, with no outside service.
 106. **Shared wishlists**: on the wishlist page, "Share my wishlist" makes a link (copy it or use the phone's share sheet) that shows the customer's first name and the products on their wishlist, for family and friends buying presents; "Stop sharing" turns the link off, and sharing again makes a new one. Shared lists are kept out of search engines.
+107. **Save for later**: in the cart, "Save for later" moves an item to the wishlist, and a "Saved for later" list under the cart (also when it's empty) moves it back with "Move to cart" (products with sizes or colours go to their page to choose one again). Guests are asked to log in.
 
 What's next: see [ROADMAP.md](ROADMAP.md).
 
