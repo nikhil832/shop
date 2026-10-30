@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-30 (after the UI rounds), roughly in the order they'd help most. All free (no new services).
 
-- **Payment reminders**: an online order not paid within 10 minutes gets one email ("Complete your payment") with a
-  link back to the order's Pay now, before its 30 minutes run out and the stock is released. Recovers orders lost to a
-  closed tab or a failed UPI app. To start: "start payment reminders".
 - **Gift wrap and message**: at checkout, "This is a gift" adds a gift message (and optional wrapping for a small fee
   set in Admin), printed on the packing slip, with prices left off the slip. To start: "start gift options".
 - **State from the PIN code**: typing a PIN code fills in the state (from its first digits, no outside service), and a
@@ -139,3 +136,4 @@ Suggested on 2026-10-30 (after the UI rounds), roughly in the order they'd help 
 | A friendlier look, round 3: "You save" and a free-delivery bar in the cart and checkout, payment choices as cards, an order progress tracker, arrival dates on the orders list        | `git log --grep "UI round 3"`            |
 | Deals: a Deals link and page (40% off or more, or on sale, biggest discount first), a Deals filter and discount sort on search, a home page row                                       | Stage 101 (`git log --grep "Stage 101"`) |
 | Buy bar on phones: price, Add to cart and Buy now at the bottom of the screen while the product page's own buttons are out of view                                                    | Stage 102 (`git log --grep "Stage 102"`) |
+| Payment reminders: one email for online orders still unpaid after 10 minutes, with a link back to Pay now                                                                             | Stage 103 (`git log --grep "Stage 103"`) |

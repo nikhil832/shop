@@ -315,6 +315,36 @@ ${button('See your wishlist', wishlistUrl)}
   return { subject, text, html };
 }
 
+// An online order not paid yet (stage 103, paymentReminders.js): what's held, until when, and a link back to Pay now.
+export function paymentReminderEmail(order, user, publicUrl = DEFAULT_PUBLIC_URL) {
+  const subject = `Complete your payment for order #${orderNumber(order)}`;
+  const firstName = user.name.split(/\s+/)[0];
+  const orderUrl = `${publicUrl}/orders/${order._id}`;
+  const until = order.expiresAt.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', timeStyle: 'short' });
+  const lines = order.items.map((i) => `${i.title} × ${i.qty}`);
+  const intro = `Your order #${orderNumber(order)} isn't paid yet. We're holding your items until ${until} (India time); after that the order is cancelled and they go back on sale.`;
+  const text = [
+    `Hi ${firstName},`,
+    intro,
+    lines.map((l) => `- ${l}`).join('\n'),
+    `To pay: ${rupees(due(order))}`,
+    `Pay now: ${orderUrl}`,
+    'If the payment went through and this crossed with it, there is nothing to do: your confirmation is on its way.',
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p>${escapeHtml(intro)}</p>
+<ul>${lines.map((l) => `<li>${escapeHtml(l)}</li>`).join('')}</ul>
+<p><strong>To pay: ${escapeHtml(rupees(due(order)))}</strong></p>
+${button('Pay now', orderUrl)}
+<p style="font-size:13px;color:#6b7280">If the payment went through and this crossed with it, there is nothing to do: your confirmation is on its way.</p>`,
+    "You're getting this email because you placed an order and chose to pay online.",
+  );
+  return { subject, text, html };
+}
+
 // A few days after delivery, asking for reviews of the order's products (`products` [{ title, slug }], not yet
 // reviewed). Each links to its product page's reviews, where the form is.
 export function reviewReminderEmail(user, order, products, publicUrl = DEFAULT_PUBLIC_URL) {

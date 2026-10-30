@@ -135,6 +135,7 @@ Built in stages. Done so far:
 100. **Product performance**: Admin → Products → Performance shows each product's views, adds to cart, orders and units over 7, 30 or 90 days, with views-to-orders, sortable, and a filter for products looked at 10 times or more but not bought. Views are counted when a product page opens (staff aren't counted); nothing is kept about who looked.
 101. **Deals**: a "Deals" link in the category bar (and the footer) opens the products at least 40% below their MRP or in a running sale, biggest discount first; "Deals" is also a search filter, "Biggest discount" a sort, and the home page has a "Biggest discounts" row.
 102. **Buy bar on phones**: on a phone, once a product page's own buttons scroll out of view, a bar at the bottom of the screen keeps the price, Add to cart and Buy now (or "Choose a size", which takes you back to the sizes).
+103. **Payment reminders**: an online order still unpaid 10 minutes after it was placed gets one email ("Complete your payment") with what's held, until when, and a Pay now link to the order, while there are at least 5 minutes left. Razorpay is asked first, so a customer who paid but whose browser never came back gets their confirmation instead.
 
 What's next: see [ROADMAP.md](ROADMAP.md).
 
