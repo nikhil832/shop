@@ -14,6 +14,7 @@ const REASONS = {
   released: 'Unpaid order released',
   returned_to_sender: 'Returned to sender',
   received: 'Received',
+  counted: 'Stocktake',
   returned: 'Return approved',
   exchange_reserved: 'Set aside for an exchange',
   exchange_released: 'Exchange called off',
@@ -44,6 +45,16 @@ function Why({ entry, admin }) {
             <Link to={`/admin/stock-receipts/${entry.receipt.id}`}>Delivery #{entry.receipt.number}</Link>
           ) : (
             `Delivery #${entry.receipt.number}`
+          )}
+        </>
+      )}
+      {entry.stocktake && (
+        <>
+          {' · '}
+          {admin ? (
+            <Link to={`/admin/stocktakes/${entry.stocktake.id}`}>Stocktake #{entry.stocktake.number}</Link>
+          ) : (
+            `Stocktake #${entry.stocktake.number}`
           )}
         </>
       )}

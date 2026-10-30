@@ -7,7 +7,7 @@ import { requirePermission } from './staff.js';
 // written in the same transaction as the change itself, so the list can't miss one or show one that didn't happen:
 // { productId, variantId: ObjectId | null, label (the variant's, or null for the product's own stock), change,
 //   after (that stock once changed), reason (REASONS), orderId?, orderNumber?, returnId?, exchangeId?, receiptId?,
-//   receiptNumber?, by: { id, name } | null, at }
+//   receiptNumber?, stocktakeId?, stocktakeNumber?, by: { id, name } | null, at }
 // A product with variants has entries per variant only: its own stock is their sum. Entries go after HISTORY_DAYS.
 
 export const HISTORY_DAYS = 365;
@@ -19,6 +19,8 @@ export const REASONS = {
   released: 'Unpaid order released',
   returned_to_sender: 'Returned to sender',
   received: 'Received',
+  // Put right by a stocktake (stocktakes.js).
+  counted: 'Stocktake',
   returned: 'Return approved',
   // Exchanges (stage 89): the new option set aside when asked, given back when declined or called off, and the
   // customer's item back when approved.
@@ -103,6 +105,8 @@ const toEntry = (doc) => ({
   exchangeId: doc.exchangeId?.toString() ?? null,
   // A delivery from a supplier (stockReceipts.js).
   receipt: doc.receiptId ? { id: doc.receiptId.toString(), number: doc.receiptNumber } : null,
+  // A stocktake that put the stock right (stocktakes.js).
+  stocktake: doc.stocktakeId ? { id: doc.stocktakeId.toString(), number: doc.stocktakeNumber } : null,
   by: doc.by?.name ?? null,
 });
 

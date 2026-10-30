@@ -55,6 +55,8 @@ const INDEXES = {
   bundles: [[{ productIds: 1, active: 1 }]],
   // Deliveries from suppliers, newest first, by supplier.
   stockReceipts: [[{ createdAt: -1 }], [{ supplier: 1, createdAt: -1 }], [{ purchaseOrderId: 1 }, { sparse: true }]],
+  // Stocktakes (stage 98), newest first.
+  stocktakes: [[{ createdAt: -1 }]],
   // Gift cards: by code (only once paid), by Razorpay order (payments and the webhook), by buyer, the sweep's lists;
   // unpaid ones go UNPAID_DAYS after they were started (payBy is unset once paid).
   giftCards: [

@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-30, roughly in the order they'd help most. All free (no new services).
 
-- **Stocktake**: a printable count sheet per category, the counted numbers typed in, a preview of the differences, then
-  saved at once as "Counted" in stock history (by whom, when). Shelves and the database drift apart over time; this
-  is how shops put them right. To start: "start stocktake".
 - **Quantity discounts**: per product, e.g. "Buy 3 or more, 10% off each", shown on the product page and applied in the
   cart and at checkout (lines and GST worked out like bundles). Good for everyday items and wholesale customers. To
   start: "start quantity discounts".
@@ -129,3 +126,4 @@ Suggested on 2026-10-30, roughly in the order they'd help most. All free (no new
 | Review reminders: one email three days after delivery asking for reviews of the order's products, with a switch on the account page                                       | Stage 95 (`git log --grep "Stage 95"`) |
 | Helpful reviews: "Helpful" votes on reviews, sorting by most helpful, filters by stars (from a breakdown) and with photos                                                 | Stage 96 (`git log --grep "Stage 96"`) |
 | Cancel some items: customers or admins cancel part of an order before it ships, with the new total shown first, stock back, a part refund or credit back                  | Stage 97 (`git log --grep "Stage 97"`) |
+| Stocktake: printable count sheets per category, counted numbers checked against what should be on the shelf, saved as "Stocktake" in stock history                        | Stage 98 (`git log --grep "Stage 98"`) |

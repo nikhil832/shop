@@ -3601,3 +3601,38 @@ textarea {
 .cancel-items p {
   margin: 0;
 }
+/* Stocktake count sheet (stage 98): boxes to write in on paper, typed counts on screen. */
+.print-only {
+  display: none;
+}
+.stocktake .count-input {
+  width: 6em;
+  text-align: right;
+}
+.stocktake-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+}
+.stocktake-actions label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  max-width: 420px;
+}
+@media print {
+  .print-only {
+    display: block;
+  }
+  .stocktake .count-input {
+    border: 1px solid #000000;
+    background: #ffffff;
+    color: #000000;
+  }
+  .stocktake .table-wrap {
+    overflow: visible;
+  }
+}

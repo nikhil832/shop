@@ -24,6 +24,7 @@ const NAMES = {
   searchStats: 'Search insights',
   giftCards: 'Gift cards',
   stockReceipts: 'Deliveries received',
+  stocktakes: 'Stocktakes',
   bundles: 'Bundles',
   sizeGuides: 'Size guides',
   errorReports: 'Error reports',

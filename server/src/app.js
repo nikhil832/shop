@@ -44,6 +44,7 @@ import { searchInsightsRouter } from './searchInsights.js';
 import { giftCardsRouter } from './giftCards.js';
 import { codRouter } from './cod.js';
 import { stockReceiptsRouter } from './stockReceipts.js';
+import { stocktakesRouter } from './stocktakes.js';
 import { purchaseOrdersRouter } from './purchaseOrders.js';
 import { bundlesRouter } from './bundles.js';
 import { collectionsRouter } from './collections.js';
@@ -110,6 +111,7 @@ export function createApp(ctx) {
   api.use(giftCardsRouter(ctx));
   api.use(codRouter(ctx));
   api.use(stockReceiptsRouter(ctx));
+  api.use(stocktakesRouter(ctx));
   api.use(purchaseOrdersRouter(ctx));
   api.use(bundlesRouter(ctx));
   api.use(collectionsRouter(ctx));
