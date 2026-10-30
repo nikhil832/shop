@@ -220,6 +220,7 @@ test('admin pages fit a phone screen without sideways scrolling', async ({ page 
     '/admin/purchase-orders/new?suggested=1',
     '/admin/delivery',
     '/admin/stocktakes/new',
+    '/admin/product-performance?days=90',
     '/admin/products/new',
   ]) {
     await page.goto(path);

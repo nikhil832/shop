@@ -15,6 +15,7 @@ import Gallery from '../components/Gallery.jsx';
 import ProductRow from '../components/ProductRow.jsx';
 import RecentlyViewed from '../components/RecentlyViewed.jsx';
 import { rememberViewed } from '../recent.js';
+import { reportSeen } from '../productStats.js';
 import { expectedText, quantityOfferText, saleEndsIn } from '../format.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
@@ -34,7 +35,10 @@ function AddToCart({ product, variant, missing }) {
         type="button"
         className="btn primary"
         disabled={needsChoice || atLimit || stock === 0}
-        onClick={() => setFull(!addToCart(product.id, stock, variant?.id))}
+        onClick={() => {
+          reportSeen(product.slug, 'cart');
+          setFull(!addToCart(product.id, stock, variant?.id));
+        }}
       >
         {needsChoice
           ? `Choose a ${missing}`
@@ -115,10 +119,13 @@ export default function Product() {
   const together = useFetch(`/products/${encodeURIComponent(slug)}/bought-together`);
   const similar = useFetch(`/products/${encodeURIComponent(slug)}/related`);
   const rowsIn = !together.loading && !similar.loading;
-  // Remembered in this browser once the product has loaded (not for missing or hidden ones).
+  // Remembered in this browser and reported as a view (stage 100) once the product has loaded (not for missing or
+  // hidden ones).
   const viewed = product?.slug === slug ? slug : null;
   useEffect(() => {
-    if (viewed) rememberViewed(viewed);
+    if (!viewed) return;
+    rememberViewed(viewed);
+    reportSeen(viewed, 'view');
   }, [viewed]);
 
   if (error?.status === 404) return <NotFound message="This product doesn't exist or is no longer sold." />;

@@ -120,6 +120,9 @@ export default function AdminProducts() {
       <div className="admin-head">
         <h1>Products</h1>
         <div className="admin-head-actions">
+          <Link to="/admin/product-performance" className="btn small">
+            Performance
+          </Link>
           <Link to="/admin/products/import" className="btn small">
             Import / export CSV
           </Link>

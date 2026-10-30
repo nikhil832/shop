@@ -68,6 +68,12 @@ const INDEXES = {
     [{ payBy: 1 }, { expireAfterSeconds: 0 }],
   ],
   // Search insights: one per week and search; gone KEEP_DAYS after the last one.
+  // Product views and adds to cart per India-time day (stage 100); gone after KEEP_DAYS.
+  productStats: [
+    [{ productId: 1, day: 1 }, { unique: true }],
+    [{ day: 1 }],
+    [{ expiresAt: 1 }, { expireAfterSeconds: 0 }],
+  ],
   searchStats: [
     [{ week: 1, term: 1 }, { unique: true }],
     [{ week: 1, count: -1 }],
