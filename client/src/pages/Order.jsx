@@ -5,6 +5,7 @@ import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import OrderSummary from '../components/OrderSummary.jsx';
 import CancelItems, { CancelledItems } from '../components/CancelItems.jsx';
+import OrderProgress from '../components/OrderProgress.jsx';
 import ChangeAddress from '../components/ChangeAddress.jsx';
 import {
   formatDate,
@@ -224,6 +225,7 @@ export default function Order() {
               </div>
               <StatusBadge status={order.status} />
             </div>
+            <OrderProgress order={order} />
             <ul className="cart-lines">
               {order.items.map((i) => (
                 <li key={itemKey(i)} className="cart-line">

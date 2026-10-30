@@ -125,3 +125,4 @@ added here.
 | Product performance: views, adds to cart and orders per product over 7/30/90 days, and what's looked at but not bought                                                                | Stage 100 (`git log --grep "Stage 100"`) |
 | A friendlier look, round 1: account menu and icons in the header, a category bar on every page, a bolder home page (banner, store promises, round categories), arrows on product rows | (UI round 1 commit)                      |
 | A friendlier look, round 2: "Add" on product cards, an always-enabled Add to cart with Buy now, reviews and questions in panels, a full footer                                        | `git log --grep "UI round 2"`            |
+| A friendlier look, round 3: "You save" and a free-delivery bar in the cart and checkout, payment choices as cards, an order progress tracker, arrival dates on the orders list        | `git log --grep "UI round 3"`            |

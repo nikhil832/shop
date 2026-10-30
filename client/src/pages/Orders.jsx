@@ -4,7 +4,7 @@ import { Link, Navigate } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import AccountNav from '../components/AccountNav.jsx';
-import { ORDER_STATUS, formatDate, formatPrice, orderNumber, smallImage } from '../format.js';
+import { ORDER_STATUS, arrival, formatDate, formatPrice, orderNumber, smallImage } from '../format.js';
 import { useFetch } from '../useFetch.js';
 import { forgetCart } from '../cart.js';
 
@@ -72,6 +72,12 @@ export default function Orders() {
                   {formatDate(o.createdAt)} · {o.items.length} {o.items.length === 1 ? 'item' : 'items'}
                 </span>
                 <span className="card-title">{o.items.map((i) => i.title).join(', ')}</span>
+                {(o.status === 'placed' || o.status === 'shipped') && o.deliveryEstimate && (
+                  <span className="arriving small">Arriving {arrival(o.deliveryEstimate)}</span>
+                )}
+                {o.status === 'delivered' && o.deliveredAt && (
+                  <span className="arriving small">Delivered on {formatDate(o.deliveredAt)}</span>
+                )}
               </div>
               <div className="order-card-side">
                 <StatusBadge status={o.status} />

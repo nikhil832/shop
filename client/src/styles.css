@@ -4062,3 +4062,142 @@ textarea {
   flex-basis: 100%;
   margin: 0;
 }
+/* UI round 3: savings, the free-delivery bar and reassurance notes in summaries, and the empty cart's icon. */
+.saving-note {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px dashed var(--success);
+  color: var(--success);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-align: center;
+}
+.free-delivery {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.free-delivery p {
+  margin: 0;
+}
+.free-delivery-bar {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+}
+.free-delivery-bar span {
+  display: block;
+  height: 100%;
+  background: var(--success);
+}
+.reassure {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--muted);
+}
+.reassure svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--success);
+}
+.empty-icon {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+/* Checkout: pictures in the items list, payment choices as cards. */
+.checkout-items li {
+  align-items: center;
+}
+.checkout-items img {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.checkout-item-name {
+  flex: 1;
+  min-width: 0;
+}
+.payment-option {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.payment-option:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.payment-option.disabled {
+  cursor: default;
+}
+/* An order's progress: ordered, shipped, delivered (OrderProgress.jsx). */
+.order-progress {
+  list-style: none;
+  margin: 18px 0 6px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+.order-progress li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+  padding-top: 22px;
+}
+/* The line between dots: from this step's dot to the next one's. */
+.order-progress li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+}
+.order-progress li.done:not(:last-child):has(+ li.done)::after {
+  background: var(--success);
+}
+.step-dot {
+  position: absolute;
+  top: 0;
+  left: calc(50% - 8px);
+  z-index: 1;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  background: var(--surface);
+}
+.order-progress li.done .step-dot {
+  border-color: var(--success);
+  background: var(--success);
+}
+.order-progress li[aria-current='step'] .step-dot {
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.step-name {
+  font-weight: 600;
+}
+.order-progress li.todo .step-name {
+  color: var(--muted);
+}
+.arriving {
+  color: var(--success);
+  font-weight: 600;
+}

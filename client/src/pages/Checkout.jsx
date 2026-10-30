@@ -5,7 +5,8 @@ import { useAuth } from '../auth.jsx';
 import { cartCount, cartQuery, clearCart, lineKey, useCart } from '../cart.js';
 import AddressFields from '../components/AddressFields.jsx';
 import OrderSummary from '../components/OrderSummary.jsx';
-import { MAX_ADDRESSES, addressFields, addressLine, formatPrice, arrival } from '../format.js';
+import { MAX_ADDRESSES, addressFields, addressLine, formatPrice, arrival, mrpSavingOf, smallImage } from '../format.js';
+import { ShieldIcon } from '../components/Icons.jsx';
 import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
 import { referralCode } from '../referral.js';
@@ -350,7 +351,10 @@ export default function Checkout() {
           <ul className="checkout-items">
             {quote.items.map((line) => (
               <li key={lineKey(line)}>
-                <span>
+                {(line.image ?? line.product?.image) && (
+                  <img src={smallImage(line.image ?? line.product.image)} alt="" width="48" height="48" />
+                )}
+                <span className="checkout-item-name">
                   {line.product?.title ?? 'Unavailable item'}
                   {line.variant && ` (${line.variant.description})`} × {line.qty}
                   {line.problem && <span className="problem"> · {line.problem}</span>}
@@ -372,6 +376,7 @@ export default function Checkout() {
         discount={quote.discount}
         couponCode={quote.coupon?.code}
         discountLabel={quote.referral ? "Friend's welcome" : null}
+        mrpSaving={mrpSavingOf(quote.items)}
         total={quote.total}
         freeDeliveryMin={quote.freeDeliveryMin}
         creditUsed={creditToUse}
@@ -406,6 +411,10 @@ export default function Checkout() {
         >
           {state.busy ? 'Placing order…' : `Place order · ${formatPrice(due)}`}
         </button>
+        <p className="reassure small">
+          <ShieldIcon size={16} /> Your details are sent securely. Payments go through Razorpay; we never see card
+          numbers.
+        </p>
       </OrderSummary>
     </form>
   );

@@ -162,3 +162,7 @@ export function expectedText(comingSoon) {
 
 // A quantity discount (stage 99) in words: "Buy 3 or more, 10% off each".
 export const quantityOfferText = (offer) => `Buy ${offer.minQty} or more, ${offer.percent}% off each`;
+
+// How much less than MRP a cart quote's buyable lines cost, in paise (the cart's and checkout's "You save …").
+export const mrpSavingOf = (lines) =>
+  lines.filter((l) => !l.problem && l.mrp > l.price).reduce((sum, l) => sum + (l.mrp - l.price) * l.qty, 0);

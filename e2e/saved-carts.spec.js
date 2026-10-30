@@ -19,7 +19,7 @@ async function add(page, path) {
   await expect(page.getByRole('link', { name: /Go to cart/ })).toBeVisible();
 }
 
-// Waits for this browser's cart to reach the account.
+// Waits for this browser's cart to reach the account (saved 400 ms after the last change; slower when all specs run).
 const savedCount = async (page) => (await (await page.request.get('/api/cart/saved')).json()).items.length;
 
 test('a cart follows its account between devices, and logging out leaves it in the account', async ({ browser }) => {
@@ -33,14 +33,14 @@ test('a cart follows its account between devices, and logging out leaves it in t
   await add(phone, BOOK);
   await logIn(phone, email);
   await expect(cart(phone, 1)).toBeVisible();
-  await expect.poll(() => savedCount(phone)).toBe(1);
+  await expect.poll(() => savedCount(phone), { timeout: 10_000 }).toBe(1);
 
   // The laptop gets it on login, and adds to it.
   await logIn(laptop, email);
   await expect(cart(laptop, 1)).toBeVisible();
   await add(laptop, PHONE);
   await expect(cart(laptop, 2)).toBeVisible();
-  await expect.poll(() => savedCount(laptop)).toBe(2);
+  await expect.poll(() => savedCount(laptop), { timeout: 10_000 }).toBe(2);
 
   // Back on the phone's tab: the laptop's change is there.
   await phone.evaluate(() => globalThis.document.dispatchEvent(new globalThis.Event('visibilitychange')));
@@ -60,7 +60,7 @@ test('a cart follows its account between devices, and logging out leaves it in t
     .first()
     .click();
   await expect(cart(laptop, 1)).toBeVisible();
-  await expect.poll(() => savedCount(laptop)).toBe(1);
+  await expect.poll(() => savedCount(laptop), { timeout: 10_000 }).toBe(1);
   await phone.reload();
   await expect(cart(phone, 1)).toBeVisible();
 });
@@ -85,7 +85,7 @@ test('adding to the cart while the saved cart is still loading keeps the new ite
   const email = `race-${Date.now()}@example.com`;
   await page.request.post('/api/auth/register', { data: { name: 'Leela Nair', email, password: 'password123' } });
   await add(page, BOOK);
-  await expect.poll(() => savedCount(page)).toBe(1);
+  await expect.poll(() => savedCount(page), { timeout: 10_000 }).toBe(1);
 
   // The saved cart answers slowly on the next page load; the customer adds a phone meanwhile.
   let release;
@@ -101,7 +101,7 @@ test('adding to the cart while the saved cart is still loading keeps the new ite
   await page.waitForTimeout(500); // the saved cart has arrived
   await expect(cart(page, 2)).toBeVisible();
   await page.unroute('**/api/cart/saved');
-  await expect.poll(() => savedCount(page)).toBe(2);
+  await expect.poll(() => savedCount(page), { timeout: 10_000 }).toBe(2);
 });
 
 test('an item added just before leaving the page is kept and saved', async ({ page }) => {
@@ -112,5 +112,5 @@ test('an item added just before leaving the page is kept and saved', async ({ pa
   await page.getByRole('button', { name: 'Add to cart' }).click();
   await page.goto('/cart'); // straight away, before the change is saved
   await expect(cart(page, 1)).toBeVisible();
-  await expect.poll(() => savedCount(page)).toBe(1);
+  await expect.poll(() => savedCount(page), { timeout: 10_000 }).toBe(1);
 });

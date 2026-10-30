@@ -2,7 +2,10 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import OrderSummary from '../components/OrderSummary.jsx';
 import PriceTag from '../components/PriceTag.jsx';
 import { MAX_QTY, cartCount, cartQuery, lineKey, removeFromCart, setQty, useCart } from '../cart.js';
-import { formatPrice, smallImage } from '../format.js';
+import { formatPrice, mrpSavingOf, smallImage } from '../format.js';
+import { CartIcon, ShieldIcon } from '../components/Icons.jsx';
+import RecentlyViewed from '../components/RecentlyViewed.jsx';
+import { RETURN_DAYS } from '../storeFacts.js';
 import { useFetch } from '../useFetch.js';
 
 // `qty` comes from the cart itself, so the select changes at once while the new quote loads.
@@ -100,6 +103,9 @@ export default function Cart() {
   if (!items.length) {
     return (
       <div className="empty-state">
+        <span className="empty-icon">
+          <CartIcon size={40} />
+        </span>
         <h1>Your cart is empty</h1>
         <p>Find something you like and add it here.</p>
         <Link to="/search" className="btn primary">
@@ -141,6 +147,7 @@ export default function Cart() {
           delivery={quote.delivery}
           total={quote.total}
           freeDeliveryMin={quote.freeDeliveryMin}
+          mrpSaving={mrpSavingOf(lines)}
         >
           {quote.cashback?.amount > 0 && (
             <p className="small cashback-note">
@@ -156,8 +163,12 @@ export default function Cart() {
           >
             Checkout
           </button>
+          <p className="reassure small">
+            <ShieldIcon size={16} /> Safe checkout · Cash on Delivery or pay online · {RETURN_DAYS}-day returns
+          </p>
         </OrderSummary>
       </div>
+      <RecentlyViewed />
     </>
   );
 }

@@ -19,9 +19,12 @@ export default function OrderSummary({
   // Quantity discounts (stage 99), likewise already taken off `subtotal`.
   quantitySaving = 0,
   dueLabel = 'To pay',
+  // How much less than MRP the items cost (paise), for "You save …" with the other savings; the cart and checkout.
+  mrpSaving = 0,
   children,
 }) {
   const short = freeDeliveryMin ? freeDeliveryMin - subtotal : 0;
+  const saving = mrpSaving + bundleSaving + quantitySaving + discount;
   return (
     <aside className="panel summary" aria-label="Order summary">
       <h2>Price details</h2>
@@ -62,7 +65,16 @@ export default function OrderSummary({
           </>
         )}
       </dl>
-      {delivery > 0 && short > 0 && <p className="muted small">Add {formatPrice(short)} more for free delivery.</p>}
+      {saving > 0 && <p className="saving-note">You save {formatPrice(saving)} on this order</p>}
+      {/* How close the cart is to free delivery, as words and a bar. */}
+      {freeDeliveryMin > 0 && delivery > 0 && short > 0 && (
+        <div className="free-delivery">
+          <p className="muted small">Add {formatPrice(short)} more for free delivery.</p>
+          <span className="free-delivery-bar" aria-hidden="true">
+            <span style={{ width: `${Math.min(100, (subtotal / freeDeliveryMin) * 100)}%` }} />
+          </span>
+        </div>
+      )}
       {children}
     </aside>
   );
