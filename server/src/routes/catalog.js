@@ -222,6 +222,8 @@ export const toProductCard = (doc) => ({
   sale: doc.sale ? { name: doc.sale.name, percent: doc.sale.percent, endsAt: doc.sale.endsAt } : null,
   // Not in stock yet (stage 92): { expected: 'YYYY-MM-DD' | null }, only while it has none.
   comingSoon: doc.comingSoon && doc.stock === 0 ? { expected: doc.comingSoon.expected ?? null } : null,
+  // "Buy N or more, P% off each" (stage 99), or null.
+  quantityDiscount: doc.quantityDiscount ?? null,
 });
 
 export function catalogRouter({ db }) {

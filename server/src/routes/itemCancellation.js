@@ -66,6 +66,11 @@ export function cancellationPlan(order, cancel) {
   const money = Math.min(moneyPaid, total);
   const newCreditUsed = moneyPaid ? total - money : Math.min(creditUsed, total);
   const bundleSaving = items.reduce((sum, i) => sum + (i.bundle ? (i.regularPrice - i.price) * i.qty : 0), 0);
+  // The units kept keep their quantity-discount price, even if fewer than its minimum are left (like a coupon).
+  const quantitySaving = items.reduce(
+    (sum, i) => sum + (i.quantityDiscount ? (i.regularPrice - i.price) * i.qty : 0),
+    0,
+  );
   return {
     items: items.filter((line) => line.qty > 0),
     cancelled: cancel.map((c) => {
@@ -84,6 +89,7 @@ export function cancellationPlan(order, cancel) {
     total,
     creditUsed: newCreditUsed,
     bundleSaving,
+    quantitySaving,
     // What the order no longer costs, and how it comes back.
     amount: order.total - total,
     refund: moneyPaid - money,
@@ -190,6 +196,7 @@ async function cancelItems(ctx, filter, body, user, role) {
           total: plan.total,
           ...(order.creditUsed && { creditUsed: plan.creditUsed }),
           ...(order.bundleSaving && { bundleSaving: plan.bundleSaving }),
+          ...(order.quantitySaving && { quantitySaving: plan.quantitySaving }),
           updatedAt: now,
         },
         $push: { cancellations: entry },

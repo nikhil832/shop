@@ -159,3 +159,6 @@ export function expectedText(comingSoon) {
   const today = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
   return day && day >= today ? `Expected ${arrivalDay(day)}` : null;
 }
+
+// A quantity discount (stage 99) in words: "Buy 3 or more, 10% off each".
+export const quantityOfferText = (offer) => `Buy ${offer.minQty} or more, ${offer.percent}% off each`;

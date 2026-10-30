@@ -15,7 +15,7 @@ import Gallery from '../components/Gallery.jsx';
 import ProductRow from '../components/ProductRow.jsx';
 import RecentlyViewed from '../components/RecentlyViewed.jsx';
 import { rememberViewed } from '../recent.js';
-import { expectedText, saleEndsIn } from '../format.js';
+import { expectedText, quantityOfferText, saleEndsIn } from '../format.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
 
@@ -185,6 +185,7 @@ export default function Product() {
             </p>
           )}
           <span className="muted small">Inclusive of all taxes</span>
+          {product.quantityDiscount && <p className="quantity-note">{quantityOfferText(product.quantityDiscount)}</p>}
           {product.variants.length > 0 && product.stock > 0 && (
             <>
               <VariantPicker product={product} chosen={chosen} onChoose={choose} />

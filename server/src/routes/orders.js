@@ -15,6 +15,7 @@ import { byOf, CANCEL_REASONS, movedEntry, recordStock } from '../stockHistory.j
 import { addCredit, amountDue } from '../credit.js';
 import { codAllowed } from '../cod.js';
 import { applyBundles, bundlesFor } from '../bundles.js';
+import { applyQuantityDiscounts } from '../quantityDiscounts.js';
 import { cashbackOn, cashbackSettings } from '../cashback.js';
 import { friendDiscount } from '../referrals.js';
 
@@ -146,6 +147,8 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   referral: Boolean(doc.referral),
   // Saved by bundles (stage 83): already in the bundled items' prices, so `subtotal` is after it.
   bundleSaving: doc.bundleSaving ?? 0,
+  // Saved by quantity discounts (stage 99): also already in the items' prices.
+  quantitySaving: doc.quantitySaving ?? 0,
   // Paid with store credit (stage 72); `total` less this is what was paid, or is to pay, in money.
   creditUsed: doc.creditUsed ?? 0,
   address: doc.address,
@@ -362,7 +365,16 @@ export function ordersRouter(ctx) {
         buyable.map((l) => l.productId),
       ),
     );
-    const totals = orderTotals(itemsTotal - bundled.saving);
+    // Quantity discounts (quantityDiscounts.js) on the units not in a bundle.
+    const quantity = applyQuantityDiscounts(
+      bundled.parts.flatMap((parts, n) => parts.map((part) => ({ ...part, productId: buyable[n].productId, line: n }))),
+      new Map(docs.map((d) => [d._id.toString(), d.quantityDiscount ?? null])),
+    );
+    // Each buyable line's discounted unit price, when its units qualify.
+    const quantityPrice = new Map(
+      quantity.parts.filter((part) => part.quantityDiscount).map((part) => [buyable[part.line], part.price]),
+    );
+    const totals = orderTotals(itemsTotal - bundled.saving - quantity.saving);
     // A coupon that can't be used is reported (couponError), not an error: the quote is still useful.
     let coupon = null;
     let couponError = null;
@@ -384,12 +396,19 @@ export function ordersRouter(ctx) {
     const cashback = await cashbackSettings(db);
     const itemsPaid = totals.subtotal - (coupon?.type === 'free_delivery' ? 0 : discount);
     res.json({
-      items: lines,
+      // `quantityDiscount` is the product's offer, `quantityPrice` the unit price once it applies (else null).
+      items: lines.map((l) => ({
+        ...l,
+        quantityDiscount:
+          l.product && byId.get(l.productId)?.quantityDiscount ? byId.get(l.productId).quantityDiscount : null,
+        quantityPrice: quantityPrice.get(l) ?? null,
+      })),
       cashback: cashback.enabled ? { amount: cashbackOn(itemsPaid, cashback), percent: cashback.percent } : null,
-      // `subtotal` (below) is after bundle savings; `itemsTotal` before them.
+      // `subtotal` (below) is after bundle and quantity savings; `itemsTotal` before them.
       itemsTotal,
       bundles: bundled.applied,
       bundleSaving: bundled.saving,
+      quantitySaving: quantity.saving,
       ...withDiscount(totals, discount),
       coupon,
       referral: referral ? { discount: referral } : null,
@@ -415,6 +434,7 @@ export function ordersRouter(ctx) {
         const now = new Date();
         const items = [];
         const moved = []; // stock history, numbered with the order once it has one
+        const offers = new Map(); // productId → its quantity discount (quantityDiscounts.js)
         // With GST on, each item remembers its rate and HSN code, and the order the store's details (gst.js).
         const gst = await gstForOrders(db, session);
         for (const { productId, variantId, qty } of body.items) {
@@ -448,6 +468,7 @@ export function ordersRouter(ctx) {
             );
           }
           const variant = vid ? findVariant(doc, vid) : null;
+          offers.set(productId, doc.quantityDiscount ?? null);
           moved.push(movedEntry(doc, vid, -qty, { reason: 'ordered', by: null, at: now }));
           items.push({
             productId: _id,
@@ -483,6 +504,18 @@ export function ordersRouter(ctx) {
             })),
           );
           items.splice(0, items.length, ...split);
+        }
+        // Quantity discounts on the units not in a bundle: those items keep their lower price and the regular one.
+        const quantity = applyQuantityDiscounts(
+          items.map((i) => ({ ...i, productId: i.productId.toString() })),
+          offers,
+        );
+        if (quantity.saving) {
+          items.splice(
+            0,
+            items.length,
+            ...quantity.parts.map((part, n) => ({ ...part, productId: items[n].productId })),
+          );
         }
         const before = orderTotals(items.reduce((sum, i) => sum + i.price * i.qty, 0));
         const orderId = new ObjectId();
@@ -539,6 +572,7 @@ export function ordersRouter(ctx) {
           // Online orders hold their stock while the customer pays; expireUnpaidOrders releases it if they don't.
           ...(body.creditToUse && { creditUsed: body.creditToUse }),
           ...(bundled.saving && { bundleSaving: bundled.saving }),
+          ...(quantity.saving && { quantitySaving: quantity.saving }),
           // Its discount is a referred friend's welcome (stage 87); the referrer's reward is set later.
           ...(referral && { referral }),
           // When it should arrive (stage 86), from the delivery area's days, kept as promised at the time.

@@ -298,6 +298,9 @@ export default function AdminOrder() {
                     <td>
                       {can(user, '*') ? <Link to={`/admin/products/${i.productId}`}>{i.title}</Link> : i.title}
                       {i.bundle && <span className="muted small"> · {i.bundle.name}</span>}
+                      {i.quantityDiscount && (
+                        <span className="muted small"> · {i.quantityDiscount.percent}% quantity discount</span>
+                      )}
                       {can(user, 'stock.history') && (
                         <>
                           {' '}
@@ -457,6 +460,7 @@ export default function AdminOrder() {
           count={order.items.reduce((n, i) => n + i.qty, 0)}
           subtotal={order.subtotal}
           bundleSaving={order.bundleSaving}
+          quantitySaving={order.quantitySaving}
           delivery={order.delivery}
           discount={order.discount}
           couponCode={order.coupon?.code}

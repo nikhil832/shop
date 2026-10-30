@@ -459,6 +459,11 @@ function ProductForm({ product, categories }) {
       comingSoon: form.get('comingSoon') === 'on' ? { expected: form.get('expected') || null } : null,
       // '' is the category's size guide (stage 88).
       sizeGuide: form.get('sizeGuide') || null,
+      // Both boxes empty: no quantity discount (stage 99); one empty is refused by the server.
+      quantityDiscount:
+        form.get('minQty') === '' && form.get('percentOff') === ''
+          ? null
+          : { minQty: Number(form.get('minQty')), percent: Number(form.get('percentOff')) },
     };
     setState({ busy: true, error: null });
     try {
@@ -573,6 +578,35 @@ function ProductForm({ product, categories }) {
           Expected on (optional)
           <input name="expected" type="date" defaultValue={product?.comingSoon?.expected ?? ''} />
         </label>
+        <fieldset className="quantity-offer">
+          <legend>Quantity discount (optional)</legend>
+          <p className="muted small">
+            &ldquo;Buy 3 or more, 10% off each&rdquo;: every size and colour counts towards it, units in a bundle
+            don&apos;t. Leave both empty for none.
+          </p>
+          <label>
+            From how many
+            <input
+              name="minQty"
+              type="number"
+              min="2"
+              max="50"
+              step="1"
+              defaultValue={product?.quantityDiscount?.minQty ?? ''}
+            />
+          </label>
+          <label>
+            Percent off each
+            <input
+              name="percentOff"
+              type="number"
+              min="1"
+              max="50"
+              step="1"
+              defaultValue={product?.quantityDiscount?.percent ?? ''}
+            />
+          </label>
+        </fieldset>
         {guides?.items.length > 0 && (
           <label>
             Size guide

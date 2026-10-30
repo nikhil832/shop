@@ -16,6 +16,8 @@ export default function OrderSummary({
   // Bundle savings (stage 83): `subtotal` is after them, so Items shows the prices before.
   bundleSaving = 0,
   bundles = [],
+  // Quantity discounts (stage 99), likewise already taken off `subtotal`.
+  quantitySaving = 0,
   dueLabel = 'To pay',
   children,
 }) {
@@ -25,7 +27,7 @@ export default function OrderSummary({
       <h2>Price details</h2>
       <dl>
         <dt>Items ({count})</dt>
-        <dd>{formatPrice(subtotal + bundleSaving)}</dd>
+        <dd>{formatPrice(subtotal + bundleSaving + quantitySaving)}</dd>
         {bundleSaving > 0 && (
           <>
             <dt>
@@ -33,6 +35,12 @@ export default function OrderSummary({
               {bundles.length > 0 && <span className="muted small block">{bundles.map((b) => b.name).join(', ')}</span>}
             </dt>
             <dd className="free">−{formatPrice(bundleSaving)}</dd>
+          </>
+        )}
+        {quantitySaving > 0 && (
+          <>
+            <dt>Quantity discounts</dt>
+            <dd className="free">−{formatPrice(quantitySaving)}</dd>
           </>
         )}
         <dt>Delivery</dt>

@@ -237,6 +237,12 @@ export default function Order() {
                       {i.title}
                     </Link>
                     {i.bundle && <span className="muted small">In the &ldquo;{i.bundle.name}&rdquo; bundle</span>}
+                    {i.quantityDiscount && (
+                      <span className="muted small">
+                        {i.quantityDiscount.percent}% off for {i.quantityDiscount.minQty} or more (was{' '}
+                        {formatPrice(i.regularPrice)})
+                      </span>
+                    )}
                     <span className="muted small">
                       {formatPrice(i.price)} × {i.qty}
                     </span>
@@ -359,6 +365,7 @@ export default function Order() {
           count={count}
           subtotal={order.subtotal}
           bundleSaving={order.bundleSaving}
+          quantitySaving={order.quantitySaving}
           delivery={order.delivery}
           discount={order.discount}
           couponCode={order.coupon?.code}

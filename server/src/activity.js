@@ -93,6 +93,10 @@ export function productChanges(before, after, categoryName) {
   const soon = (doc) =>
     doc.comingSoon ? `yes${doc.comingSoon.expected ? `, expected ${doc.comingSoon.expected}` : ''}` : 'no';
   push(changes, 'Coming soon', soon(before), soon(after));
+  // Quantity discount (stage 99).
+  const offer = (doc) =>
+    doc.quantityDiscount ? `${doc.quantityDiscount.percent}% off from ${doc.quantityDiscount.minQty}` : 'none';
+  push(changes, 'Quantity discount', offer(before), offer(after));
 
   const variantsBefore = before.variants ?? [];
   const variantsAfter = after.variants ?? [];

@@ -6,7 +6,8 @@ import { formatPrice, smallImage } from '../format.js';
 import { useFetch } from '../useFetch.js';
 
 // `qty` comes from the cart itself, so the select changes at once while the new quote loads.
-function CartLine({ line, qty }) {
+// `units`: how many of this product the cart holds in all (every size and colour counts towards a quantity discount).
+function CartLine({ line, qty, units }) {
   // `stock`, `price` and `mrp` are the chosen variant's, or the product's.
   const { product, problem, variant, stock } = line;
   if (!product) {
@@ -39,6 +40,20 @@ function CartLine({ line, qty }) {
         {variant && <span className="muted small">{variant.description}</span>}
         <PriceTag price={line.price || product.price} mrp={line.mrp || product.mrp} />
         {problem && <span className="problem">{problem}</span>}
+        {/* A quantity discount (stage 99): what it saves once it applies, or how many more it needs. */}
+        {line.quantityDiscount &&
+          (line.quantityPrice !== null ? (
+            <span className="quantity-note">
+              {line.quantityDiscount.percent}% off for {line.quantityDiscount.minQty} or more:{' '}
+              {formatPrice(line.quantityPrice)} each
+            </span>
+          ) : (
+            units < line.quantityDiscount.minQty && (
+              <span className="quantity-note">
+                Add {line.quantityDiscount.minQty - units} more for {line.quantityDiscount.percent}% off each
+              </span>
+            )
+          ))}
         <div className="cart-actions">
           <label className="qty">
             Qty
@@ -98,6 +113,7 @@ export default function Cart() {
 
   const qtyOf = new Map(items.map((i) => [lineKey(i), i.qty]));
   const lines = quote.items.filter((line) => qtyOf.has(lineKey(line)));
+  const unitsOf = (productId) => items.filter((i) => i.productId === productId).reduce((n, i) => n + i.qty, 0);
 
   return (
     <>
@@ -107,7 +123,12 @@ export default function Cart() {
           <h1>Cart ({cartCount(items)})</h1>
           <ul className="cart-lines">
             {lines.map((line) => (
-              <CartLine key={lineKey(line)} line={line} qty={qtyOf.get(lineKey(line))} />
+              <CartLine
+                key={lineKey(line)}
+                line={line}
+                qty={qtyOf.get(lineKey(line))}
+                units={unitsOf(line.productId)}
+              />
             ))}
           </ul>
         </section>
@@ -115,6 +136,7 @@ export default function Cart() {
           count={cartCount(quote.items)}
           subtotal={quote.subtotal}
           bundleSaving={quote.bundleSaving}
+          quantitySaving={quote.quantitySaving}
           bundles={quote.bundles}
           delivery={quote.delivery}
           total={quote.total}

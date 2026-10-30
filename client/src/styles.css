@@ -3636,3 +3636,28 @@ textarea {
     overflow: visible;
   }
 }
+/* Quantity discounts (stage 99): the offer on the product page and in the cart. */
+.quantity-note {
+  margin: 0;
+  color: var(--success);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.quantity-offer {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+.quantity-offer legend {
+  font-weight: 600;
+  padding: 0 4px;
+}
+.quantity-offer p {
+  flex-basis: 100%;
+  margin: 0;
+}

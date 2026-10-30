@@ -1,3 +1,4 @@
+import { quantityDiscountField } from '../quantityDiscounts.js';
 import express from 'express';
 import { ObjectId } from 'mongodb';
 import { z } from 'zod';
@@ -52,6 +53,8 @@ const productFields = z.object({
         .default(null),
     })
     .nullable(),
+  // "Buy N or more, P% off each" (stage 99, quantityDiscounts.js); null for none.
+  quantityDiscount: quantityDiscountField,
   images: z.array(imageRef).max(5),
   // Descriptions of uploaded photos for screen readers, by photo address (stage 59); empty ones are dropped.
   imageAlts: z
@@ -98,6 +101,7 @@ const createProduct = productFields
     cost: productFields.shape.cost.default(null),
     sizeGuide: productFields.shape.sizeGuide.default(null),
     comingSoon: productFields.shape.comingSoon.default(null),
+    quantityDiscount: productFields.shape.quantityDiscount.default(null),
     // With variants, the product's own price, MRP and stock come from them.
     price: productFields.shape.price.optional(),
     mrp: productFields.shape.mrp.optional(),
@@ -276,6 +280,7 @@ const toAdminProduct = (doc) => ({
   cost: doc.cost ?? null,
   sizeGuide: doc.sizeGuide ?? null,
   comingSoon: doc.comingSoon ?? null,
+  quantityDiscount: doc.quantityDiscount ?? null,
   images: doc.images,
   imageAlts: imageAltsOf(doc),
   active: doc.active,

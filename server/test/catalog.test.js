@@ -38,6 +38,7 @@ test('lists products with paging and totals', async () => {
     'mrp',
     'price',
     'priceFrom',
+    'quantityDiscount',
     'rating',
     'sale',
     'slug',

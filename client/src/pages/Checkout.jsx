@@ -366,6 +366,7 @@ export default function Checkout() {
         count={cartCount(quote.items)}
         subtotal={quote.subtotal}
         bundleSaving={quote.bundleSaving}
+        quantitySaving={quote.quantitySaving}
         bundles={quote.bundles}
         delivery={quote.delivery}
         discount={quote.discount}

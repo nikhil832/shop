@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-30, roughly in the order they'd help most. All free (no new services).
 
-- **Quantity discounts**: per product, e.g. "Buy 3 or more, 10% off each", shown on the product page and applied in the
-  cart and at checkout (lines and GST worked out like bundles). Good for everyday items and wholesale customers. To
-  start: "start quantity discounts".
 - **Product performance**: Admin → Products gains views, add-to-carts and orders per product for 7/30 days, counted per
   day with nothing stored about visitors, so you can see which products are looked at but not bought (price or photos
   to fix). To start: "start product performance".
@@ -127,3 +124,4 @@ Suggested on 2026-10-30, roughly in the order they'd help most. All free (no new
 | Helpful reviews: "Helpful" votes on reviews, sorting by most helpful, filters by stars (from a breakdown) and with photos                                                 | Stage 96 (`git log --grep "Stage 96"`) |
 | Cancel some items: customers or admins cancel part of an order before it ships, with the new total shown first, stock back, a part refund or credit back                  | Stage 97 (`git log --grep "Stage 97"`) |
 | Stocktake: printable count sheets per category, counted numbers checked against what should be on the shelf, saved as "Stocktake" in stock history                        | Stage 98 (`git log --grep "Stage 98"`) |
+| Quantity discounts: "Buy N or more, P% off each" per product, on the product page and in the cart, kept on the order's items                                              | Stage 99 (`git log --grep "Stage 99"`) |
