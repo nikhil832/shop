@@ -32,6 +32,7 @@ test('with nothing set up, every PIN is delivered in 3–7 days, with India-time
     minDays: 3,
     maxDays: 7,
     area: null,
+    extraCharge: 0,
     from: istDate(3),
     to: istDate(7),
   });
@@ -76,7 +77,7 @@ test('areas by PIN prefix: the longest match wins; everywhere else can be switch
   assert.equal((await check('110001')).body.deliverable, false);
   assert.equal((await check('560001')).body.deliverable, true);
   const list = (await admin('GET', '/admin/delivery')).body;
-  assert.deepEqual(list.everywhereElse, { deliverable: false, minDays: 0, maxDays: 0 });
+  assert.deepEqual(list.everywhereElse, { deliverable: false, minDays: 0, maxDays: 0, extraCharge: 0 });
   assert.deepEqual(
     list.zones.map((z) => z.prefix),
     ['56', '560', '79'],

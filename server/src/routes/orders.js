@@ -38,6 +38,10 @@ export const orderTotals = (subtotal) => {
   const delivery = subtotal >= FREE_DELIVERY_MIN ? 0 : DELIVERY_FEE;
   return { subtotal, delivery, total: subtotal + delivery };
 };
+// A far-off area's extra charge (stage 111, routes/delivery.js) goes into `delivery`, so invoices, GST, emails and a
+// free-delivery coupon treat it as delivery; orders also keep it as `deliveryExtra` to say so.
+const withDeliveryExtra = (totals, extra) =>
+  extra ? { ...totals, delivery: totals.delivery + extra, total: totals.total + extra } : totals;
 
 // A cart line: a product, and which variant for a product that has them (e.g. its size).
 const lineKey = (i) => (i.variantId ? `${i.productId}.${i.variantId}` : i.productId);
@@ -60,6 +64,11 @@ const quoteQuery = z.object({
   coupon: z.string().trim().max(40).optional(),
   // Gift wrapping chosen at checkout (stage 104): its fee is added when the store offers it.
   giftWrap: z.enum(['1']).optional(),
+  // The PIN code it would go to (stage 111): its area's extra delivery charge is added.
+  pincode: z
+    .string()
+    .regex(/^[1-9]\d{5}$/)
+    .optional(),
   // A friend's referral code (stage 87), for a visitor who'll make their account at checkout.
   ref: z.string().trim().max(20).optional(),
   items: z
@@ -168,6 +177,8 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   bundleSaving: doc.bundleSaving ?? 0,
   // Saved by quantity discounts (stage 99): also already in the items' prices.
   quantitySaving: doc.quantitySaving ?? 0,
+  // The part of `delivery` that is the area's extra charge (stage 111).
+  deliveryExtra: doc.deliveryExtra ?? 0,
   // A gift (stage 104): { message, wrap } or null, and the wrapping fee paid (in `total`, like delivery).
   gift: doc.gift ?? null,
   giftWrap: doc.giftWrap ?? 0,
@@ -396,7 +407,9 @@ export function ordersRouter(ctx) {
     const quantityPrice = new Map(
       quantity.parts.filter((part) => part.quantityDiscount).map((part) => [buyable[part.line], part.price]),
     );
-    const totals = orderTotals(itemsTotal - bundled.saving - quantity.saving);
+    // A far-off area's extra delivery charge (stage 111), when checkout says where it's going.
+    const deliveryExtra = query.pincode ? (await deliveryFor(db, query.pincode)).extraCharge : 0;
+    const totals = withDeliveryExtra(orderTotals(itemsTotal - bundled.saving - quantity.saving), deliveryExtra);
     // A coupon that can't be used is reported (couponError), not an error: the quote is still useful.
     let coupon = null;
     let couponError = null;
@@ -435,6 +448,7 @@ export function ordersRouter(ctx) {
       bundles: bundled.applied,
       bundleSaving: bundled.saving,
       quantitySaving: quantity.saving,
+      deliveryExtra,
       ...priced,
       total: priced.total + giftWrap,
       giftWrap,
@@ -546,7 +560,10 @@ export function ordersRouter(ctx) {
             ...quantity.parts.map((part, n) => ({ ...part, productId: items[n].productId })),
           );
         }
-        const before = orderTotals(items.reduce((sum, i) => sum + i.price * i.qty, 0));
+        const before = withDeliveryExtra(
+          orderTotals(items.reduce((sum, i) => sum + i.price * i.qty, 0)),
+          delivery.extraCharge,
+        );
         const orderId = new ObjectId();
         let coupon = null;
         let discount = 0;
@@ -605,6 +622,7 @@ export function ordersRouter(ctx) {
           ...(body.creditToUse && { creditUsed: body.creditToUse }),
           ...(bundled.saving && { bundleSaving: bundled.saving }),
           ...(quantity.saving && { quantitySaving: quantity.saving }),
+          ...(delivery.extraCharge && { deliveryExtra: delivery.extraCharge }),
           ...(body.gift && { gift: body.gift }),
           ...(giftWrap && { giftWrap }),
           // Its discount is a referred friend's welcome (stage 87); the referrer's reward is set later.

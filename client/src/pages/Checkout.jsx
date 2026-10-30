@@ -181,6 +181,8 @@ export default function Checkout() {
   const [useCredit, setUseCredit] = useState(true);
   // The PIN code the order would go to: a saved address's, or what's typed (null: the default address's).
   const [pin, setPin] = useState(null);
+  // Where it's going, for an area's extra delivery charge in the quote (stage 111): typed, chosen or the default.
+  const quotePin = pin ?? user?.addresses?.[0]?.pincode;
   // Gift options (stage 104): kept here, not as named form fields (those are read as the address).
   const [gift, setGift] = useState({ on: false, wrap: false, message: '' });
   // Which payment is chosen, for the gift panel's note about Cash on Delivery.
@@ -193,7 +195,7 @@ export default function Checkout() {
     loading,
   } = useFetch(
     user !== undefined && items.length
-      ? `/cart?items=${cartQuery(items)}${coupon ? `&coupon=${encodeURIComponent(coupon)}` : ''}${!user && referralCode() ? `&ref=${referralCode()}` : ''}${gift.on && gift.wrap ? '&giftWrap=1' : ''}`
+      ? `/cart?items=${cartQuery(items)}${coupon ? `&coupon=${encodeURIComponent(coupon)}` : ''}${!user && referralCode() ? `&ref=${referralCode()}` : ''}${gift.on && gift.wrap ? '&giftWrap=1' : ''}${/^[1-9]\d{5}$/.test(quotePin ?? '') ? `&pincode=${quotePin}` : ''}`
       : null,
     state.version,
   );
@@ -424,6 +426,7 @@ export default function Checkout() {
         discountLabel={quote.referral ? "Friend's welcome" : null}
         mrpSaving={mrpSavingOf(quote.items)}
         giftWrap={quote.giftWrap}
+        deliveryExtra={quote.deliveryExtra}
         total={quote.total}
         freeDeliveryMin={quote.freeDeliveryMin}
         creditUsed={creditToUse}

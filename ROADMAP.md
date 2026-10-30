@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-30 (third list), roughly in the order they'd help most. All free (no new services).
 
-- **Delivery charge by area**: delivery areas (Admin → Delivery) can add an extra charge for far-off PIN codes (the
-  North East, islands), shown with the delivery dates and at checkout. Couriers charge more there. To start: "start
-  area charges".
 - **Lowest price in 30 days**: the store keeps each product's price history from now on and the product page says
   "Lowest price in 30 days" when it is, or shows the lowest, so discounts can be trusted. To start: "start price
   history".
@@ -142,3 +139,4 @@ Suggested on 2026-10-30 (third list), roughly in the order they'd help most. All
 | Track an order without logging in: by order number and delivery PIN code, progress and tracking only                                                                                  | Stage 108 (`git log --grep "Stage 108"`) |
 | Shop by size: a size filter on search (in stock only), with the shopper's sizes remembered                                                                                            | Stage 109 (`git log --grep "Stage 109"`) |
 | Log in with an email code: a 6-digit code by email instead of the password, limited like the password                                                                                 | Stage 110 (`git log --grep "Stage 110"`) |
+| Delivery charge by area: an extra charge per delivery area, added to delivery and shown with the PIN check and at checkout                                                            | Stage 111 (`git log --grep "Stage 111"`) |

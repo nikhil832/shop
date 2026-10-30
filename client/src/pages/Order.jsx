@@ -371,6 +371,7 @@ export default function Order() {
           subtotal={order.subtotal}
           bundleSaving={order.bundleSaving}
           giftWrap={order.giftWrap}
+          deliveryExtra={order.deliveryExtra}
           quantitySaving={order.quantitySaving}
           delivery={order.delivery}
           discount={order.discount}

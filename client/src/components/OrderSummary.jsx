@@ -23,6 +23,8 @@ export default function OrderSummary({
   mrpSaving = 0,
   // Gift wrapping's fee (stage 104), a charge like delivery.
   giftWrap = 0,
+  // The part of `delivery` that a far-off area adds (stage 111).
+  deliveryExtra = 0,
   children,
 }) {
   const short = freeDeliveryMin ? freeDeliveryMin - subtotal : 0;
@@ -48,7 +50,12 @@ export default function OrderSummary({
             <dd className="free">−{formatPrice(quantitySaving)}</dd>
           </>
         )}
-        <dt>Delivery</dt>
+        <dt>
+          Delivery
+          {deliveryExtra > 0 && (
+            <span className="muted small block">Includes {formatPrice(deliveryExtra)} for this area</span>
+          )}
+        </dt>
         <dd className={delivery ? '' : 'free'}>{delivery ? formatPrice(delivery) : 'Free'}</dd>
         {giftWrap > 0 && (
           <>

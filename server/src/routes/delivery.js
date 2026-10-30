@@ -7,7 +7,7 @@ import { logActivity } from '../activity.js';
 // Where the store delivers, and how fast: areas by PIN code prefix ("560" = Bengaluru, 1–2 days; "79" = not
 // delivered), the longest matching prefix winning, and a rule for everywhere else. Customers check a PIN on the product
 // page; checkout refuses an address the store doesn't deliver to. With nothing set up, everywhere takes 3–7 days.
-export const DEFAULT_RULE = { deliverable: true, minDays: 3, maxDays: 7 };
+export const DEFAULT_RULE = { deliverable: true, minDays: 3, maxDays: 7, extraCharge: 0 };
 const SETTINGS_ID = 'delivery';
 const IST_OFFSET = 330 * 60_000;
 const DAY = 86_400_000;
@@ -17,9 +17,22 @@ const pincode = z
   .trim()
   .regex(/^[1-9]\d{5}$/, 'Enter a 6-digit PIN code');
 const days = z.number().int().min(0).max(30);
-// A rule: delivered in minDays–maxDays, or not delivered (then the days are ignored).
+// A rule: delivered in minDays–maxDays, or not delivered (then the days are ignored). `extraCharge` (stage 111, paise,
+// whole rupees) is added to the delivery charge of orders to the area, even when delivery is otherwise free: couriers
+// charge more for far-off places.
 const rule = z
-  .object({ deliverable: z.boolean(), minDays: days.default(0), maxDays: days.default(0) })
+  .object({
+    deliverable: z.boolean(),
+    minDays: days.default(0),
+    maxDays: days.default(0),
+    extraCharge: z
+      .number()
+      .int()
+      .min(0)
+      .max(50_000, 'At most ₹500')
+      .refine((n) => n % 100 === 0, 'Whole rupees only')
+      .default(0),
+  })
   .refine((r) => !r.deliverable || r.minDays <= r.maxDays, {
     message: "The fastest delivery can't be slower than the slowest",
     path: ['maxDays'],
@@ -41,6 +54,7 @@ const toZone = (z) => ({
   deliverable: z.deliverable,
   minDays: z.minDays,
   maxDays: z.maxDays,
+  extraCharge: z.extraCharge ?? 0,
 });
 
 // The rule for one PIN code: its longest matching area, or the one for everywhere else.
@@ -55,12 +69,22 @@ export async function deliveryFor(db, pin) {
   ]);
   const zone = zones.sort((a, b) => b.prefix.length - a.prefix.length)[0];
   const r = zone ?? settings?.everywhereElse ?? DEFAULT_RULE;
-  return { deliverable: r.deliverable, minDays: r.minDays, maxDays: r.maxDays, area: zone?.name || null };
+  return {
+    deliverable: r.deliverable,
+    minDays: r.minDays,
+    maxDays: r.maxDays,
+    area: zone?.name || null,
+    // Added to the delivery charge (stage 111); none where the store doesn't deliver.
+    extraCharge: r.deliverable ? (r.extraCharge ?? 0) : 0,
+  };
 }
 
 // "2026-10-27": the India-time date `n` days after `now`.
 // "2–4 days", or "no delivery", for the activity log.
-const ruleText = (r) => (r.deliverable ? `${r.minDays}–${r.maxDays} days` : 'no delivery');
+const ruleText = (r) =>
+  r.deliverable
+    ? `${r.minDays}–${r.maxDays} days${r.extraCharge ? `, +₹${(r.extraCharge / 100).toLocaleString('en-IN')}` : ''}`
+    : 'no delivery';
 const zoneText = (z) => `${z.prefix}${z.name ? ` (${z.name})` : ''}, ${ruleText(z)}`;
 
 // The India-time date `n` days after `now`, as 'YYYY-MM-DD'.
@@ -91,7 +115,7 @@ export function deliveryRouter({ db }) {
       zones.find().sort({ prefix: 1 }).toArray(),
       settings.findOne({ _id: SETTINGS_ID }),
     ]);
-    res.json({ everywhereElse: doc?.everywhereElse ?? DEFAULT_RULE, zones: list.map(toZone) });
+    res.json({ everywhereElse: { ...DEFAULT_RULE, ...doc?.everywhereElse }, zones: list.map(toZone) });
   });
 
   router.put('/admin/delivery/everywhere-else', async (req, res) => {

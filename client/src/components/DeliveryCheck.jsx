@@ -75,7 +75,7 @@ function Check({ initial }) {
               : data.deliverable
                 ? `Delivered to ${data.pincode}${data.area ? ` (${data.area})` : ''} by ${
                     data.from === data.to ? formatDay(data.to) : `${formatDay(data.from)} – ${formatDay(data.to)}`
-                  }`
+                  }${data.extraCharge ? `, ₹${(data.extraCharge / 100).toLocaleString('en-IN')} extra for delivery there` : ''}`
                 : `Sorry, we don't deliver to ${data.pincode} yet.`}
       </p>
     </form>

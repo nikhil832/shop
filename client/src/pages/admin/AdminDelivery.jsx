@@ -131,12 +131,22 @@ function ruleFrom(form) {
   const f = Object.fromEntries(new FormData(form));
   const deliverable = f.deliverable === 'yes';
   return deliverable
-    ? { deliverable, minDays: Number(f.minDays), maxDays: Number(f.maxDays) }
+    ? {
+        deliverable,
+        minDays: Number(f.minDays),
+        maxDays: Number(f.maxDays),
+        // Rupees in the form; paise for the API (stage 111).
+        extraCharge: Math.round(Number(f.extraCharge || 0) * 100),
+      }
     : { deliverable, minDays: 0, maxDays: 0 };
 }
 
 const describe = (r) =>
-  r.deliverable ? (r.minDays === r.maxDays ? `${r.minDays} days` : `${r.minDays}–${r.maxDays} days`) : 'Not delivered';
+  r.deliverable
+    ? `${r.minDays === r.maxDays ? `${r.minDays} days` : `${r.minDays}–${r.maxDays} days`}${
+        r.extraCharge ? `, +₹${(r.extraCharge / 100).toLocaleString('en-IN')} delivery` : ''
+      }`
+    : 'Not delivered';
 
 // The yes/no and days fields shared by the "everywhere else" rule and the areas.
 function RuleFields({ rule, id }) {
@@ -164,6 +174,18 @@ function RuleFields({ rule, id }) {
           <label>
             Slowest, days
             <input name="maxDays" type="number" min="0" max="30" required defaultValue={rule?.maxDays ?? 5} />
+          </label>
+          <label>
+            Extra charge (₹)
+            <input
+              name="extraCharge"
+              type="number"
+              min="0"
+              max="500"
+              step="1"
+              defaultValue={rule?.extraCharge ? rule.extraCharge / 100 : ''}
+              placeholder="None"
+            />
           </label>
         </>
       )}
