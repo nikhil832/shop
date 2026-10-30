@@ -68,7 +68,7 @@ test('the customer changes the address before it ships: checked, new dates, hist
   const same = await change(home);
   assert.equal(same.status, 400);
   assert.equal(same.body.error, 'That is already the delivery address');
-  const far = await change({ ...office, pincode: '744101' });
+  const far = await change({ ...office, city: 'Port Blair', state: 'Andaman and Nicobar Islands', pincode: '744101' });
   assert.equal(far.status, 409);
   assert.equal(far.body.error, "Sorry, we don't deliver to 744101 yet.");
   assert.equal((await (await register())('POST', `/orders/${placed.id}/address`, office)).status, 404);

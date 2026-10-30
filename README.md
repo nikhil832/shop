@@ -137,6 +137,7 @@ Built in stages. Done so far:
 102. **Buy bar on phones**: on a phone, once a product page's own buttons scroll out of view, a bar at the bottom of the screen keeps the price, Add to cart and Buy now (or "Choose a size", which takes you back to the sizes).
 103. **Payment reminders**: an online order still unpaid 10 minutes after it was placed gets one email ("Complete your payment") with what's held, until when, and a Pay now link to the order, while there are at least 5 minutes left. Razorpay is asked first, so a customer who paid but whose browser never came back gets their confirmation instead.
 104. **Gift options**: at checkout, "This is a gift" adds a message (up to 200 characters) for the packing slip, which shows no prices, and, when switched on in Admin → Delivery, gift wrapping for a fee (₹49 by default). The fee is added like delivery (its own line on the GST invoice, never refunded by returns or item cancellations); the order pages, emails, packing slip and export show the gift.
+105. **PIN code check**: the address form asks for the PIN code before the city and state, fills in the state when the PIN code has only one, and warns when the typed state isn't one the PIN code is in; the server refuses such addresses everywhere (checkout, address book, address changes), as a wrong state puts the wrong tax on a GST invoice. Worked out from the PIN code's first three digits, with no outside service.
 
 What's next: see [ROADMAP.md](ROADMAP.md).
 

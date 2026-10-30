@@ -139,7 +139,8 @@ async function placeOrder(slug, state = 'Karnataka') {
       line1: '1 Main Road',
       city: 'Somewhere',
       state,
-      pincode: '560001',
+      // A PIN code in that state (the address is checked against it).
+      pincode: { Karnataka: '560001', Kerala: '682001' }[state],
     },
     expectedTotal: quote.body.total,
   });

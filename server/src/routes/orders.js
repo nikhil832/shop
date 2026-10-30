@@ -18,6 +18,7 @@ import { applyBundles, bundlesFor } from '../bundles.js';
 import { applyQuantityDiscounts } from '../quantityDiscounts.js';
 import { giftBody, giftSettings, giftWrapFee } from '../giftOptions.js';
 import { cashbackOn, cashbackSettings } from '../cashback.js';
+import { statesForPin } from '../pinStates.js';
 import { friendDiscount } from '../referrals.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
@@ -78,35 +79,48 @@ const quoteQuery = z.object({
 });
 
 // Also used by the account page's saved address.
-export const address = z.object({
-  name: z.string().trim().min(1, 'Enter the recipient name').max(80),
-  phone: z
-    .string()
-    .trim()
-    .regex(/^[6-9]\d{9}$/, 'Enter a 10-digit mobile number'),
-  line1: z.string().trim().min(1, 'Enter the address').max(120),
-  line2: z.string().trim().max(120).default(''),
-  city: z.string().trim().min(1, 'Enter the city').max(60),
-  // A state or union territory from the list, stored by its proper name ("tamilnadu" → "Tamil Nadu"): GST invoices
-  // compare it with the store's state.
-  state: z
-    .string()
-    .trim()
-    .min(1, 'Enter the state')
-    .max(60)
-    .transform((s, ctx) => {
-      const found = findState(s);
-      if (!found) {
-        ctx.addIssue({ code: 'custom', message: 'Choose a state or union territory from the list' });
-        return z.NEVER;
-      }
-      return found.name;
-    }),
-  pincode: z
-    .string()
-    .trim()
-    .regex(/^[1-9]\d{5}$/, 'Enter a 6-digit PIN code'),
-});
+export const address = z
+  .object({
+    name: z.string().trim().min(1, 'Enter the recipient name').max(80),
+    phone: z
+      .string()
+      .trim()
+      .regex(/^[6-9]\d{9}$/, 'Enter a 10-digit mobile number'),
+    line1: z.string().trim().min(1, 'Enter the address').max(120),
+    line2: z.string().trim().max(120).default(''),
+    city: z.string().trim().min(1, 'Enter the city').max(60),
+    // A state or union territory from the list, stored by its proper name ("tamilnadu" → "Tamil Nadu"): GST invoices
+    // compare it with the store's state.
+    state: z
+      .string()
+      .trim()
+      .min(1, 'Enter the state')
+      .max(60)
+      .transform((s, ctx) => {
+        const found = findState(s);
+        if (!found) {
+          ctx.addIssue({ code: 'custom', message: 'Choose a state or union territory from the list' });
+          return z.NEVER;
+        }
+        return found.name;
+      }),
+    pincode: z
+      .string()
+      .trim()
+      .regex(/^[1-9]\d{5}$/, 'Enter a 6-digit PIN code'),
+  })
+  // The state must be one its PIN code is in (stage 105, pinStates.js): a wrong state puts the wrong tax on a GST
+  // invoice. PIN codes whose prefix isn't known aren't checked.
+  .superRefine((a, ctx) => {
+    const states = statesForPin(a.pincode);
+    if (states && !states.includes(a.state)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: `PIN code ${a.pincode} is in ${states.join(' or ')}, not ${a.state}`,
+      });
+    }
+  });
 
 const orderBody = z.object({
   items: cartItems,

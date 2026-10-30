@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-30 (after the UI rounds), roughly in the order they'd help most. All free (no new services).
 
-- **State from the PIN code**: typing a PIN code fills in the state (from its first digits, no outside service), and a
-  state that doesn't match the PIN is flagged before ordering, as wrong states break GST invoices. To start: "start PIN
-  check".
 - **Share a wishlist**: a link that shows someone's wishlist (read-only, chosen to share, can be switched off) for
   birthdays and festivals, with "Buy as a gift" adding an item to the visitor's cart. To start: "start shared
   wishlists".
@@ -136,3 +133,4 @@ Suggested on 2026-10-30 (after the UI rounds), roughly in the order they'd help 
 | Buy bar on phones: price, Add to cart and Buy now at the bottom of the screen while the product page's own buttons are out of view                                                    | Stage 102 (`git log --grep "Stage 102"`) |
 | Payment reminders: one email for online orders still unpaid after 10 minutes, with a link back to Pay now                                                                             | Stage 103 (`git log --grep "Stage 103"`) |
 | Gift options: a gift message on the packing slip, and gift wrapping for a fee when switched on in Admin → Delivery                                                                    | Stage 104 (`git log --grep "Stage 104"`) |
+| PIN code check: the state filled in from the PIN code, and addresses whose state doesn't match their PIN refused                                                                      | Stage 105 (`git log --grep "Stage 105"`) |

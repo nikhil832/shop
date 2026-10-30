@@ -1,0 +1,70 @@
+// Which states and union territories a PIN code can be in, from its first three digits (the postal sorting district).
+// Kept identical in client/src/pinStates.js and server/src/pinStates.js (a test compares the two files). A few prefixes cross a border and list
+// every state they serve; prefixes not listed (such as 9xx, the Army Postal Service) aren't checked.
+// Each entry is [first prefix, last prefix, states].
+export const PIN_PREFIXES = [
+  [110, 110, ['Delhi']],
+  [121, 136, ['Haryana']],
+  [140, 159, ['Punjab']],
+  [160, 160, ['Chandigarh', 'Punjab', 'Haryana']],
+  [171, 177, ['Himachal Pradesh']],
+  [180, 193, ['Jammu and Kashmir']],
+  [194, 194, ['Ladakh', 'Jammu and Kashmir']],
+  [201, 243, ['Uttar Pradesh']],
+  [244, 247, ['Uttar Pradesh', 'Uttarakhand']],
+  [248, 249, ['Uttarakhand']],
+  [250, 261, ['Uttar Pradesh']],
+  [262, 263, ['Uttarakhand', 'Uttar Pradesh']],
+  [264, 285, ['Uttar Pradesh']],
+  [301, 345, ['Rajasthan']],
+  [360, 361, ['Gujarat']],
+  [362, 362, ['Gujarat', 'Dadra and Nagar Haveli and Daman and Diu']],
+  [363, 395, ['Gujarat']],
+  [396, 396, ['Gujarat', 'Dadra and Nagar Haveli and Daman and Diu']],
+  [400, 402, ['Maharashtra']],
+  [403, 403, ['Goa']],
+  [404, 445, ['Maharashtra']],
+  [450, 488, ['Madhya Pradesh']],
+  [490, 497, ['Chhattisgarh']],
+  [500, 509, ['Telangana']],
+  [515, 532, ['Andhra Pradesh']],
+  [533, 533, ['Andhra Pradesh', 'Puducherry']],
+  [534, 535, ['Andhra Pradesh']],
+  [560, 591, ['Karnataka']],
+  [600, 604, ['Tamil Nadu']],
+  [605, 605, ['Puducherry', 'Tamil Nadu']],
+  [606, 608, ['Tamil Nadu']],
+  [609, 609, ['Tamil Nadu', 'Puducherry']],
+  [610, 643, ['Tamil Nadu']],
+  [670, 672, ['Kerala']],
+  [673, 673, ['Kerala', 'Puducherry']],
+  [674, 681, ['Kerala']],
+  [682, 682, ['Kerala', 'Lakshadweep']],
+  [683, 695, ['Kerala']],
+  [700, 736, ['West Bengal']],
+  [737, 737, ['Sikkim']],
+  [738, 743, ['West Bengal']],
+  [744, 744, ['Andaman and Nicobar Islands']],
+  [751, 770, ['Odisha']],
+  [781, 788, ['Assam']],
+  [790, 792, ['Arunachal Pradesh']],
+  [793, 794, ['Meghalaya']],
+  [795, 795, ['Manipur']],
+  [796, 796, ['Mizoram']],
+  [797, 798, ['Nagaland']],
+  [799, 799, ['Tripura']],
+  [800, 813, ['Bihar']],
+  [814, 816, ['Jharkhand', 'Bihar']],
+  [817, 821, ['Bihar']],
+  [822, 822, ['Jharkhand']],
+  [823, 824, ['Bihar']],
+  [825, 835, ['Jharkhand']],
+  [836, 855, ['Bihar']],
+];
+
+// The states a 6-digit PIN code can be in, or null when its prefix isn't known (then nothing is checked).
+export function statesForPin(pincode) {
+  if (!/^[1-9]\d{5}$/.test(pincode ?? '')) return null;
+  const prefix = Number(pincode.slice(0, 3));
+  return PIN_PREFIXES.find(([from, to]) => prefix >= from && prefix <= to)?.[2] ?? null;
+}

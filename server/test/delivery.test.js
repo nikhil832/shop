@@ -1,5 +1,6 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { statesForPin } from '../src/pinStates.js';
 import { startTestServer } from './helpers.js';
 
 let t;
@@ -108,7 +109,8 @@ test("checkout refuses an address the store doesn't deliver to, and changes noth
         phone: '9876543210',
         line1: '1 Hill Road',
         city: 'Aizawl',
-        state: 'Mizoram',
+        // A state the PIN code is in (addresses are checked against it).
+        state: statesForPin(pincode)[0],
         pincode,
       },
       expectedTotal: quote.body.total,

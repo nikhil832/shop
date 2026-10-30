@@ -4311,3 +4311,10 @@ textarea {
   font-style: italic;
   white-space: pre-wrap;
 }
+/* The address form's warning when the state isn't one the PIN code is in (stage 105). */
+.address-warning {
+  margin: 0;
+  color: var(--warning);
+  font-weight: 600;
+  font-size: 0.9rem;
+}

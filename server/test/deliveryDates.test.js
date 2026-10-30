@@ -2,6 +2,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { arrival } from '../src/emails.js';
 import { istDate } from '../src/routes/delivery.js';
+import { statesForPin } from '../src/pinStates.js';
 import { startTestServer } from './helpers.js';
 
 let t;
@@ -26,7 +27,8 @@ const address = (pincode) => ({
   phone: '9876543210',
   line1: '12 MG Road',
   city: 'Bengaluru',
-  state: 'Karnataka',
+  // A state the PIN code is in (addresses are checked against it).
+  state: statesForPin(pincode)[0],
   pincode,
 });
 async function order(pincode) {
