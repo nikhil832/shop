@@ -62,7 +62,7 @@ export function accountDataRouter(ctx) {
   router.get('/account/data', async (req, res) => {
     const u = req.user;
     const userId = u._id;
-    const [orders, returns, exchanges, reviews, questions, wishlist, alerts, cart, help, credit, giftCards] =
+    const [orders, returns, exchanges, reviews, questions, wishlist, alerts, cart, help, credit, giftCards, votes] =
       await Promise.all([
         db.collection('orders').find({ userId }).sort({ createdAt: -1 }).toArray(),
         db.collection('returns').find({ userId }).sort({ createdAt: -1 }).toArray(),
@@ -78,6 +78,7 @@ export function accountDataRouter(ctx) {
           .collection('giftCards')
           .find({ buyerId: userId, status: { $ne: 'awaiting_payment' } })
           .toArray(),
+        db.collection('reviewVotes').countDocuments({ userId }),
       ]);
     const productIds = [...reviews, ...questions, ...wishlist, ...alerts].map((d) => d.productId);
     const titles = new Map(
@@ -110,6 +111,8 @@ export function accountDataRouter(ctx) {
       returns: returns.map(toReturn),
       exchanges: exchanges.map(toExchange),
       reviews: reviews.map((r) => ({ product: title(r.productId), ...toReview(r) })),
+      // How many other customers' reviews they marked helpful (which ones isn't shown to anyone).
+      helpfulVotes: votes,
       questions: questions.map((q) => ({ product: title(q.productId), ...toQuestion(q) })),
       wishlist: wishlist.map((w) => ({ product: title(w.productId), addedAt: w.addedAt })),
       backInStockAlerts: alerts.map((a) => ({ product: title(a.productId), createdAt: a.createdAt })),
@@ -156,9 +159,17 @@ export function accountDataRouter(ctx) {
 
     await inTransaction(client, async (session) => {
       // Reviews leave the ratings they were counted in (hidden ones weren't).
-      for (const r of await db.collection('reviews').find({ userId }, { session }).toArray()) {
+      const ownReviews = await db.collection('reviews').find({ userId }, { session }).toArray();
+      const reviewIds = ownReviews.map((r) => r._id);
+      for (const r of ownReviews) {
         if (!r.hidden) await changeRating(db, r.productId, { sum: -r.rating, count: -1 }, session);
       }
+      // Their helpful votes come off the reviews they were counted on; votes on their own reviews go with them.
+      for (const v of await db.collection('reviewVotes').find({ userId }, { session }).toArray()) {
+        await db.collection('reviews').updateOne({ _id: v.reviewId }, { $inc: { helpful: -1 } }, { session });
+      }
+      await db.collection('reviewVotes').deleteMany({ userId }, { session });
+      await db.collection('reviewVotes').deleteMany({ reviewId: { $in: reviewIds } }, { session });
       await db.collection('reviews').deleteMany({ userId }, { session });
       await db.collection('questions').deleteMany({ userId, answer: null }, { session });
       await db

@@ -146,8 +146,11 @@ const INDEXES = {
   reviews: [
     [{ productId: 1, userId: 1 }, { unique: true }],
     [{ productId: 1, hidden: 1, createdAt: -1 }],
+    [{ productId: 1, hidden: 1, helpful: -1, createdAt: -1 }],
     [{ createdAt: -1 }],
   ],
+  // "Helpful" votes (stage 96): one per customer per review; found by customer when closing an account.
+  reviewVotes: [[{ reviewId: 1, userId: 1 }, { unique: true }], [{ userId: 1 }]],
   wishlist: [[{ userId: 1, productId: 1 }, { unique: true }], [{ userId: 1, addedAt: -1 }]],
   // The unused-upload sweep looks at uploads older than a day.
   images: [[{ createdAt: 1 }]],

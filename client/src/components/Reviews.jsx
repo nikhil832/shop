@@ -215,12 +215,116 @@ function MyReview({ slug, viewer, onChange }) {
   );
 }
 
+// Stars per written review (bars), each a filter, plus "With photos" and the order. Pressing a pressed one shows
+// all again. `breakdown` is { 1: n, …, 5: n } of the visible reviews, whatever the current filter.
+// `shown`: how many reviews the current filter finds, announced to screen readers.
+function ReviewFilters({ breakdown, withPhotos, shown, view, onView }) {
+  const total = Object.values(breakdown).reduce((a, b) => a + b, 0);
+  const plural = (n) => `${n} ${n === 1 ? 'review' : 'reviews'}`;
+  return (
+    <div className="review-filters">
+      <ul className="review-breakdown" aria-label="Filter by stars">
+        {[5, 4, 3, 2, 1].map((n) => (
+          <li key={n}>
+            <button
+              type="button"
+              className="review-bar"
+              aria-pressed={view.stars === n}
+              disabled={!breakdown[n]}
+              onClick={() => onView({ ...view, stars: view.stars === n ? null : n })}
+            >
+              <span>
+                {n} <span aria-hidden="true">★</span>
+                <span className="sr-only"> {n === 1 ? 'star' : 'stars'}:</span>
+              </span>
+              <span className="review-bar-track" aria-hidden="true">
+                <span style={{ width: `${total ? (breakdown[n] / total) * 100 : 0}%` }} />
+              </span>
+              <span className="muted">{breakdown[n]}</span>
+              <span className="sr-only">{breakdown[n] === 1 ? ' review' : ' reviews'}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className="review-filter-row">
+        {withPhotos > 0 && (
+          <button
+            type="button"
+            className="btn small"
+            aria-pressed={view.photos}
+            onClick={() => onView({ ...view, photos: !view.photos })}
+          >
+            With photos ({withPhotos})
+          </button>
+        )}
+        <label>
+          Sort reviews
+          <select value={view.sort} onChange={(e) => onView({ ...view, sort: e.target.value })}>
+            <option value="newest">Newest first</option>
+            <option value="helpful">Most helpful</option>
+          </select>
+        </label>
+        <span className="sr-only" aria-live="polite">
+          {view.stars || view.photos ? `Showing ${plural(shown)}` : ''}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// "Helpful" under someone else's review: a toggle for logged-in visitors, the count alone for others.
+function HelpfulButton({ review, loggedIn, onVoted }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const count = review.helpful
+    ? `${review.helpful} ${review.helpful === 1 ? 'person' : 'people'} found this helpful`
+    : '';
+  if (!loggedIn) return count && <span className="muted small">{count}</span>;
+  async function vote() {
+    setBusy(true);
+    setError(null);
+    try {
+      const method = review.votedHelpful ? 'DELETE' : 'POST';
+      onVoted(review.id, await request(`/reviews/${review.id}/helpful`, { method }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <span className="review-helpful">
+      <button type="button" className="btn small" aria-pressed={review.votedHelpful} disabled={busy} onClick={vote}>
+        Helpful<span className="sr-only"> (review by {review.author})</span>
+      </button>
+      {count && <span className="muted small">{count}</span>}
+      {error && <span className="error small">{error}</span>}
+    </span>
+  );
+}
+
 // Ratings & reviews under a product. `onChange` tells the page to reload the product, whose rating just changed.
 // `canScroll`: the page's rows above have loaded, so a #reviews link can scroll here.
 export default function Reviews({ product, canScroll, onChange }) {
   const [page, setPage] = useState(1);
   const [version, setVersion] = useState(0);
-  const { data, error } = useFetch(`/products/${product.slug}/reviews?page=${page}`, version);
+  // Which reviews are listed: the order, and a star or photos filter (stage 96).
+  const [view, setView] = useState({ sort: 'newest', stars: null, photos: false });
+  const query = new URLSearchParams({ page, sort: view.sort });
+  if (view.stars) query.set('stars', view.stars);
+  if (view.photos) query.set('photos', '1');
+  const { data, error } = useFetch(`/products/${product.slug}/reviews?${query}`, version);
+  // Helpful votes given on this page, over what the list loaded with (cleared when it reloads).
+  const [voted, setVoted] = useState({ key: null, votes: {} });
+  const listKey = `${version}:${query}`;
+  const votes = voted.key === listKey ? voted.votes : {};
+  const onVoted = (id, result) => setVoted({ key: listKey, votes: { ...votes, [id]: result } });
+  const changeView = (next) => {
+    setView(next);
+    setPage(1);
+  };
+  const written = data ? Object.values(data.breakdown).reduce((a, b) => a + b, 0) : 0;
+  const filtered = view.stars || view.photos;
   // Opened from the review reminder email (/p/…#reviews): scroll here once the reviews are in.
   const { hash } = useLocation();
   const loaded = Boolean(data) && canScroll;
@@ -243,7 +347,7 @@ export default function Reviews({ product, canScroll, onChange }) {
             <Rating rating={product.rating} count={false} />
             <span className="muted">
               {product.rating.count.toLocaleString('en-IN')} {product.rating.count === 1 ? 'rating' : 'ratings'}
-              {data && ` · ${data.total} written ${data.total === 1 ? 'review' : 'reviews'}`}
+              {data && ` · ${written} written ${written === 1 ? 'review' : 'reviews'}`}
             </span>
           </>
         ) : (
@@ -270,16 +374,39 @@ export default function Reviews({ product, canScroll, onChange }) {
           </p>
         ))}
 
+      {written > 1 && (
+        <ReviewFilters
+          breakdown={data.breakdown}
+          withPhotos={data.withPhotos}
+          shown={data.total}
+          view={view}
+          onView={changeView}
+        />
+      )}
+      {data && filtered && !data.items.length && (
+        <p className="muted">
+          No reviews like that yet.{' '}
+          <button type="button" className="link" onClick={() => changeView({ ...view, stars: null, photos: false })}>
+            Show all reviews
+          </button>
+        </p>
+      )}
       {data?.items.length > 0 && (
         <ul className="review-list">
-          {data.items.map((r) => (
-            <li key={r.id} className="review">
-              <ReviewText review={r} />
-              <span className="muted small">
-                {r.author} · Verified buyer · {formatDate(r.createdAt)}
-              </span>
-            </li>
-          ))}
+          {data.items.map((item) => {
+            const r = { ...item, ...votes[item.id] };
+            return (
+              <li key={r.id} className="review">
+                <ReviewText review={r} />
+                <span className="muted small">
+                  {r.author} · Verified buyer · {formatDate(r.createdAt)}
+                </span>
+                {r.id !== data.viewer?.review?.id && (
+                  <HelpfulButton review={r} loggedIn={Boolean(data.viewer)} onVoted={onVoted} />
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
       {data && <Pager page={page} total={data.total} pageSize={data.pageSize} onPage={setPage} />}

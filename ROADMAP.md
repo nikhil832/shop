@@ -9,8 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-30, roughly in the order they'd help most. All free (no new services).
 
-- **Helpful votes and review filters**: "Helpful" on reviews (one vote per logged-in customer), sorting by most helpful,
-  and filters by stars and "with photos" from a clickable star breakdown. To start: "start helpful reviews".
 - **Cancel one item**: customers (while placed) and admins (until shipped) cancel some lines of an order instead of the
   whole order: stock back, the coupon share and store credit worked out like returns, a part refund for online
   payments, and a credit note when the order has GST. Today it's all or nothing. To start: "start item cancellation".
@@ -132,3 +130,4 @@ Suggested on 2026-10-30, roughly in the order they'd help most. All free (no new
 | Supplier orders: printable orders to suppliers, filled from the reorder suggestions, received against under Receiving, on-order stock taken off the suggestions           | Stage 93 (`git log --grep "Stage 93"`) |
 | Photo zoom: product photos full screen with next/previous, arrow keys and swipes, tap to zoom in where tapped; swipe the page's photo on phones                           | Stage 94 (`git log --grep "Stage 94"`) |
 | Review reminders: one email three days after delivery asking for reviews of the order's products, with a switch on the account page                                       | Stage 95 (`git log --grep "Stage 95"`) |
+| Helpful reviews: "Helpful" votes on reviews, sorting by most helpful, filters by stars (from a breakdown) and with photos                                                 | Stage 96 (`git log --grep "Stage 96"`) |

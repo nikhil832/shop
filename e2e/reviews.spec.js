@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 // Named to run after catalog.spec.js (files run alphabetically on one shared demo server): reviews change ratings.
 const ADMIN = { email: 'admin@bazaar.demo', password: 'demo-admin-123' }; // created by server/src/demo.js
@@ -180,4 +181,63 @@ test('a buyer adds photos to a review: shrunk, shown as thumbnails, removable', 
   // Delete it again, so the book's rating is as other tests expect.
   await page.locator('.my-review').getByRole('button', { name: 'Delete' }).click();
   await expect(page.getByRole('button', { name: 'Post review' })).toBeVisible();
+});
+
+test('reviews filter by stars, and other customers mark them helpful', async ({ page, browser, request }) => {
+  // Two buyers review the book (4 and 5 stars), each in their own browser; the page is a third customer.
+  const tag = unique();
+  const authors = [];
+  for (const rating of [4, 5]) {
+    const context = await browser.newContext();
+    const author = await context.newPage();
+    await customerWhoReceivedIt(author, request);
+    const res = await author.request.put(`/api/products/${SLUG}/review`, {
+      data: { rating, title: `${rating} stars ${tag}` },
+    });
+    expect(res.ok()).toBe(true);
+    authors.push(context);
+  }
+  try {
+    const email = `reader-${unique()}@example.com`;
+    await page.request.post('/api/auth/register', { data: { name: 'Ravi Kumar', email, password: 'password123' } });
+    await page.goto(`/p/${SLUG}`);
+    const section = reviews(page);
+    const four = section.getByRole('listitem').filter({ hasText: `4 stars ${tag}` });
+    const five = section.getByRole('listitem').filter({ hasText: `5 stars ${tag}` });
+    await expect(five).toBeVisible();
+
+    // Only four-star reviews, then all again.
+    const fourStars = section.getByRole('button', { name: /^4 stars:/ });
+    await fourStars.click();
+    await expect(fourStars).toHaveAttribute('aria-pressed', 'true');
+    await expect(four).toBeVisible();
+    await expect(five).toHaveCount(0);
+    await fourStars.click();
+    await expect(five).toBeVisible();
+
+    // A helpful vote, kept after a reload, and the most helpful first.
+    const helpful = four.getByRole('button', { name: /^Helpful/ });
+    await helpful.click();
+    await expect(helpful).toHaveAttribute('aria-pressed', 'true');
+    await expect(four).toContainText('1 person found this helpful');
+    // The breakdown, filters and votes pass the accessibility check (WCAG 2.1 AA), as the page-wide run has no reviews.
+    const { violations } = await new AxeBuilder({ page })
+      .include('#reviews')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`)).toEqual([]);
+    await page.reload();
+    await expect(helpful).toHaveAttribute('aria-pressed', 'true');
+    await section.getByLabel('Sort reviews').selectOption('helpful');
+    await expect(section.locator('.review-list > li').first()).toContainText(`4 stars ${tag}`);
+    await helpful.click();
+    await expect(helpful).toHaveAttribute('aria-pressed', 'false');
+    await expect(four).not.toContainText('found this helpful');
+  } finally {
+    // Deleted again, so the book's rating is as other tests expect.
+    for (const context of authors) {
+      await context.request.delete(`/api/products/${SLUG}/review`);
+      await context.close();
+    }
+  }
 });
