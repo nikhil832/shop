@@ -8,6 +8,9 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # A full run takes about 7 minutes. Twice a run hung in `npm test` (never in the same test locally) and would have
+    # held a runner for GitHub's 6-hour default; this fails it instead, with the log showing where it stopped.
+    timeout-minutes: 20
     env:
       # Where mongodb-memory-server keeps its MongoDB binary (cached below).
       MONGOMS_DOWNLOAD_DIR: /home/runner/.cache/mongodb-binaries
