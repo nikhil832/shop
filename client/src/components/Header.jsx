@@ -100,7 +100,9 @@ function CategoryBar() {
   const [params] = useSearchParams();
   const { data: categories } = useFetch('/categories');
   if (pathname === '/' || pathname.startsWith('/admin') || pathname === '/checkout' || !categories) return null;
-  const current = pathname === '/search' ? (params.get('category') ?? '') : null;
+  // The Deals link is current on the deals page itself (deals without a category); categories when chosen.
+  const deals = pathname === '/search' && params.get('deals') === '1' && !params.get('category') && !params.get('q');
+  const current = pathname === '/search' && !deals ? (params.get('category') ?? '') : null;
   return (
     <nav className="category-bar" aria-label="Shop by category">
       <div className="category-bar-inner">
@@ -110,6 +112,14 @@ function CategoryBar() {
           aria-current={current === '' ? 'page' : undefined}
         >
           All products
+        </Link>
+        <Link
+          to="/search?deals=1&sort=discount"
+          className={`deals ${deals ? 'active' : ''}`}
+          aria-current={deals ? 'page' : undefined}
+          ref={deals ? showInBar : undefined}
+        >
+          Deals
         </Link>
         {categories.map((c) => (
           <Link

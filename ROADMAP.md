@@ -7,8 +7,22 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Nothing queued: every idea from 2026-10-30 is built. Ask for new ideas ("what should we build next?") and they'll be
-added here.
+Suggested on 2026-10-30 (after the UI rounds), roughly in the order they'd help most. All free (no new services).
+
+- **Buy bar on phones**: on a product page on a phone, the price and Add to cart / Buy now stay at the bottom of the
+  screen while scrolling through photos, details and reviews. The buttons are otherwise easy to scroll past. To start:
+  "start buy bar".
+- **Payment reminders**: an online order not paid within 10 minutes gets one email ("Complete your payment") with a
+  link back to the order's Pay now, before its 30 minutes run out and the stock is released. Recovers orders lost to a
+  closed tab or a failed UPI app. To start: "start payment reminders".
+- **Gift wrap and message**: at checkout, "This is a gift" adds a gift message (and optional wrapping for a small fee
+  set in Admin), printed on the packing slip, with prices left off the slip. To start: "start gift options".
+- **State from the PIN code**: typing a PIN code fills in the state (from its first digits, no outside service), and a
+  state that doesn't match the PIN is flagged before ordering, as wrong states break GST invoices. To start: "start PIN
+  check".
+- **Share a wishlist**: a link that shows someone's wishlist (read-only, chosen to share, can be switched off) for
+  birthdays and festivals, with "Buy as a gift" adding an item to the visitor's cart. To start: "start shared
+  wishlists".
 
 ## Set aside
 
@@ -126,3 +140,4 @@ added here.
 | A friendlier look, round 1: account menu and icons in the header, a category bar on every page, a bolder home page (banner, store promises, round categories), arrows on product rows | (UI round 1 commit)                      |
 | A friendlier look, round 2: "Add" on product cards, an always-enabled Add to cart with Buy now, reviews and questions in panels, a full footer                                        | `git log --grep "UI round 2"`            |
 | A friendlier look, round 3: "You save" and a free-delivery bar in the cart and checkout, payment choices as cards, an order progress tracker, arrival dates on the orders list        | `git log --grep "UI round 3"`            |
+| Deals: a Deals link and page (40% off or more, or on sale, biggest discount first), a Deals filter and discount sort on search, a home page row                                       | Stage 101 (`git log --grep "Stage 101"`) |

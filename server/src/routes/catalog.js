@@ -14,6 +14,21 @@ export const PRODUCT_SORTS = {
   price_desc: { price: -1, _id: 1 },
   newest: { createdAt: -1, _id: -1 },
   rating: { 'rating.avg': -1, 'rating.count': -1, _id: 1 },
+  // Biggest discount off the MRP first (stage 101); `discountRatio` is added just before sorting.
+  discount: { discountRatio: -1, 'rating.count': -1, _id: 1 },
+};
+// Deals (stage 101): products at least this much below their MRP, or in a running sale.
+export const DEAL_PERCENT = 40;
+const DEAL_FILTER = {
+  $or: [
+    { sale: { $type: 'object' } },
+    {
+      $expr: { $gte: [{ $multiply: [{ $subtract: ['$mrp', '$price'] }, 100] }, { $multiply: ['$mrp', DEAL_PERCENT] }] },
+    },
+  ],
+};
+const DISCOUNT_RATIO = {
+  $cond: [{ $gt: ['$mrp', 0] }, { $divide: [{ $subtract: ['$mrp', '$price'] }, '$mrp'] }, 0],
 };
 
 const SUGGESTIONS = 6;
@@ -48,6 +63,8 @@ const listQuery = z.object({
   inStock: z.enum(['1', 'true']).optional(),
   // Only products marked "Coming soon" (stage 92), for the home page's row.
   comingSoon: z.enum(['1', 'true']).optional(),
+  // Only deals: DEAL_PERCENT off or more, or on sale (stage 101).
+  deals: z.enum(['1', 'true']).optional(),
   sort: z.enum(Object.keys(PRODUCT_SORTS)).default('relevance'),
   page: z.coerce.number().int().min(1).max(1000).default(1),
   pageSize: z.coerce.number().int().min(1).max(48).default(24),
@@ -255,6 +272,7 @@ export function catalogRouter({ db }) {
     if (query.rating) base['rating.avg'] = { $gte: query.rating };
     if (query.inStock) base.stock = { $gt: 0 };
     if (query.comingSoon) Object.assign(base, { comingSoon: { $type: 'object' }, stock: 0 });
+    if (query.deals) base.$and = [...(base.$and ?? []), DEAL_FILTER];
 
     // The brand facet ignores the brand filter itself, so other brands stay selectable.
     const brandList = query.brand
@@ -275,7 +293,10 @@ export function catalogRouter({ db }) {
                       { $addFields: { searchScore: search.score } },
                       { $sort: { searchScore: -1, ...PRODUCT_SORTS.relevance } },
                     ]
-                  : [{ $sort: PRODUCT_SORTS[query.sort] }]),
+                  : [
+                      ...(query.sort === 'discount' ? [{ $addFields: { discountRatio: DISCOUNT_RATIO } }] : []),
+                      { $sort: PRODUCT_SORTS[query.sort] },
+                    ]),
                 { $skip: (query.page - 1) * query.pageSize },
                 { $limit: query.pageSize },
               ],
@@ -301,7 +322,8 @@ export function catalogRouter({ db }) {
       query.maxPrice === undefined &&
       !query.rating &&
       !query.inStock &&
-      !query.comingSoon;
+      !query.comingSoon &&
+      !query.deals;
     if (query.q && plain) await recordSearch(db, query.q, total);
     // Nothing found: a corrected search ("samsng" → "samsung"), offered only if it finds something with the same filters.
     let suggestion = null;

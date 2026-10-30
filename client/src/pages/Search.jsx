@@ -4,6 +4,7 @@ import { query } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import CompareToggle from '../components/CompareToggle.jsx';
 import { formatPrice } from '../format.js';
+import { DEAL_PERCENT } from '../storeFacts.js';
 import { useFetch } from '../useFetch.js';
 
 // The same search page with `q` corrected, its filters kept, from the first page.
@@ -50,6 +51,7 @@ export const SORTS = [
   { id: 'price_desc', label: 'Price: high to low' },
   { id: 'newest', label: 'Newest first' },
   { id: 'rating', label: 'Customer rating' },
+  { id: 'discount', label: 'Biggest discount' },
 ];
 const PAGE_SIZE = 24;
 
@@ -95,6 +97,7 @@ export default function Search() {
       maxPrice: toPaise(get('maxPrice')),
       rating: get('rating'),
       inStock: get('inStock'),
+      deals: get('deals'),
       sort,
       page,
       pageSize: PAGE_SIZE,
@@ -116,9 +119,10 @@ export default function Search() {
     update({ brand: (brands.includes(name) ? brands.filter((b) => b !== name) : [...brands, name]).join(',') });
 
   const categoryName = categories?.find((c) => c.slug === category)?.name;
-  const heading = q ? `Results for “${q}”` : (categoryName ?? 'All products');
+  // Deals (stage 101) on their own are a page of their own: "Deals" rather than "All products".
+  const heading = q ? `Results for “${q}”` : (categoryName ?? (get('deals') ? 'Deals' : 'All products'));
   const pages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
-  const hasFilters = ['brand', 'minPrice', 'maxPrice', 'rating', 'inStock'].some((k) => params.has(k));
+  const hasFilters = ['brand', 'minPrice', 'maxPrice', 'rating', 'inStock', 'deals'].some((k) => params.has(k));
 
   return (
     <div className="search-page">
@@ -214,6 +218,14 @@ export default function Search() {
                   onChange={(e) => update({ inStock: e.target.checked ? '1' : '' })}
                 />
                 In stock only
+              </label>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={get('deals') === '1'}
+                  onChange={(e) => update({ deals: e.target.checked ? '1' : '' })}
+                />
+                Deals: {DEAL_PERCENT}% off or more
               </label>
             </fieldset>
           </div>

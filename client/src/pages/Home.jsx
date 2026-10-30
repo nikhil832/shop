@@ -92,6 +92,11 @@ export default function Home() {
       <CollectionRows />
       <RecentlyViewed />
       <ListRow title="Top rated" path="/products?sort=rating&inStock=1&pageSize=8" moreLink="/search?sort=rating" />
+      <ListRow
+        title="Biggest discounts"
+        path="/products?deals=1&sort=discount&inStock=1&pageSize=8"
+        moreLink="/search?deals=1&sort=discount"
+      />
       <ListRow title="New arrivals" path="/products?sort=newest&pageSize=8" moreLink="/search?sort=newest" />
       <ComingSoonRow />
     </>

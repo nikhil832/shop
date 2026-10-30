@@ -4201,3 +4201,7 @@ textarea {
   color: var(--success);
   font-weight: 600;
 }
+/* Deals (stage 101): its link in the category bar stands out a little. */
+.category-bar a.deals {
+  color: #fde68a;
+}

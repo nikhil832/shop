@@ -55,6 +55,9 @@ function Footer() {
               <Link to="/search">All products</Link>
             </li>
             <li>
+              <Link to="/search?deals=1&sort=discount">Deals</Link>
+            </li>
+            <li>
               <Link to="/search?sort=newest">New arrivals</Link>
             </li>
             <li>
