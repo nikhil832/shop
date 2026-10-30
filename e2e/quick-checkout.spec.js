@@ -27,7 +27,7 @@ test('a new shopper checks out with a name and email; the account is made and as
   await expect(page).toHaveURL(/\/orders\/[0-9a-f]{24}$/);
   await expect(page.getByRole('status')).toContainText('Order placed!');
   // Logged in as the new account, which has no password yet.
-  await expect(page.getByRole('link', { name: 'Meera' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Meera' })).toBeVisible();
   await page.goto('/account');
   const password = page.getByRole('region', { name: 'Password' });
   await expect(password).toContainText('it has no password yet');

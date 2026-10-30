@@ -69,7 +69,7 @@ test('checkout offers to log in, places a COD order, and the order can be cancel
   await page.getByRole('button', { name: 'Create account' }).click();
 
   await expect(page).toHaveURL('/checkout');
-  await expect(page.getByRole('link', { name: 'Asha' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Asha' })).toBeVisible();
   await expect(page.getByLabel('Full name')).toHaveValue('Asha Rao');
   for (const [label, value] of Object.entries(address)) await page.getByLabel(label).fill(value);
   await page.getByRole('radio', { name: /Cash on Delivery/ }).check();
@@ -103,7 +103,7 @@ test('the address is saved to the address book, and logging out and back in work
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill('password123');
   await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByRole('link', { name: 'Ravi' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Ravi' })).toBeVisible();
 
   await addToCart(page, BOOK);
   await page.goto('/checkout');
@@ -120,7 +120,7 @@ test('the address is saved to the address book, and logging out and back in work
   await expect(page.getByRole('radio', { name: /Ravi Kumar/ })).toHaveAccessibleName(/12 MG Road.*560001/);
   await expect(page.getByLabel('Mobile number')).toHaveCount(0);
 
-  await page.getByRole('link', { name: 'Ravi' }).click();
+  await page.getByRole('button', { name: 'Ravi' }).click();
   await page.getByRole('button', { name: 'Log out' }).click();
   await expect(page).toHaveURL('/');
   await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible();

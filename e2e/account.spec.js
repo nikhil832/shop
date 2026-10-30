@@ -9,7 +9,7 @@ test('the account page changes the name and password', async ({ page }) => {
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill('password123');
   await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByRole('banner').getByRole('link', { name: 'Asha' })).toBeVisible();
+  await expect(page.getByRole('banner').getByRole('button', { name: 'Asha' })).toBeVisible();
   await page.goto('/orders');
   await page.getByRole('link', { name: 'Account' }).click();
   await expect(page).toHaveURL('/account');
@@ -19,7 +19,7 @@ test('the account page changes the name and password', async ({ page }) => {
   await details.getByLabel('Name').fill('Meera Iyer');
   await details.getByRole('button', { name: 'Save' }).click();
   await expect(details.getByRole('status')).toHaveText('Saved');
-  await expect(page.getByRole('banner').getByRole('link', { name: 'Meera' })).toBeVisible();
+  await expect(page.getByRole('banner').getByRole('button', { name: 'Meera' })).toBeVisible();
 
   // Password: the current one is required and can't be reused.
   const password = page.getByRole('form', { name: 'Change password' });
@@ -56,7 +56,7 @@ test('asking for a new email shows it as waiting until confirmed, and can be can
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill('password123');
   await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByRole('banner').getByRole('link', { name: 'Asha' })).toBeVisible();
+  await expect(page.getByRole('banner').getByRole('button', { name: 'Asha' })).toBeVisible();
   await page.goto('/account');
 
   const section = page.getByRole('form', { name: 'Email' });

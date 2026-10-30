@@ -50,7 +50,7 @@ test('customers see "Admins only" and no admin link', async ({ page }) => {
   await page.getByLabel('Email').fill(`plain-${unique()}@example.com`);
   await page.getByLabel('Password').fill('password123');
   await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByRole('link', { name: 'Plain' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Plain' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Admin' })).toHaveCount(0);
 
   await page.goto('/admin/orders');

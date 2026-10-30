@@ -45,7 +45,7 @@ async function readyToPay(page) {
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill('password123');
   await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByRole('link', { name: 'Asha' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Asha' })).toBeVisible();
   await page.goto(PHONE);
   await page.getByRole('button', { name: 'Add to cart' }).click();
   await page.goto('/checkout');

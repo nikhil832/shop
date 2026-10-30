@@ -10,7 +10,7 @@ async function logIn(page, email) {
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill('password123');
   await page.getByRole('button', { name: 'Log in' }).click();
-  await expect(page.getByRole('link', { name: 'Leela' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Leela' })).toBeVisible();
 }
 
 async function add(page, path) {
@@ -108,7 +108,7 @@ test('an item added just before leaving the page is kept and saved', async ({ pa
   const email = `leave-${Date.now()}@example.com`;
   await page.request.post('/api/auth/register', { data: { name: 'Leela Nair', email, password: 'password123' } });
   await page.goto(BOOK);
-  await expect(page.getByRole('link', { name: 'Leela' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Leela' })).toBeVisible();
   await page.getByRole('button', { name: 'Add to cart' }).click();
   await page.goto('/cart'); // straight away, before the change is saved
   await expect(cart(page, 1)).toBeVisible();

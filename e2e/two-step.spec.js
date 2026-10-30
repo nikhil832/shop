@@ -10,7 +10,7 @@ test('a customer turns on two-step login; logging in then asks for the code', as
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill('password123');
   await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByRole('banner').getByRole('link', { name: 'Asha' })).toBeVisible();
+  await expect(page.getByRole('banner').getByRole('button', { name: 'Asha' })).toBeVisible();
 
   await page.goto('/account');
   const section = page.getByRole('region', { name: 'Two-step login' });
@@ -42,7 +42,7 @@ test('a customer turns on two-step login; logging in then asks for the code', as
   // The code used to turn it on can't be used again; the next one works.
   await other.getByLabel('Code').fill(codeAt(secret, stepOf() + 1));
   await other.getByRole('button', { name: 'Log in' }).click();
-  await expect(other.getByRole('banner').getByRole('link', { name: 'Asha' })).toBeVisible();
+  await expect(other.getByRole('banner').getByRole('button', { name: 'Asha' })).toBeVisible();
   await other.close();
 });
 

@@ -191,6 +191,12 @@ a:focus-visible {
   font-weight: 800;
   font-size: 1.35rem;
   letter-spacing: -0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.logo svg {
+  color: #fbbf24;
 }
 .logo:hover {
   text-decoration: none;
@@ -274,6 +280,91 @@ a:focus-visible {
   text-decoration: none;
   background: rgb(255 255 255 / 0.12);
 }
+/* The account menu's button looks like the header's links. */
+button.header-link {
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.cart-icon {
+  position: relative;
+  display: inline-flex;
+}
+.cart-icon .cart-badge {
+  position: absolute;
+  top: -7px;
+  right: -10px;
+}
+.account-menu {
+  position: relative;
+}
+.account-menu-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  min-width: 230px;
+  margin: 0;
+  padding: 6px 0;
+  list-style: none;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.18);
+}
+.account-menu-list a,
+.account-menu-list button {
+  display: block;
+  width: 100%;
+  padding: 9px 16px;
+  color: var(--text);
+  background: none;
+  border: 0;
+  text-align: left;
+  font-weight: 500;
+  cursor: pointer;
+}
+.account-menu-list a:hover,
+.account-menu-list button:hover {
+  background: var(--accent-soft);
+  text-decoration: none;
+}
+.account-menu-who {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 16px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+/* Every category under the header (not on the home page, which has its own). */
+.category-bar {
+  background: rgb(0 0 0 / 0.18);
+}
+.category-bar-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 10px;
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.category-bar a {
+  color: var(--header-text);
+  padding: 9px 12px 7px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+}
+.category-bar a:hover {
+  text-decoration: none;
+  background: rgb(255 255 255 / 0.1);
+}
+.category-bar a.active {
+  border-bottom-color: #fbbf24;
+}
 .cart-badge {
   background: #fbbf24;
   color: #1a1d23;
@@ -304,35 +395,125 @@ a:focus-visible {
 }
 
 /* ---- Home ---- */
+/* A deep blue banner in both themes (fixed colours, so its white text keeps its contrast), with the category pictures
+   beside the words on wider screens. */
 .hero {
-  background: linear-gradient(120deg, var(--accent-soft), var(--surface));
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 32px 28px;
-  margin-bottom: 20px;
+  background: linear-gradient(115deg, #172554, #1e3a8a 45%, #1d4ed8);
+  color: #ffffff;
+  border-radius: 16px;
+  padding: 40px 40px;
+  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  overflow: hidden;
+}
+.hero-text {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
 }
 .hero h1 {
-  font-size: 1.9rem;
+  margin: 0;
+  font-size: 2.5rem;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
 }
 .hero p {
   margin: 0;
-  color: var(--muted);
+  color: #dbeafe;
+  font-size: 1.05rem;
 }
+.hero .hero-kicker {
+  color: #fde68a;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+.btn.hero-primary {
+  background: #fbbf24;
+  border-color: #fbbf24;
+  color: #1a1d23;
+  padding: 11px 20px;
+}
+.btn.hero-primary:hover:not(:disabled) {
+  background: #f59e0b;
+  border-color: #f59e0b;
+}
+.btn.hero-secondary {
+  background: transparent;
+  border-color: rgb(255 255 255 / 0.6);
+  color: #ffffff;
+  padding: 11px 20px;
+}
+.btn.hero-secondary:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.12);
+}
+.hero-art {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  justify-items: center;
+}
+.hero-art img {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 4px solid rgb(255 255 255 / 0.25);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+  object-fit: cover;
+}
+/* The middle column a little lower, for a looser arrangement. */
+.hero-art img:nth-child(3n + 2) {
+  transform: translateY(18px);
+}
+/* What the store promises, under the banner. */
+.promises {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.promises li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.promise-icon {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Categories as round pictures across the page (one swipeable line on phones). */
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 12px;
   margin-bottom: 28px;
 }
 .category-tile {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px;
+  padding: 6px 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -340,12 +521,22 @@ a:focus-visible {
   color: var(--text);
   font-weight: 600;
   text-align: center;
+  border-radius: var(--radius);
+}
+.category-tile:hover {
+  text-decoration: none;
 }
 .category-tile img {
-  width: 72px;
-  height: 72px;
+  width: 88px;
+  height: 88px;
   border-radius: 50%;
   object-fit: cover;
+  border: 3px solid var(--surface);
+  box-shadow: var(--shadow);
+  transition: transform 0.15s;
+}
+.category-tile:hover img {
+  transform: scale(1.06);
 }
 .row-section {
   margin-bottom: 28px;
@@ -369,6 +560,45 @@ a:focus-visible {
   gap: 12px;
   overflow-x: auto;
   padding-bottom: 6px;
+  scroll-snap-type: x proximity;
+}
+.product-row > * {
+  scroll-snap-align: start;
+}
+/* Arrows at the row's ends, for a mouse (ProductRow.jsx); touch screens swipe. */
+.product-row-wrap {
+  position: relative;
+}
+.row-arrow {
+  position: absolute;
+  top: 38%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.row-arrow:hover {
+  background: var(--accent-soft);
+}
+.row-arrow.prev {
+  left: -12px;
+}
+.row-arrow.next {
+  right: -12px;
+}
+@media (hover: none) {
+  .row-arrow {
+    display: none;
+  }
 }
 
 /* ---- Product card ---- */
@@ -389,12 +619,15 @@ a:focus-visible {
   display: flex;
   flex-direction: column;
   color: var(--text);
-  transition: box-shadow 0.15s;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
 }
 .card:hover {
   text-decoration: none;
-  box-shadow: var(--shadow);
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.1);
   border-color: var(--muted);
+  transform: translateY(-2px);
 }
 .card-image {
   position: relative;
@@ -2533,6 +2766,66 @@ textarea {
   .header-link {
     padding: 6px 8px;
   }
+  /* Icons only: the words stay for screen readers. */
+  .header-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 26px 22px;
+    border-radius: 12px;
+  }
+  .hero h1 {
+    font-size: 1.75rem;
+  }
+  .hero p {
+    font-size: 0.98rem;
+  }
+  .hero-art {
+    display: none;
+  }
+  .promises {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .promises li {
+    padding: 10px;
+    gap: 8px;
+    font-size: 0.85rem;
+  }
+  .promise-icon {
+    width: 34px;
+    height: 34px;
+  }
+  /* Just the promise on phones, one line each where it fits. */
+  .promises .muted {
+    display: none;
+  }
+  .hero-actions .btn {
+    padding: 10px 14px;
+    font-size: 0.95rem;
+  }
+  .category-grid {
+    display: flex;
+    overflow-x: auto;
+    gap: 6px;
+    margin: 0 -16px 22px;
+    padding: 2px 16px 6px;
+    scrollbar-width: none;
+  }
+  .category-tile {
+    flex: 0 0 78px;
+    font-size: 0.8rem;
+  }
+  .category-tile img {
+    width: 62px;
+    height: 62px;
+  }
   .cart-page {
     grid-template-columns: 1fr;
   }
@@ -2611,7 +2904,7 @@ textarea {
   margin-top: 28px;
   max-width: 760px;
   /* Opened from emails (#reviews, #questions): stop below the sticky header. */
-  scroll-margin-top: 120px;
+  scroll-margin-top: 170px;
 }
 .reviews-summary {
   display: flex;
@@ -3078,7 +3371,7 @@ textarea {
 }
 /* Linked sections (/account#addresses) stop below the sticky header, which is two rows tall on phones. */
 .account-section {
-  scroll-margin-top: 120px;
+  scroll-margin-top: 170px;
 }
 /* A draft the product's details didn't settle ("Draft an answer"): worth a second look. */
 .warning-text {

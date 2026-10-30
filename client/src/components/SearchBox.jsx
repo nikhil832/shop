@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { formatPrice } from '../format.js';
+import { SearchIcon } from './Icons.jsx';
 import { useFetch } from '../useFetch.js';
 
 // Suggestions are asked for once typing pauses this long, and only from this many characters.
@@ -98,7 +99,7 @@ export default function SearchBox({ initial }) {
         onBlur={close}
       />
       <button type="submit" aria-label="Search">
-        🔍
+        <SearchIcon />
       </button>
       {options.length > 0 && (
         // mousedown would blur the box (closing the list) before the click lands.
