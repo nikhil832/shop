@@ -57,7 +57,7 @@ const SHOP = [
   '/p/the-quiet-engineer-paperback',
   '/p/urbane-men-slim-fit-jeans',
 ];
-const SIGNED_OUT = ['/login', '/register', '/forgot-password', '/no-such-page', '/help'];
+const SIGNED_OUT = ['/login', '/register', '/forgot-password', '/no-such-page', '/help', '/track'];
 const CUSTOMER = (o) => [
   '/cart',
   '/checkout',

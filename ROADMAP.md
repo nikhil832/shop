@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-30 (third list), roughly in the order they'd help most. All free (no new services).
 
-- **Track without logging in**: a "Track an order" page that finds an order by its number and the delivery PIN code,
-  showing its progress, dates and tracking link (no prices, address or items beyond the names). Handy for gift
-  recipients and anyone on another device. To start: "start order tracking page".
 - **Shop by size**: a size filter on search for products with sizes ("UK 8", "M", "32"), showing only those with that
   size in stock, and the size remembered for the next search. Fashion shoppers want to see only what fits. To start:
   "start size filter".
@@ -148,3 +145,4 @@ Suggested on 2026-10-30 (third list), roughly in the order they'd help most. All
 | PIN code check: the state filled in from the PIN code, and addresses whose state doesn't match their PIN refused                                                                      | Stage 105 (`git log --grep "Stage 105"`) |
 | Shared wishlists: a link showing the customer's first name and wishlist, for presents, that can be turned off                                                                         | Stage 106 (`git log --grep "Stage 106"`) |
 | Save for later: cart items moved to the wishlist and back from a "Saved for later" list under the cart                                                                                | Stage 107 (`git log --grep "Stage 107"`) |
+| Track an order without logging in: by order number and delivery PIN code, progress and tracking only                                                                                  | Stage 108 (`git log --grep "Stage 108"`) |

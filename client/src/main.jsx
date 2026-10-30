@@ -72,6 +72,7 @@ const HelpRequest = lazyPage(() => import('./pages/HelpRequest.jsx'));
 const Compare = lazyPage(() => import('./pages/Compare.jsx'));
 const GiftCards = lazyPage(() => import('./pages/GiftCards.jsx'));
 const SharedWishlist = lazyPage(() => import('./pages/SharedWishlist.jsx'));
+const Track = lazyPage(() => import('./pages/Track.jsx'));
 // Which of them the browser opened on, if any.
 const OPENED_ON = [
   [/^\/admin(\/|$)/, AdminRoutes],
@@ -85,6 +86,7 @@ const OPENED_ON = [
   [/^\/compare$/, Compare],
   [/^\/gift-cards$/, GiftCards],
   [/^\/w\/[^/]+$/, SharedWishlist],
+  [/^\/track$/, Track],
 ].find(([path]) => path.test(window.location.pathname))?.[1];
 
 watchSecurityPolicy();
@@ -120,6 +122,7 @@ Promise.resolve(OPENED_ON?.preload())
                 <Route path="orders/:id/exchange" element={<ExchangeRequest />} />
                 <Route path="wishlist" element={<Wishlist />} />
                 <Route path="w/:token" element={<SharedWishlist />} />
+                <Route path="track" element={<Track />} />
                 <Route path="compare" element={<Compare />} />
                 <Route path="gift-cards" element={<GiftCards />} />
                 <Route path="account" element={<Account />} />

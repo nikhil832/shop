@@ -75,7 +75,7 @@ function Footer() {
               <Link to="/help">Contact us</Link>
             </li>
             <li>
-              <Link to="/orders">Track an order</Link>
+              <Link to="/track">Track an order</Link>
             </li>
             <li>
               <Link to="/orders">Returns and exchanges</Link>
