@@ -925,6 +925,99 @@ export async function sendAddressChanged(ctx, order, previous, byStore) {
   }
 }
 
+// Items cancelled from an order before it ships (stage 97, itemCancellation.js): what went, the new total, and how
+// the difference comes back. `entry` is the saved cancellation (after any refund attempt).
+const cancelledLines = (entry) => entry.items.map((i) => `${i.title} × ${i.qty}`);
+function cancelledMoney(order, entry) {
+  const lines = [`The order's total is now ${rupees(order.total)} (${rupees(entry.amount)} less).`];
+  if (entry.refund) {
+    lines.push(
+      entry.refundStatus === 'refunded'
+        ? `We've started a refund of ${rupees(entry.refund)} to the way you paid. Banks usually take 5–7 working days to show it.`
+        : `We'll refund ${rupees(entry.refund)} to the way you paid shortly.`,
+    );
+  }
+  if (entry.creditBack) lines.push(`${rupees(entry.creditBack)} is back in your store credit.`);
+  if (order.payment?.method === 'cod' && due(order) > 0) lines.push(`You'll pay ${rupees(due(order))} on delivery.`);
+  return lines;
+}
+
+export function itemsCancelledEmail(order, entry, user, byStore, publicUrl = DEFAULT_PUBLIC_URL) {
+  const subject = `Items cancelled from order #${orderNumber(order)}`;
+  const firstName = user.name.split(/\s+/)[0];
+  const orderUrl = `${publicUrl}/orders/${order._id}`;
+  const intro = byStore
+    ? `We've cancelled these items from order #${orderNumber(order)}:`
+    : `You cancelled these items from order #${orderNumber(order)}:`;
+  const money = cancelledMoney(order, entry);
+  const text = [
+    `Hi ${firstName},`,
+    intro,
+    cancelledLines(entry)
+      .map((l) => `- ${l}`)
+      .join('\n'),
+    ...money,
+    'The rest of the order is on its way as planned.',
+    `View your order: ${orderUrl}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p>${escapeHtml(intro)}</p>
+<ul>${cancelledLines(entry)
+      .map((l) => `<li>${escapeHtml(l)}</li>`)
+      .join('')}</ul>
+${money.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+<p>The rest of the order is on its way as planned.</p>
+${button('View your order', orderUrl)}`,
+    "You're getting this email because items of your order were cancelled.",
+  );
+  return { subject, text, html };
+}
+
+// For the admins when a customer cancels items: a packing slip may be printed already.
+export function itemsCancelledAlertEmail(order, entry, publicUrl = DEFAULT_PUBLIC_URL) {
+  const subject = `Order #${orderNumber(order)}: items cancelled`;
+  const url = `${publicUrl}/admin/orders/${order._id}`;
+  const lines = [
+    `The customer cancelled items from order #${orderNumber(order)} before it shipped. If you've printed its packing slip, print it again.`,
+    ...cancelledLines(entry).map((l) => `Cancelled: ${l}`),
+    `New total: ${rupees(order.total)}`,
+    ...(entry.refundStatus === 'refund_failed'
+      ? [`The refund of ${rupees(entry.refund)} failed; retry it from the order page.`]
+      : []),
+  ];
+  const text = [...lines, `Open the order: ${url}`, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+${button('Open the order', url)}`,
+    "You're getting this email because you're an admin of the store.",
+  );
+  return { subject, text, html };
+}
+
+// Emails the customer about cancelled items, and the admins when the customer did it. Never throws: the change stands.
+export async function sendItemsCancelled(ctx, order, entry, byStore) {
+  try {
+    const user = await ctx.db.collection('users').findOne({ _id: order.userId }, { projection: { name: 1, email: 1 } });
+    if (user) {
+      const email = itemsCancelledEmail(order, entry, user, byStore, ctx.config.mail?.publicUrl);
+      await ctx.mail.send({ to: { email: user.email, name: user.name }, ...email });
+    }
+    if (!byStore) {
+      await sendToAdmins(
+        ctx,
+        itemsCancelledAlertEmail(order, entry, ctx.config.mail?.publicUrl),
+        `the items cancelled alert for order ${order._id}`,
+      );
+    }
+  } catch (err) {
+    console.error(`Could not send the items cancelled emails for order ${order._id}:`, err.message);
+  }
+}
+
 // Exchanges (stage 89): why a customer wants another option of the same product.
 export const EXCHANGE_REASONS = {
   fit: "Doesn't fit",

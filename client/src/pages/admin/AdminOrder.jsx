@@ -3,6 +3,7 @@ import { itemKey } from '../../cart.js';
 import { Link, useParams } from 'react-router';
 import { request } from '../../api.js';
 import OrderSummary from '../../components/OrderSummary.jsx';
+import CancelItems, { CancelledItems } from '../../components/CancelItems.jsx';
 import ChangeAddress from '../../components/ChangeAddress.jsx';
 import {
   formatDate,
@@ -317,6 +318,25 @@ export default function AdminOrder() {
                 ))}
               </tbody>
             </table>
+            <CancelledItems
+              order={order}
+              admin
+              busy={action.busy}
+              retry={(c) =>
+                run(async () => ({
+                  ...(await request(`/admin/orders/${order.id}/cancellations/${c.id}/refund`, { method: 'POST' })),
+                  customer: order.customer,
+                }))
+              }
+            />
+            {/* Until it ships (stage 97); admins only, like cancelling. */}
+            {order.status === 'placed' && can(user, '*') && (
+              <CancelItems
+                order={order}
+                path={`/admin/orders/${order.id}/cancel-items`}
+                onDone={(changed) => setUpdated({ ...changed, customer: order.customer })}
+              />
+            )}
           </section>
 
           {returns?.length > 0 && (

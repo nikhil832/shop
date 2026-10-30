@@ -151,6 +151,19 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   address: doc.address,
   // When the address was last changed before shipping (stage 90, orderAddress.js); admins also get every earlier one.
   addressChangedAt: doc.addressChanges?.at(-1)?.at ?? null,
+  // Items cancelled before shipping (stage 97, itemCancellation.js): what, how much it took off, and how it came back
+  // (`refundStatus` none | pending | refunding | refunded | refund_failed for the online part).
+  cancellations: (doc.cancellations ?? []).map((c) => ({
+    id: c._id.toString(),
+    items: c.items.map((i) => ({ ...i, productId: i.productId.toString(), variantId: i.variantId?.toString() })),
+    amount: c.amount,
+    refund: c.refund,
+    creditBack: c.creditBack,
+    refundStatus: c.refundStatus,
+    role: c.role,
+    at: c.at,
+    ...(admin && { by: c.by?.name ?? null, refundError: c.refundError ?? null }),
+  })),
   ...(admin && {
     addressChanges: (doc.addressChanges ?? []).map((c) => ({ from: c.from, at: c.at, by: c.by.name, role: c.role })),
   }),

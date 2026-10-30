@@ -4,6 +4,7 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-route
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import OrderSummary from '../components/OrderSummary.jsx';
+import CancelItems, { CancelledItems } from '../components/CancelItems.jsx';
 import ChangeAddress from '../components/ChangeAddress.jsx';
 import {
   formatDate,
@@ -244,6 +245,11 @@ export default function Order() {
                 </li>
               ))}
             </ul>
+            <CancelledItems order={order} />
+            {/* Until it ships (stage 97). */}
+            {order.status === 'placed' && (
+              <CancelItems order={order} path={`/orders/${order.id}/cancel-items`} onDone={setUpdated} />
+            )}
           </section>
 
           {order.shipment && order.status !== 'cancelled' && (

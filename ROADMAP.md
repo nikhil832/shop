@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-30, roughly in the order they'd help most. All free (no new services).
 
-- **Cancel one item**: customers (while placed) and admins (until shipped) cancel some lines of an order instead of the
-  whole order: stock back, the coupon share and store credit worked out like returns, a part refund for online
-  payments, and a credit note when the order has GST. Today it's all or nothing. To start: "start item cancellation".
 - **Stocktake**: a printable count sheet per category, the counted numbers typed in, a preview of the differences, then
   saved at once as "Counted" in stock history (by whom, when). Shelves and the database drift apart over time; this
   is how shops put them right. To start: "start stocktake".
@@ -131,3 +128,4 @@ Suggested on 2026-10-30, roughly in the order they'd help most. All free (no new
 | Photo zoom: product photos full screen with next/previous, arrow keys and swipes, tap to zoom in where tapped; swipe the page's photo on phones                           | Stage 94 (`git log --grep "Stage 94"`) |
 | Review reminders: one email three days after delivery asking for reviews of the order's products, with a switch on the account page                                       | Stage 95 (`git log --grep "Stage 95"`) |
 | Helpful reviews: "Helpful" votes on reviews, sorting by most helpful, filters by stars (from a breakdown) and with photos                                                 | Stage 96 (`git log --grep "Stage 96"`) |
+| Cancel some items: customers or admins cancel part of an order before it ships, with the new total shown first, stock back, a part refund or credit back                  | Stage 97 (`git log --grep "Stage 97"`) |

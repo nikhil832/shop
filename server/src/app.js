@@ -10,6 +10,7 @@ import { orderExportRouter } from './routes/orderExport.js';
 import { productImportRouter } from './routes/productImport.js';
 import { ordersRouter } from './routes/orders.js';
 import { orderAddressRouter } from './routes/orderAddress.js';
+import { itemCancellationRouter } from './routes/itemCancellation.js';
 import { paymentsRouter } from './routes/payments.js';
 import { aiWriterRouter } from './routes/aiWriter.js';
 import { adminRouter } from './routes/admin.js';
@@ -76,6 +77,7 @@ export function createApp(ctx) {
   api.use(accountRouter(ctx));
   api.use(ordersRouter(ctx));
   api.use(orderAddressRouter(ctx));
+  api.use(itemCancellationRouter(ctx));
   api.use(paymentsRouter(ctx));
   api.use(imagesRouter(ctx));
   api.use(reviewsRouter(ctx));

@@ -3559,3 +3559,45 @@ textarea {
   background: var(--accent-soft);
   color: var(--accent-strong);
 }
+/* Items cancelled before shipping, and the form to cancel some (stage 97). */
+.cancelled-items {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.cancelled-items h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+.cancelled-items ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cancelled-items li {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.cancel-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.cancel-items label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cancel-items p {
+  margin: 0;
+}
