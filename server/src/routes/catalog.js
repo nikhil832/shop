@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { HttpError, escapeRegex, parse } from '../http.js';
 import { imageAltsOf } from '../imageAlts.js';
 import { recordSearch } from '../searchInsights.js';
+import { parseSizes, sizeFacet, sizeFilter } from '../sizes.js';
 
 // Prices are integers in paise (₹1 = 100) everywhere: storage, API and client state.
 
@@ -65,6 +66,8 @@ const listQuery = z.object({
   comingSoon: z.enum(['1', 'true']).optional(),
   // Only deals: DEAL_PERCENT off or more, or on sale (stage 101).
   deals: z.enum(['1', 'true']).optional(),
+  // Sizes (stage 109, sizes.js), comma-separated: only products with one of them in stock.
+  size: z.string().max(300).optional(),
   sort: z.enum(Object.keys(PRODUCT_SORTS)).default('relevance'),
   page: z.coerce.number().int().min(1).max(1000).default(1),
   pageSize: z.coerce.number().int().min(1).max(48).default(24),
@@ -259,7 +262,9 @@ export function catalogRouter({ db }) {
 
     if (query.category) {
       const category = await categories.findOne({ slug: query.category });
-      if (!category) return res.json({ items: [], total: 0, page: query.page, pageSize: query.pageSize, brands: [] });
+      if (!category) {
+        return res.json({ items: [], total: 0, page: query.page, pageSize: query.pageSize, brands: [], sizes: [] });
+      }
       base.categoryId = category._id;
     }
     const search = query.q ? await searchStages(categories, query.q) : null;
@@ -279,9 +284,12 @@ export function catalogRouter({ db }) {
       ?.split(',')
       .map((b) => b.trim())
       .filter(Boolean);
-    const match = brandList?.length ? { ...base, brand: { $in: brandList } } : base;
+    const branded = brandList?.length ? { ...base, brand: { $in: brandList } } : base;
+    // The size facet ignores the size filter itself, like brands.
+    const sizes = parseSizes(query.size);
+    const match = sizes.length ? { ...branded, $and: [...(branded.$and ?? []), sizeFilter(sizes)] } : branded;
 
-    const [[result], brands] = await Promise.all([
+    const [[result], brands, sizeList] = await Promise.all([
       products
         .aggregate([
           { $match: match },
@@ -308,6 +316,7 @@ export function catalogRouter({ db }) {
       products
         .aggregate([{ $match: base }, { $group: { _id: '$brand', count: { $sum: 1 } } }, { $sort: { _id: 1 } }])
         .toArray(),
+      sizeFacet(products, branded),
     ]);
 
     const total = result.total[0]?.n ?? 0;
@@ -323,7 +332,8 @@ export function catalogRouter({ db }) {
       !query.rating &&
       !query.inStock &&
       !query.comingSoon &&
-      !query.deals;
+      !query.deals &&
+      !sizes.length;
     if (query.q && plain) await recordSearch(db, query.q, total);
     // Nothing found: a corrected search ("samsng" → "samsung"), offered only if it finds something with the same filters.
     let suggestion = null;
@@ -343,6 +353,8 @@ export function catalogRouter({ db }) {
       page: query.page,
       pageSize: query.pageSize,
       brands: brands.map((b) => ({ name: b._id, count: b.count })),
+      // Sizes in stock among the results whatever the size filter, for products that have sizes; [] when none do.
+      sizes: sizeList,
     });
   });
 

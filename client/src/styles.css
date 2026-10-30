@@ -4415,3 +4415,34 @@ textarea {
   margin: 0;
   padding-left: 20px;
 }
+/* Shop by size (stage 109): sizes as chips on search, each a real checkbox underneath. */
+.size-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0;
+}
+.size-chip {
+  position: relative;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.size-chip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.size-chip:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.size-chip:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

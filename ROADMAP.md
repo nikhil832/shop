@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-30 (third list), roughly in the order they'd help most. All free (no new services).
 
-- **Shop by size**: a size filter on search for products with sizes ("UK 8", "M", "32"), showing only those with that
-  size in stock, and the size remembered for the next search. Fashion shoppers want to see only what fits. To start:
-  "start size filter".
 - **Log in with an email code**: besides the password, "Email me a code" sends a 6-digit code that logs in for 10
   minutes (limited tries, like the password). Customers forget passwords, and the checkout-made accounts have none.
   To start: "start email codes".
@@ -146,3 +143,4 @@ Suggested on 2026-10-30 (third list), roughly in the order they'd help most. All
 | Shared wishlists: a link showing the customer's first name and wishlist, for presents, that can be turned off                                                                         | Stage 106 (`git log --grep "Stage 106"`) |
 | Save for later: cart items moved to the wishlist and back from a "Saved for later" list under the cart                                                                                | Stage 107 (`git log --grep "Stage 107"`) |
 | Track an order without logging in: by order number and delivery PIN code, progress and tracking only                                                                                  | Stage 108 (`git log --grep "Stage 108"`) |
+| Shop by size: a size filter on search (in stock only), with the shopper's sizes remembered                                                                                            | Stage 109 (`git log --grep "Stage 109"`) |

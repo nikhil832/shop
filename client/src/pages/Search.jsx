@@ -45,6 +45,23 @@ function PlainWordsSearch({ q, categories }) {
   );
 }
 
+// The sizes last chosen on search, kept in this browser (empty when storage is blocked).
+const SIZES_KEY = 'bazaar.sizes';
+function rememberedSizes() {
+  try {
+    return JSON.parse(localStorage.getItem(SIZES_KEY)) ?? [];
+  } catch {
+    return [];
+  }
+}
+function rememberSizes(list) {
+  try {
+    localStorage.setItem(SIZES_KEY, JSON.stringify(list.slice(0, 10)));
+  } catch {
+    // Not remembered: the filter still works.
+  }
+}
+
 export const SORTS = [
   { id: 'relevance', label: 'Popularity' },
   { id: 'price_asc', label: 'Price: low to high' },
@@ -84,6 +101,7 @@ export default function Search() {
   const q = get('q');
   const category = get('category');
   const brands = get('brand') ? get('brand').split(',') : [];
+  const sizes = get('size') ? get('size').split(',') : [];
   const sort = SORTS.some((s) => s.id === get('sort')) ? get('sort') : 'relevance';
   const page = Math.max(1, Number(get('page')) || 1);
 
@@ -93,6 +111,7 @@ export default function Search() {
       q,
       category,
       brand: brands.join(','),
+      size: sizes.join(','),
       minPrice: toPaise(get('minPrice')),
       maxPrice: toPaise(get('maxPrice')),
       rating: get('rating'),
@@ -117,12 +136,19 @@ export default function Search() {
 
   const toggleBrand = (name) =>
     update({ brand: (brands.includes(name) ? brands.filter((b) => b !== name) : [...brands, name]).join(',') });
+  // Sizes (stage 109): chosen ones are remembered in this browser for the next search's "Show my sizes".
+  const toggleSize = (name) => {
+    const next = sizes.includes(name) ? sizes.filter((s) => s !== name) : [...sizes, name];
+    if (next.length) rememberSizes(next);
+    update({ size: next.join(',') });
+  };
+  const mySizes = !sizes.length ? rememberedSizes().filter((s) => data?.sizes?.some((x) => x.name === s)) : [];
 
   const categoryName = categories?.find((c) => c.slug === category)?.name;
   // Deals (stage 101) on their own are a page of their own: "Deals" rather than "All products".
   const heading = q ? `Results for “${q}”` : (categoryName ?? (get('deals') ? 'Deals' : 'All products'));
   const pages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
-  const hasFilters = ['brand', 'minPrice', 'maxPrice', 'rating', 'inStock', 'deals'].some((k) => params.has(k));
+  const hasFilters = ['brand', 'size', 'minPrice', 'maxPrice', 'rating', 'inStock', 'deals'].some((k) => params.has(k));
 
   return (
     <div className="search-page">
@@ -167,6 +193,26 @@ export default function Search() {
                 ))}
               </ul>
             </fieldset>
+
+            {data?.sizes?.length > 0 && (
+              <fieldset className="size-filter">
+                <legend>Size</legend>
+                {mySizes.length > 0 && (
+                  <button type="button" className="link small" onClick={() => update({ size: mySizes.join(',') })}>
+                    Show my sizes ({mySizes.join(', ')})
+                  </button>
+                )}
+                <div className="size-chips">
+                  {data.sizes.map((s) => (
+                    <label key={s.name} className="size-chip">
+                      <input type="checkbox" checked={sizes.includes(s.name)} onChange={() => toggleSize(s.name)} />
+                      {s.name}
+                    </label>
+                  ))}
+                </div>
+                <span className="muted small">Only products with that size in stock.</span>
+              </fieldset>
+            )}
 
             {data?.brands.length > 0 && (
               <fieldset>
