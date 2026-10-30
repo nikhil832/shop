@@ -144,6 +144,7 @@ Built in stages. Done so far:
 109. **Shop by size**: search results with sizes get a "Size" filter (UK 7–10, S–XL, waists…) showing only products with that size in stock; the sizes chosen are remembered in the browser and offered on the next search ("Show my sizes").
 110. **Log in with an email code**: on the login page, "Use an email code instead" emails a 6-digit code that logs in once within 10 minutes (3 emails an hour, 5 wrong tries per code, 30 tries an hour per network). It works for accounts made at checkout, which have no password; with two-step login on, the authenticator code is still asked for.
 111. **Delivery charge by area**: a delivery area (or "everywhere else") in Admin → Delivery can add an extra charge, in whole rupees up to ₹500, for far-off PIN codes. It's added to the delivery charge even when delivery is otherwise free, shown with the product page's PIN check and at checkout ("Includes ₹60 for this area"), and kept on the order.
+112. **Lowest price in 30 days**: the store now keeps each product's lowest price per day (daily, and whenever a price changes: admin edits, CSV imports, sales). With a week or more of history, the product page says "Lowest price in N days" when today's price is the lowest, or shows the lowest price of those days; with less, it says nothing.
 
 What's next: see [ROADMAP.md](ROADMAP.md).
 

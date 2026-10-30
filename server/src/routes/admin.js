@@ -18,6 +18,7 @@ import { changeRating, inTransaction, toReview } from './reviews.js';
 import { byOf, recordStock, savedEntries } from '../stockHistory.js';
 import { logActivity, orderTarget, productChanges, productTarget, rupees, yesNo } from '../activity.js';
 import { RTO_REASONS } from '../cod.js';
+import { notePrices } from '../priceHistory.js';
 import { toAdminNote } from '../customerTags.js';
 
 const hexId = (what) => z.string().regex(/^[0-9a-f]{24}$/, `Choose a ${what}`);
@@ -437,6 +438,7 @@ export function adminRouter(ctx) {
             { field: 'Shown', to: yesNo(doc.active) },
           ],
         });
+        await notePrices(db, { _id: insertedId }); // the price history (stage 112)
         return res.status(201).json(toAdminProduct({ ...doc, _id: insertedId }));
       } catch (err) {
         if (err.code !== 11000) throw err;
@@ -522,6 +524,7 @@ export function adminRouter(ctx) {
         changes,
       });
     }
+    await notePrices(db, { _id: doc._id }); // the price history (stage 112)
     res.json(toAdminProduct(doc));
   });
 

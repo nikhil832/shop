@@ -68,6 +68,11 @@ const INDEXES = {
     [{ payBy: 1 }, { expireAfterSeconds: 0 }],
   ],
   // Search insights: one per week and search; gone KEEP_DAYS after the last one.
+  // Each product's lowest price per day (stage 112); gone after KEEP_DAYS.
+  priceDays: [
+    [{ productId: 1, day: 1 }, { unique: true }],
+    [{ expiresAt: 1 }, { expireAfterSeconds: 0 }],
+  ],
   // Product views and adds to cart per India-time day (stage 100); gone after KEEP_DAYS.
   productStats: [
     [{ productId: 1, day: 1 }, { unique: true }],

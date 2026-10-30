@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import { z } from 'zod';
 import { logActivity } from './activity.js';
 import { requireAdmin } from './auth.js';
+import { notePrices } from './priceHistory.js';
 import { HttpError, parse, parseObjectId } from './http.js';
 
 // Scheduled sales (stage 67): a percentage off a category's products or chosen products, from `startsAt` to `endsAt`.
@@ -82,6 +83,7 @@ async function startSale(db, sale, now) {
     );
     applied += modifiedCount;
   }
+  await notePrices(db, { 'sale.id': sale._id }, now); // the sale prices, in the price history (stage 112)
   const inScope = await products.countDocuments(scope);
   await db.collection('sales').updateOne({ _id: sale._id }, { $set: { applied, skipped: inScope - applied } });
 }

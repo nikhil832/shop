@@ -23,6 +23,7 @@ const NAMES = {
   creditLedger: 'Store credit',
   searchStats: 'Search insights',
   productStats: 'Product views',
+  priceDays: 'Price history',
   giftCards: 'Gift cards',
   stockReceipts: 'Deliveries received',
   stocktakes: 'Stocktakes',

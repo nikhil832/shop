@@ -7,11 +7,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Suggested on 2026-10-30 (third list), roughly in the order they'd help most. All free (no new services).
-
-- **Lowest price in 30 days**: the store keeps each product's price history from now on and the product page says
-  "Lowest price in 30 days" when it is, or shows the lowest, so discounts can be trusted. To start: "start price
-  history".
+Nothing queued: every idea from 2026-10-30 is built. Ask for new ideas ("what should we build next?") and they'll be
+added here.
 
 ## Set aside
 
@@ -140,3 +137,4 @@ Suggested on 2026-10-30 (third list), roughly in the order they'd help most. All
 | Shop by size: a size filter on search (in stock only), with the shopper's sizes remembered                                                                                            | Stage 109 (`git log --grep "Stage 109"`) |
 | Log in with an email code: a 6-digit code by email instead of the password, limited like the password                                                                                 | Stage 110 (`git log --grep "Stage 110"`) |
 | Delivery charge by area: an extra charge per delivery area, added to delivery and shown with the PIN check and at checkout                                                            | Stage 111 (`git log --grep "Stage 111"`) |
+| Lowest price in 30 days: a daily price history, and the product page's "Lowest price in N days" (from a week of history)                                                              | Stage 112 (`git log --grep "Stage 112"`) |

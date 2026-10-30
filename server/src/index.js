@@ -24,6 +24,7 @@ import { payCashback } from './cashback.js';
 import { payReferrals } from './referrals.js';
 import { loadConfig } from './config.js';
 import { previewRouter } from './preview.js';
+import { recordDailyPrices } from './priceHistory.js';
 import { checkStorage } from './storage.js';
 
 const config = loadConfig();
@@ -49,6 +50,8 @@ const app = createApp(ctx);
 const sweeper = setInterval(async () => {
   // First, so a sale starting or ending now is in the prices the emails below read.
   await runSales(ctx).catch((err) => console.error(err));
+  // Once a day, every shown product's price into the price history (priceHistory.js).
+  await recordDailyPrices(ctx).catch((err) => console.error(err));
   await expireUnpaidOrders(ctx).catch((err) => console.error(err));
   // One reminder for online orders still unpaid after 10 minutes (paymentReminders.js).
   await sendPaymentReminders(ctx).catch((err) => console.error(err));

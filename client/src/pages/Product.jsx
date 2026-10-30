@@ -16,7 +16,7 @@ import ProductRow from '../components/ProductRow.jsx';
 import RecentlyViewed from '../components/RecentlyViewed.jsx';
 import { rememberViewed } from '../recent.js';
 import { reportSeen } from '../productStats.js';
-import { expectedText, quantityOfferText, saleEndsIn } from '../format.js';
+import { expectedText, formatPrice, quantityOfferText, saleEndsIn } from '../format.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
 
@@ -247,6 +247,15 @@ export default function Product() {
             </p>
           )}
           <span className="muted small">Inclusive of all taxes</span>
+          {/* From the price history (stage 112), only with a week or more of it. */}
+          {product.priceInsight &&
+            (product.priceInsight.isLowest ? (
+              <p className="lowest-price">Lowest price in {product.priceInsight.days} days</p>
+            ) : (
+              <p className="muted small">
+                Lowest in the last {product.priceInsight.days} days: {formatPrice(product.priceInsight.lowest)}
+              </p>
+            ))}
           {product.quantityDiscount && <p className="quantity-note">{quantityOfferText(product.quantityDiscount)}</p>}
           {product.variants.length > 0 && product.stock > 0 && (
             <>

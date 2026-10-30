@@ -4453,3 +4453,14 @@ textarea {
   justify-content: space-between;
   gap: 8px;
 }
+/* "Lowest price in N days" on a product page (stage 112): a small green tag. */
+.lowest-price {
+  margin: 0;
+  align-self: flex-start;
+  padding: 2px 8px;
+  border: 1px solid var(--success);
+  border-radius: 4px;
+  color: var(--success);
+  font-size: 0.85rem;
+  font-weight: 700;
+}

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { HttpError, escapeRegex, parse } from '../http.js';
 import { imageAltsOf } from '../imageAlts.js';
 import { recordSearch } from '../searchInsights.js';
+import { priceInsight } from '../priceHistory.js';
 import { parseSizes, sizeFacet, sizeFilter } from '../sizes.js';
 
 // Prices are integers in paise (₹1 = 100) everywhere: storage, API and client state.
@@ -458,7 +459,7 @@ export function catalogRouter({ db }) {
     const doc = await products.findOne({ slug: req.params.slug, active: true });
     if (!doc) throw new HttpError(404, 'Product not found');
     const mine = { userId: req.user?._id, productId: doc._id };
-    const [category, saved, alerts] = await Promise.all([
+    const [category, saved, alerts, prices] = await Promise.all([
       categories.findOne({ _id: doc.categoryId }),
       req.user && db.collection('wishlist').findOne(mine),
       req.user &&
@@ -466,6 +467,7 @@ export function catalogRouter({ db }) {
           .collection('stockAlerts')
           .find(mine, { projection: { variantId: 1 } })
           .toArray(),
+      priceInsight(db, doc),
     ]);
     res.json({
       ...toProductCard(doc),
@@ -482,6 +484,8 @@ export function catalogRouter({ db }) {
       // Asked to be emailed when it's back: the whole product (out of stock), or these sold-out variants.
       stockAlert: Boolean(alerts && alerts.some((a) => !a.variantId)),
       stockAlertVariants: alerts ? alerts.filter((a) => a.variantId).map((a) => a.variantId.toString()) : [],
+      // { days, lowest, isLowest } over the last 30 days of price history (stage 112), or null with too little.
+      priceInsight: prices,
     });
   });
 

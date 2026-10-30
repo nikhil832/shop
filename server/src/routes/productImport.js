@@ -9,6 +9,7 @@ import { categoryIcon } from './admin.js';
 import { cell } from './orderExport.js';
 import { inTransaction } from './reviews.js';
 import { logActivity, productChanges } from '../activity.js';
+import { notePrices } from '../priceHistory.js';
 import { byOf, recordStock, savedEntries } from '../stockHistory.js';
 
 // Products from a spreadsheet: download them all as CSV, edit, upload. An upload is checked first (a preview of what
@@ -404,6 +405,8 @@ export function productImportRouter(ctx) {
     const csv = csvOf(req);
     // What was saved, for the activity log: each product added, and each change by product.
     const logged = [];
+    // When the save happened: the products it wrote carry it as `updatedAt`, for the price history below.
+    let touched = null;
     const result = await inTransaction(ctx.client, async (session) => {
       logged.length = 0; // a retried transaction starts again
       const { id, summary, writes } = await makePlan(db, csv, session);
@@ -413,6 +416,7 @@ export function productImportRouter(ctx) {
       if (summary.error) throw new HttpError(400, 'Fix the rows with problems first');
       if (!writes.inserts.length && !writes.updates.length) throw new HttpError(400, 'Nothing in the file changes');
       const now = new Date();
+      touched = now;
       const taken = new Set();
       const categoryNames = new Map(
         (await db.collection('categories').find({}, { session }).toArray()).map((c) => [c._id.toString(), c.name]),
@@ -461,6 +465,7 @@ export function productImportRouter(ctx) {
       action: `Imported products from a CSV file: ${result.added} added, ${result.updated} updated`,
       changes: logged,
     });
+    await notePrices(db, { updatedAt: touched }); // the price history (stage 112)
     res.json(result);
   });
 
