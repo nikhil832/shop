@@ -289,6 +289,7 @@ button.header-link {
 .cart-icon {
   position: relative;
   display: inline-flex;
+  margin-right: 6px;
 }
 .cart-icon .cart-badge {
   position: absolute;
@@ -387,10 +388,64 @@ button.header-link {
   padding: 20px 16px 40px;
 }
 .footer {
-  text-align: center;
-  padding: 20px 16px;
+  margin-top: 24px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+}
+.footer-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 32px 16px 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.footer-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-weight: 800;
+  font-size: 1.2rem;
+}
+.footer-logo svg {
+  color: #d97706;
+}
+.footer-logo:hover {
+  text-decoration: none;
+}
+.footer-brand p {
+  margin: 8px 0 0;
+  max-width: 340px;
+}
+.footer h2 {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+.footer ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.footer ul a {
+  color: var(--muted);
+}
+.footer ul a:hover {
+  color: var(--accent-strong);
+}
+.footer-bottom {
+  margin: 0;
+  padding: 14px 16px;
+  text-align: center;
+  font-size: 0.82rem;
   border-top: 1px solid var(--border);
 }
 
@@ -628,6 +683,31 @@ button.header-link {
   box-shadow: 0 8px 22px rgb(0 0 0 / 0.1);
   border-color: var(--muted);
   transform: translateY(-2px);
+}
+/* The card's link holds the picture and details; "Add" sits under it (ProductCard.jsx). */
+.card-link {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  color: inherit;
+}
+.card-link:hover {
+  text-decoration: none;
+}
+.card-actions {
+  padding: 0 12px 12px;
+}
+.card-add {
+  width: 100%;
+  color: var(--accent-strong);
+  border-color: var(--accent);
+}
+.card-add:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+.card-add.added {
+  color: var(--success);
+  border-color: var(--success);
 }
 .card-image {
   position: relative;
@@ -1369,6 +1449,24 @@ p a:not(.btn) {
 .buy-buttons p {
   margin: 0;
   width: 100%;
+}
+.buy-buttons .btn {
+  padding: 12px 22px;
+  min-width: 150px;
+}
+/* A second, warmer call to action beside "Add to cart". */
+.btn.buy-now {
+  background: #fbbf24;
+  border-color: #fbbf24;
+  color: #1a1d23;
+}
+.btn.buy-now:hover:not(:disabled) {
+  background: #f59e0b;
+  border-color: #f59e0b;
+}
+.choose-prompt {
+  color: var(--warning);
+  font-weight: 600;
 }
 
 /* ---- Login ---- */
@@ -2775,6 +2873,16 @@ textarea {
     clip-path: inset(50%);
     white-space: nowrap;
   }
+  .footer-inner {
+    grid-template-columns: 1fr 1fr;
+    padding-top: 24px;
+  }
+  .footer-brand {
+    grid-column: 1 / -1;
+  }
+  .reviews {
+    padding: 14px;
+  }
   .hero {
     grid-template-columns: 1fr;
     padding: 26px 22px;
@@ -2897,12 +3005,16 @@ textarea {
 }
 
 /* ---- Reviews ---- */
+/* Reviews and questions under a product, each in a panel like the product itself. */
 .reviews {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  margin-top: 28px;
-  max-width: 760px;
+  margin-top: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
   /* Opened from emails (#reviews, #questions): stop below the sticky header. */
   scroll-margin-top: 170px;
 }
@@ -3617,10 +3729,6 @@ textarea {
 .status.help-closed {
   background: var(--bg);
   color: var(--muted);
-}
-/* Links in the footer's line of text are underlined, like links inside paragraphs. */
-.footer a {
-  text-decoration: underline;
 }
 /* Closing an account: a red button, behind a "Close my account" disclosure */
 .btn.danger {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { MAX_QTY, addToCart, qtyInCart, useCart } from '../cart.js';
 import PriceTag from '../components/PriceTag.jsx';
 import Rating from '../components/Rating.jsx';
@@ -24,34 +24,50 @@ import NotFound from './NotFound.jsx';
 // `missing` names the options still to choose ("size", or "colour and size").
 function AddToCart({ product, variant, missing }) {
   const items = useCart();
+  const navigate = useNavigate();
   const [full, setFull] = useState(false);
+  // Pressed before choosing: say what's missing (the button stays enabled, as a faded one looks broken).
+  const [prompted, setPrompted] = useState(false);
   const needsChoice = product.variants.length > 0 && !variant;
   const stock = variant ? variant.stock : product.stock;
   const inCart = qtyInCart(items, product.id, variant?.id);
   const atLimit = !needsChoice && inCart >= Math.min(MAX_QTY, stock);
+
+  function add() {
+    if (needsChoice) {
+      setPrompted(true);
+      document.querySelector('.variant-picker button:not(:disabled)')?.focus();
+      return false;
+    }
+    reportSeen(product.slug, 'cart');
+    const added = addToCart(product.id, stock, variant?.id);
+    setFull(!added);
+    return added;
+  }
+  // Straight to checkout with this item (one more only if it isn't in the cart yet).
+  function buyNow() {
+    if (inCart > 0 || add()) navigate('/checkout');
+  }
+
   return (
     <div className="buy-buttons">
-      <button
-        type="button"
-        className="btn primary"
-        disabled={needsChoice || atLimit || stock === 0}
-        onClick={() => {
-          reportSeen(product.slug, 'cart');
-          setFull(!addToCart(product.id, stock, variant?.id));
-        }}
-      >
-        {needsChoice
-          ? `Choose a ${missing}`
-          : stock === 0
-            ? 'Out of stock'
-            : atLimit
-              ? 'Maximum quantity in cart'
-              : 'Add to cart'}
+      <button type="button" className="btn primary" disabled={atLimit || stock === 0} onClick={add}>
+        {stock === 0 ? 'Out of stock' : atLimit ? 'Maximum quantity in cart' : 'Add to cart'}
       </button>
+      {stock > 0 && !needsChoice && (
+        <button type="button" className="btn buy-now" onClick={buyNow}>
+          Buy now
+        </button>
+      )}
       {inCart > 0 && (
         <Link to="/cart" className="btn">
           Go to cart ({inCart} added)
         </Link>
+      )}
+      {prompted && needsChoice && (
+        <p className="choose-prompt" role="alert">
+          Choose a {missing} first
+        </p>
       )}
       {full && <p className="error small">Your cart is full. Remove something to add this.</p>}
     </div>

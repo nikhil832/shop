@@ -23,7 +23,7 @@ test('the store works under its security policy: nothing on its pages is blocked
   for (const [path, ready] of [
     ['/', 'Top rated'],
     ['/search?q=shoes', 'Stride Running Shoes'],
-    ['/p/ziva-women-handbag', 'Choose a colour'],
+    ['/p/ziva-women-handbag', 'Add to cart'],
     // The dashboard's chart bars are sized with style props.
     ['/admin', 'Sales'],
     ['/account', 'Two-step login'],

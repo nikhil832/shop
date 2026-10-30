@@ -124,3 +124,4 @@ added here.
 | Quantity discounts: "Buy N or more, P% off each" per product, on the product page and in the cart, kept on the order's items                                                          | Stage 99 (`git log --grep "Stage 99"`)   |
 | Product performance: views, adds to cart and orders per product over 7/30/90 days, and what's looked at but not bought                                                                | Stage 100 (`git log --grep "Stage 100"`) |
 | A friendlier look, round 1: account menu and icons in the header, a category bar on every page, a bolder home page (banner, store promises, round categories), arrows on product rows | (UI round 1 commit)                      |
+| A friendlier look, round 2: "Add" on product cards, an always-enabled Add to cart with Buy now, reviews and questions in panels, a full footer                                        | `git log --grep "UI round 2"`            |

@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+// "Add to cart" before every option is chosen says which one is missing, and adds nothing.
+async function mustChoose(page, missing) {
+  await page.getByRole('button', { name: 'Add to cart', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveText(`Choose a ${missing} first`);
+  await expect(page.getByRole('button', { name: 'Buy now' })).toHaveCount(0);
+}
+
 // Sample sizes from server/src/seed.js. Shares the demo server with the other files: it buys a few pairs of shoes,
 // whose stock no other test counts.
 const SHOES = '/p/stride-running-shoes'; // UK 7–10 at ₹2,499
@@ -16,7 +23,7 @@ test('a size must be chosen; each size is its own cart line and order line', asy
   await expect(page.locator('.product-info .price')).toHaveText('₹1,599');
 
   await page.goto(SHOES);
-  await expect(page.getByRole('button', { name: 'Choose a size' })).toBeDisabled();
+  await mustChoose(page, 'size');
   await sizes(page).getByRole('button', { name: 'UK 8' }).click();
   await expect(sizes(page).getByRole('button', { name: 'UK 8' })).toHaveAttribute('aria-pressed', 'true');
   await expect(sizes(page)).toContainText('Size: UK 8');
@@ -102,7 +109,7 @@ test('an admin adds a product in two colours; the store offers both', async ({ p
   await page.getByRole('link', { name: 'View in store ↗' }).evaluate((a) => a.removeAttribute('target'));
   await page.getByRole('link', { name: 'View in store ↗' }).click();
   const colours = page.getByRole('group', { name: /^Colour/ });
-  await expect(page.getByRole('button', { name: 'Choose a colour' })).toBeDisabled();
+  await mustChoose(page, 'colour');
   await colours.getByRole('button', { name: 'Red' }).click();
   await expect(page.getByRole('button', { name: 'Add to cart' })).toBeEnabled();
   // Sold-out Blue can be chosen, to ask for an email when it's back.
@@ -156,10 +163,10 @@ test('two options: waists depend on the colour, and the choice names both', asyn
   await page.goto('/p/urbane-men-slim-fit-jeans');
   const colour = page.getByRole('group', { name: /^Colour/ });
   const waist = page.getByRole('group', { name: /^Waist/ });
-  await expect(page.getByRole('button', { name: 'Choose a colour and waist' })).toBeDisabled();
+  await mustChoose(page, 'colour and waist');
 
   await colour.getByRole('button', { name: 'Blue' }).click();
-  await expect(page.getByRole('button', { name: 'Choose a waist' })).toBeDisabled();
+  await mustChoose(page, 'waist');
   await expect(waist.getByRole('button', { name: '30 (sold out)' })).toBeEnabled();
   await waist.getByRole('button', { name: '34' }).click();
   await expect(page.locator('.product-info .price')).toHaveText('₹1,299');
@@ -169,7 +176,7 @@ test('two options: waists depend on the colour, and the choice names both', asyn
   await colour.getByRole('button', { name: 'Black' }).click();
   await expect(page.locator('.gallery-main img')).toHaveAttribute('src', images[1]);
   await expect(waist.getByRole('button', { name: '34 (not available)' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Choose a waist' })).toBeDisabled();
+  await mustChoose(page, 'waist');
   await waist.getByRole('button', { name: '32' }).click();
   await expect(waist).toContainText('Waist: 32');
   await page.getByRole('button', { name: 'Add to cart' }).click();
