@@ -7,8 +7,22 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Nothing queued: every idea from 2026-10-29 is built (pre-orders were left out of coming soon by choice). Ask for new
-ideas ("what should we build next?") and they'll be added here.
+Suggested on 2026-10-30, roughly in the order they'd help most. All free (no new services).
+
+- **Helpful votes and review filters**: "Helpful" on reviews (one vote per logged-in customer), sorting by most helpful,
+  and filters by stars and "with photos" from a clickable star breakdown. To start: "start helpful reviews".
+- **Cancel one item**: customers (while placed) and admins (until shipped) cancel some lines of an order instead of the
+  whole order: stock back, the coupon share and store credit worked out like returns, a part refund for online
+  payments, and a credit note when the order has GST. Today it's all or nothing. To start: "start item cancellation".
+- **Stocktake**: a printable count sheet per category, the counted numbers typed in, a preview of the differences, then
+  saved at once as "Counted" in stock history (by whom, when). Shelves and the database drift apart over time; this
+  is how shops put them right. To start: "start stocktake".
+- **Quantity discounts**: per product, e.g. "Buy 3 or more, 10% off each", shown on the product page and applied in the
+  cart and at checkout (lines and GST worked out like bundles). Good for everyday items and wholesale customers. To
+  start: "start quantity discounts".
+- **Product performance**: Admin → Products gains views, add-to-carts and orders per product for 7/30 days, counted per
+  day with nothing stored about visitors, so you can see which products are looked at but not bought (price or photos
+  to fix). To start: "start product performance".
 
 ## Set aside
 
@@ -117,3 +131,4 @@ ideas ("what should we build next?") and they'll be added here.
 | Coming soon: products without stock marked with an expected day, a home page row, "Email me when it arrives", cleared once stock comes                                    | Stage 92 (`git log --grep "Stage 92"`) |
 | Supplier orders: printable orders to suppliers, filled from the reorder suggestions, received against under Receiving, on-order stock taken off the suggestions           | Stage 93 (`git log --grep "Stage 93"`) |
 | Photo zoom: product photos full screen with next/previous, arrow keys and swipes, tap to zoom in where tapped; swipe the page's photo on phones                           | Stage 94 (`git log --grep "Stage 94"`) |
+| Review reminders: one email three days after delivery asking for reviews of the order's products, with a switch on the account page                                       | Stage 95 (`git log --grep "Stage 95"`) |

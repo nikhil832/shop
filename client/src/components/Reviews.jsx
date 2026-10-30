@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router';
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router';
 import { request } from '../api.js';
 import { formatDate } from '../format.js';
 import { uploadReviewPhoto } from '../photos.js';
@@ -216,10 +216,17 @@ function MyReview({ slug, viewer, onChange }) {
 }
 
 // Ratings & reviews under a product. `onChange` tells the page to reload the product, whose rating just changed.
-export default function Reviews({ product, onChange }) {
+// `canScroll`: the page's rows above have loaded, so a #reviews link can scroll here.
+export default function Reviews({ product, canScroll, onChange }) {
   const [page, setPage] = useState(1);
   const [version, setVersion] = useState(0);
   const { data, error } = useFetch(`/products/${product.slug}/reviews?page=${page}`, version);
+  // Opened from the review reminder email (/p/…#reviews): scroll here once the reviews are in.
+  const { hash } = useLocation();
+  const loaded = Boolean(data) && canScroll;
+  useEffect(() => {
+    if (loaded && hash === '#reviews') document.getElementById('reviews')?.scrollIntoView();
+  }, [loaded, hash]);
 
   const changed = () => {
     setPage(1);
@@ -228,7 +235,7 @@ export default function Reviews({ product, onChange }) {
   };
 
   return (
-    <section className="reviews" aria-labelledby="reviews-heading">
+    <section id="reviews" className="reviews" aria-labelledby="reviews-heading">
       <h2 id="reviews-heading">Ratings &amp; reviews</h2>
       <div className="reviews-summary">
         {product.rating.count ? (
@@ -258,8 +265,8 @@ export default function Reviews({ product, onChange }) {
           <MyReview key={data.viewer.review?.id ?? 'new'} slug={product.slug} viewer={data.viewer} onChange={changed} />
         ) : (
           <p className="muted">
-            Bought this? <Link to={`/login?next=${encodeURIComponent(`/p/${product.slug}`)}`}>Log in</Link> to write a
-            review.
+            Bought this? <Link to={`/login?next=${encodeURIComponent(`/p/${product.slug}${hash}`)}`}>Log in</Link> to
+            write a review.
           </p>
         ))}
 

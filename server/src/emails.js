@@ -315,6 +315,37 @@ ${button('See your wishlist', wishlistUrl)}
   return { subject, text, html };
 }
 
+// A few days after delivery, asking for reviews of the order's products (`products` [{ title, slug }], not yet
+// reviewed). Each links to its product page's reviews, where the form is.
+export function reviewReminderEmail(user, order, products, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = user.name.split(/\s+/)[0];
+  const only = products.length === 1 ? products[0] : null;
+  const subject = only ? `How is your ${only.title}?` : `How are the things from order #${orderNumber(order)}?`;
+  const lines = products.map((p) => ({ title: p.title, url: `${publicUrl}/p/${p.slug}#reviews` }));
+  const accountUrl = `${publicUrl}/account`;
+  const intro = `Your order #${orderNumber(order)} arrived a few days ago. A short review helps other customers choose, and tells us what to keep and what to change:`;
+  const text = [
+    `Hi ${firstName},`,
+    intro,
+    lines.map((l) => `${l.title}\n${l.url}`).join('\n\n'),
+    `We ask once per order. To stop these emails, untick them on your account page: ${accountUrl}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const cell = 'padding:8px 0;border-bottom:1px solid #e5e7eb';
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p>${escapeHtml(intro)}</p>
+<table style="width:100%;border-collapse:collapse;margin:8px 0 16px">
+${lines.map((l) => `<tr><td style="${cell}">${escapeHtml(l.title)}</td><td style="${cell};text-align:right;white-space:nowrap"><a href="${escapeHtml(l.url)}" style="color:#1d4ed8">Write a review</a></td></tr>`).join('\n')}
+</table>
+${only ? button('Write a review', lines[0].url) : ''}
+<p style="font-size:13px;color:#6b7280">We ask once per order. To stop these emails, untick them on <a href="${escapeHtml(accountUrl)}">your account page</a>.</p>`,
+    "You're getting this email because an order of yours was delivered.",
+  );
+  return { subject, text, html };
+}
+
 // The asker's question has its first answer. `question` is the stored document, `product` { title, slug }.
 export function questionAnsweredEmail(user, question, product, publicUrl = DEFAULT_PUBLIC_URL) {
   const subject = `Your question about ${product.title} was answered`;

@@ -11,6 +11,7 @@ import { expireUnpaidOrders } from './routes/orders.js';
 import { clearComingSoon, sendBackInStockAlerts } from './routes/stockAlerts.js';
 import { sendPriceDropEmails } from './routes/wishlist.js';
 import { sendCartReminders } from './routes/savedCart.js';
+import { sendReviewReminders } from './reviewReminders.js';
 import { deleteUnusedImages } from './routes/images.js';
 import { sendLowStockEmail } from './lowStockEmail.js';
 import { sendWeeklyNote } from './weeklyNote.js';
@@ -41,7 +42,7 @@ const app = createApp(ctx);
 // Every minute: start and end scheduled sales, release the stock of online orders whose 30-minute payment window has
 // passed, then email customers waiting for products that are back in stock (which that release can cause), drop
 // "Coming soon" from products that now have stock, email those whose wishlist got cheaper and those who left a cart a
-// day ago, once a morning the admins' list of products running out, on Mondays their weekly note, rewrite "What
+// day ago, ask for reviews a few days after delivery, once a morning the admins' list of products running out, on Mondays their weekly note, rewrite "What
 // customers say" for products whose reviews changed, screen new reviews and questions, and send gift cards whose day
 // has come.
 const sweeper = setInterval(async () => {
@@ -52,6 +53,8 @@ const sweeper = setInterval(async () => {
   await clearComingSoon(ctx.db).catch((err) => console.error(err));
   await sendPriceDropEmails(ctx).catch((err) => console.error(err));
   await sendCartReminders(ctx).catch((err) => console.error(err));
+  // Asking for reviews a few days after delivery (reviewReminders.js).
+  await sendReviewReminders(ctx).catch((err) => console.error(err));
   await sendLowStockEmail(ctx).catch((err) => console.error(err));
   await sendWeeklyNote(ctx).catch((err) => console.error(err));
   await updateReviewSummaries(ctx).catch((err) => console.error(err));

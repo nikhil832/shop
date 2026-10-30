@@ -25,7 +25,11 @@ import { address } from './orders.js';
 const detailsBody = z.object({ name: z.string().trim().min(1, 'Enter your name').max(80) });
 const addressBody = z.object({ address, label: z.string().trim().max(30, 'At most 30 characters').default('') });
 const emailPreferencesBody = z
-  .object({ priceDropEmails: z.boolean().optional(), cartReminderEmails: z.boolean().optional() })
+  .object({
+    priceDropEmails: z.boolean().optional(),
+    cartReminderEmails: z.boolean().optional(),
+    reviewReminderEmails: z.boolean().optional(),
+  })
   .refine((b) => Object.keys(b).length > 0, 'Say which emails to switch');
 const passwordBody = z.object({
   currentPassword: z.string().min(1, 'Enter your current password').max(128),
@@ -64,8 +68,8 @@ export function accountRouter(ctx) {
     res.json({ user: await update(req, { $set: { name } }) });
   });
 
-  // Which optional emails the customer gets: price drops on their wishlist, a reminder about a cart left behind (order
-  // emails always go). Each is sent on its own.
+  // Which optional emails the customer gets: price drops on their wishlist, a reminder about a cart left behind, a request
+  // for reviews after delivery (order emails always go). Each is sent on its own.
   router.put('/account/email-preferences', async (req, res) => {
     const choices = parse(emailPreferencesBody, req.body);
     res.json({ user: await update(req, { $set: choices }) });

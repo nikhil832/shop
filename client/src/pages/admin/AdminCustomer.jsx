@@ -167,7 +167,8 @@ export default function AdminCustomer() {
           {c.email}
           <span className="muted small block">
             Joined {formatDate(c.createdAt)} · two-step login {c.twoStep ? 'on' : 'off'} · price-drop emails{' '}
-            {c.emails.priceDrops ? 'on' : 'off'} · cart reminders {c.emails.cartReminders ? 'on' : 'off'}
+            {c.emails.priceDrops ? 'on' : 'off'} · cart reminders {c.emails.cartReminders ? 'on' : 'off'} · review
+            requests {c.emails.reviewReminders ? 'on' : 'off'}
           </span>
         </p>
         <dl className="customer-totals">

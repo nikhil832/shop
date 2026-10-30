@@ -2610,6 +2610,8 @@ textarea {
   gap: 14px;
   margin-top: 28px;
   max-width: 760px;
+  /* Opened from emails (#reviews, #questions): stop below the sticky header. */
+  scroll-margin-top: 120px;
 }
 .reviews-summary {
   display: flex;

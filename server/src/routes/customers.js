@@ -156,7 +156,11 @@ export function customersRouter(ctx) {
         twoStep: Boolean(user.totp?.enabledAt),
         notes: [...(user.adminNotes ?? [])].reverse().map(toAdminNote),
         addresses: (user.addresses ?? []).map(toAddress),
-        emails: { priceDrops: user.priceDropEmails !== false, cartReminders: user.cartReminderEmails !== false },
+        emails: {
+          priceDrops: user.priceDropEmails !== false,
+          cartReminders: user.cartReminderEmails !== false,
+          reviewReminders: user.reviewReminderEmails !== false,
+        },
       },
       totals: {
         orders: user.orders,

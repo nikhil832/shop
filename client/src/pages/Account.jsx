@@ -490,6 +490,15 @@ export default function Account() {
           />
           Remind me once about things left in my cart for a day
         </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={user.reviewReminderEmails}
+            disabled={updates.busy}
+            onChange={changeEmails('reviewReminderEmails', 'Review requests are')}
+          />
+          Ask me once for reviews a few days after an order arrives
+        </label>
         <Feedback state={updates} />
         <p className="muted small">Emails about your orders always come.</p>
       </section>

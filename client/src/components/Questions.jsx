@@ -80,7 +80,8 @@ function Waiting({ questions, onChange }) {
 }
 
 // Questions & answers under a product: the answered ones, and asking (logged in).
-export default function Questions({ product }) {
+// `canScroll`: the page's rows above have loaded, so a #questions link can scroll here.
+export default function Questions({ product, canScroll }) {
   const { user } = useAuth();
   const [page, setPage] = useState(1);
   const [version, setVersion] = useState(0);
@@ -91,7 +92,7 @@ export default function Questions({ product }) {
   );
   // Opened from the answer email (/p/…#questions): scroll here once the questions are in.
   const { hash } = useLocation();
-  const loaded = Boolean(data);
+  const loaded = Boolean(data) && canScroll;
   useEffect(() => {
     if (loaded && hash === '#questions') document.getElementById('questions')?.scrollIntoView();
   }, [loaded, hash]);

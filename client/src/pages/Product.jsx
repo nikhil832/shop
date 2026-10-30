@@ -93,19 +93,10 @@ function VariantPicker({ product, chosen, onChoose }) {
   });
 }
 
-// What other customers bought in the same orders (at least two of them, so no one's basket shows); nothing while
-// loading or when there's nothing to show.
-function BoughtTogether({ slug }) {
-  const { data } = useFetch(`/products/${encodeURIComponent(slug)}/bought-together`);
-  if (!data?.items.length) return null;
-  return <ProductRow title="Frequently bought together" items={data.items} />;
-}
-
-// Up to 8 products like this one; nothing while loading or when there are none.
-function SimilarProducts({ slug }) {
-  const { data } = useFetch(`/products/${encodeURIComponent(slug)}/related`);
-  if (!data?.items.length) return null;
-  return <ProductRow title="Similar products" items={data.items} />;
+// A row of products under the product (loaded by the page); nothing while loading or when there's nothing to show.
+function Row({ title, rows }) {
+  if (rows.loading || !rows.data?.items.length) return null;
+  return <ProductRow title={title} items={rows.data.items} />;
 }
 
 const stockText = (stock) => (stock === 0 ? 'Out of stock' : stock <= 5 ? `Only ${stock} left` : 'In stock');
@@ -118,6 +109,12 @@ export default function Product() {
   const { data: product, error, loading } = useFetch(`/products/${encodeURIComponent(slug)}`, version);
   // The value chosen for each option, for this product; kept while it reloads (e.g. after a review).
   const [choice, setChoice] = useState({ productId: null, values: [] });
+  // The rows between the product and its reviews: what other customers bought in the same orders (at least two of
+  // them, so no one's basket shows), and up to 8 products like this one. Loaded here so that a link to #reviews or
+  // #questions (from emails) scrolls only once they're in and can't push the section out of view.
+  const together = useFetch(`/products/${encodeURIComponent(slug)}/bought-together`);
+  const similar = useFetch(`/products/${encodeURIComponent(slug)}/related`);
+  const rowsIn = !together.loading && !similar.loading;
   // Remembered in this browser once the product has loaded (not for missing or hidden ones).
   const viewed = product?.slug === slug ? slug : null;
   useEffect(() => {
@@ -237,11 +234,11 @@ export default function Product() {
           </section>
         </div>
       </article>
-      {/* Remounted per product, so the row doesn't show the previous product's while the next loads. */}
-      <BoughtTogether key={`together-${product.slug}`} slug={product.slug} />
-      <SimilarProducts key={`similar-${product.slug}`} slug={product.slug} />
-      <Reviews key={product.id} product={product} onChange={() => setVersion((v) => v + 1)} />
-      <Questions key={`questions-${product.id}`} product={product} />
+      {/* Hidden while loading, so a row doesn't show the previous product's while the next loads. */}
+      <Row title="Frequently bought together" rows={together} />
+      <Row title="Similar products" rows={similar} />
+      <Reviews key={product.id} product={product} canScroll={rowsIn} onChange={() => setVersion((v) => v + 1)} />
+      <Questions key={`questions-${product.id}`} product={product} canScroll={rowsIn} />
       <RecentlyViewed exclude={product.slug} />
     </>
   );
