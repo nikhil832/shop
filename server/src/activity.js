@@ -97,6 +97,15 @@ export function productChanges(before, after, categoryName) {
   const offer = (doc) =>
     doc.quantityDiscount ? `${doc.quantityDiscount.percent}% off from ${doc.quantityDiscount.minQty}` : 'none';
   push(changes, 'Quantity discount', offer(before), offer(after));
+  // "Goes well with" (stage 114): ids only, so the count.
+  const addOns = (doc) => (doc.addOns ?? []).map(String);
+  if (JSON.stringify(addOns(before)) !== JSON.stringify(addOns(after))) {
+    changes.push({
+      field: 'Goes well with',
+      from: String(addOns(before).length),
+      to: `${addOns(after).length} (changed)`,
+    });
+  }
 
   const variantsBefore = before.variants ?? [];
   const variantsAfter = after.variants ?? [];

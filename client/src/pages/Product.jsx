@@ -306,6 +306,8 @@ export default function Product() {
           </section>
         </div>
       </article>
+      {/* "Goes well with" (stage 114): picked by the store, so it comes with the product and shows first. */}
+      {product.addOns.length > 0 && <ProductRow title="Goes well with" items={product.addOns} />}
       {/* Hidden while loading, so a row doesn't show the previous product's while the next loads. */}
       <Row title="Frequently bought together" rows={together} />
       <Row title="Similar products" rows={similar} />

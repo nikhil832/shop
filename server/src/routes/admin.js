@@ -20,6 +20,7 @@ import { logActivity, orderTarget, productChanges, productTarget, rupees, yesNo 
 import { RTO_REASONS } from '../cod.js';
 import { notePrices } from '../priceHistory.js';
 import { toAdminNote } from '../customerTags.js';
+import { MAX_ADD_ONS } from './catalog.js';
 
 const hexId = (what) => z.string().regex(/^[0-9a-f]{24}$/, `Choose a ${what}`);
 
@@ -56,6 +57,11 @@ const productFields = z.object({
     .nullable(),
   // "Buy N or more, P% off each" (stage 99, quantityDiscounts.js); null for none.
   quantityDiscount: quantityDiscountField,
+  // "Goes well with" (stage 114): up to MAX_ADD_ONS other products, in the order shown.
+  addOns: z
+    .array(hexId('product'))
+    .max(MAX_ADD_ONS, `Choose at most ${MAX_ADD_ONS} products that go well with it`)
+    .refine((ids) => new Set(ids).size === ids.length, 'Choose each product that goes well with it once'),
   images: z.array(imageRef).max(5),
   // Descriptions of uploaded photos for screen readers, by photo address (stage 59); empty ones are dropped.
   imageAlts: z
@@ -103,6 +109,7 @@ const createProduct = productFields
     sizeGuide: productFields.shape.sizeGuide.default(null),
     comingSoon: productFields.shape.comingSoon.default(null),
     quantityDiscount: productFields.shape.quantityDiscount.default(null),
+    addOns: productFields.shape.addOns.default([]),
     // With variants, the product's own price, MRP and stock come from them.
     price: productFields.shape.price.optional(),
     mrp: productFields.shape.mrp.optional(),
@@ -282,6 +289,7 @@ const toAdminProduct = (doc) => ({
   sizeGuide: doc.sizeGuide ?? null,
   comingSoon: doc.comingSoon ?? null,
   quantityDiscount: doc.quantityDiscount ?? null,
+  addOns: (doc.addOns ?? []).map(String),
   images: doc.images,
   imageAlts: imageAltsOf(doc),
   active: doc.active,
@@ -326,6 +334,34 @@ export function adminRouter(ctx) {
     const category = await categories.findOne({ _id: new ObjectId(id) });
     if (!category) throw new HttpError(400, 'categoryId: Choose a category');
     return category;
+  }
+
+  // Add-ons must be other products that exist (hidden ones are allowed: the store skips them until shown).
+  async function checkAddOns(ids, self) {
+    const addOns = ids.map((id) => new ObjectId(id));
+    if (self && addOns.some((id) => id.equals(self))) {
+      throw new HttpError(400, "addOns: A product can't go well with itself");
+    }
+    if ((await products.countDocuments({ _id: { $in: addOns } })) !== addOns.length) {
+      throw new HttpError(400, 'addOns: A product that goes well with it no longer exists');
+    }
+    return addOns;
+  }
+
+  // The form's list of add-ons, with their titles.
+  async function withAddOns(doc) {
+    const ids = doc.addOns ?? [];
+    const docs = ids.length
+      ? await products.find({ _id: { $in: ids } }, { projection: { title: 1, price: 1, active: 1 } }).toArray()
+      : [];
+    const byId = new Map(docs.map((p) => [p._id.toString(), p]));
+    return {
+      ...toAdminProduct(doc),
+      addOnProducts: ids
+        .map((id) => byId.get(id.toString()))
+        .filter(Boolean)
+        .map((p) => ({ id: p._id.toString(), title: p.title, price: p.price, shown: p.active })),
+    };
   }
 
   // Uploads unused for a day are deleted (deleteUnusedImages), so a form left open that long may hold a gone photo.
@@ -388,7 +424,7 @@ export function adminRouter(ctx) {
   router.get('/admin/products/:id', async (req, res) => {
     const doc = await products.findOne({ _id: parseObjectId(req.params.id, 'product id') });
     if (!doc) throw new HttpError(404, 'Product not found');
-    res.json(toAdminProduct(doc));
+    res.json(await withAddOns(doc));
   });
 
   router.post('/admin/products', async (req, res) => {
@@ -397,6 +433,7 @@ export function adminRouter(ctx) {
     checkVariantImages(variants, body.images);
     const category = await findCategory(body.categoryId);
     await checkImages(body.images);
+    body.addOns = await checkAddOns(body.addOns);
     const now = new Date();
     const base = slugify(body.title) || 'product';
     // The slug comes from the title and never changes afterwards, so product links keep working.
@@ -439,7 +476,7 @@ export function adminRouter(ctx) {
           ],
         });
         await notePrices(db, { _id: insertedId }); // the price history (stage 112)
-        return res.status(201).json(toAdminProduct({ ...doc, _id: insertedId }));
+        return res.status(201).json(await withAddOns({ ...doc, _id: insertedId }));
       } catch (err) {
         if (err.code !== 11000) throw err;
       }
@@ -479,6 +516,7 @@ export function adminRouter(ctx) {
     // A product on sale keeps its prices until the sale ends (sales.js puts the regular ones back then).
     assertPriceUnchanged(current, { price: update.price, mrp: update.mrp, variants: update.variants });
     if (body.images) await checkImages(body.images);
+    if (body.addOns) update.addOns = await checkAddOns(body.addOns, _id);
     if (body.categoryId) update.categoryId = (await findCategory(body.categoryId))._id;
     if (body.images?.length === 0) {
       const category = await categories.findOne({ _id: update.categoryId ?? current.categoryId });
@@ -525,7 +563,7 @@ export function adminRouter(ctx) {
       });
     }
     await notePrices(db, { _id: doc._id }); // the price history (stage 112)
-    res.json(toAdminProduct(doc));
+    res.json(await withAddOns(doc));
   });
 
   // ---- Categories ----

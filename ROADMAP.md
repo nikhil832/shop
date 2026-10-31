@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-30 (fourth list), roughly in the order they'd help most. All free (no new services).
 
-- **Goes well with**: an admin picks a few add-ons for a product (a case for a phone, a bag for a laptop), shown on its
-  page and in the cart with "Add". Bought-together needs sales history; this works from day one. To start: "start
-  add-ons".
 - **Recent searches**: the search box shows the shopper's last few searches (kept in their browser, with "Clear")
   before they type. Saves typing on phones. To start: "start recent searches".
 - **Shipping labels**: printable address labels for chosen orders (several to a sheet), with the order number in large
@@ -153,3 +150,4 @@ Suggested on 2026-10-30 (fourth list), roughly in the order they'd help most. Al
 | Delivery charge by area: an extra charge per delivery area, added to delivery and shown with the PIN check and at checkout                                                            | Stage 111 (`git log --grep "Stage 111"`) |
 | Lowest price in 30 days: a daily price history, and the product page's "Lowest price in N days" (from a week of history)                                                              | Stage 112 (`git log --grep "Stage 112"`) |
 | Delivery instructions: a note at checkout for the courier and packer, on the order pages and packing slip, changeable until it ships                                                  | Stage 113 (`git log --grep "Stage 113"`) |
+| Goes well with: up to 6 hand-picked add-ons per product, on its page and in the cart with Add                                                                                         | Stage 114 (`git log --grep "Stage 114"`) |

@@ -1,4 +1,5 @@
 import express from 'express';
+import { ObjectId } from 'mongodb';
 import { optionsOf, toVariant } from '../variants.js';
 import { z } from 'zod';
 import { HttpError, escapeRegex, parse } from '../http.js';
@@ -52,6 +53,14 @@ const recentQuery = z.object({
     .max(RECENTLY_VIEWED * 161)
     .transform((s) => [...new Set(s.split(',').filter(Boolean))])
     .pipe(z.array(z.string().regex(/^[a-z0-9-]{1,160}$/, 'Invalid product address')).max(RECENTLY_VIEWED)),
+});
+// Add-ons (stage 114): the cart's product ids (at most MAX_CART_ITEMS, 20, in orders.js).
+const addOnsQuery = z.object({
+  ids: z
+    .string()
+    .max(20 * 25)
+    .transform((s) => [...new Set(s.split(',').filter(Boolean))])
+    .pipe(z.array(z.string().regex(/^[0-9a-f]{24}$/, 'Invalid product id')).max(20)),
 });
 const suggestQuery = z.object({ q: z.string().trim().min(1, 'Type something to search for').max(100) });
 
@@ -246,6 +255,26 @@ export const toProductCard = (doc) => ({
   // "Buy N or more, P% off each" (stage 99), or null.
   quantityDiscount: doc.quantityDiscount ?? null,
 });
+
+// "Goes well with" (stage 114): products have `addOns`, up to MAX_ADD_ONS product ids an admin picked, in their order.
+// Shoppers see only those shown and in stock; hidden or sold-out ones stay in the list and come back when they can be
+// bought.
+export const MAX_ADD_ONS = 6;
+const CART_ADD_ONS = 8;
+
+// Cards for these product ids, in this order, skipping any that can't be bought now.
+async function buyableCards(db, ids) {
+  if (!ids.length) return [];
+  const docs = await db
+    .collection('products')
+    .find({ _id: { $in: ids }, active: true, stock: { $gt: 0 } })
+    .toArray();
+  const byId = new Map(docs.map((d) => [d._id.toString(), d]));
+  return ids
+    .map((id) => byId.get(id.toString()))
+    .filter(Boolean)
+    .map(toProductCard);
+}
 
 export function catalogRouter({ db }) {
   const categories = db.collection('categories');
@@ -455,11 +484,32 @@ export function catalogRouter({ db }) {
     res.json({ items: slugs.filter((s) => bySlug.has(s)).map((s) => toProductCard(bySlug.get(s))) });
   });
 
+  // The cart's "Goes well with your cart": the add-ons of its products, cart order then each one's own order, without
+  // products already in it.
+  router.get('/add-ons', async (req, res) => {
+    const { ids } = parse(addOnsQuery, req.query);
+    const docs = ids.length
+      ? await products
+          .find({ _id: { $in: ids.map((id) => ObjectId.createFromHexString(id)) }, active: true })
+          .project({ addOns: 1 })
+          .toArray()
+      : [];
+    const byId = new Map(docs.map((d) => [d._id.toString(), d]));
+    const inCart = new Set(ids);
+    const wanted = new Map();
+    for (const id of ids) {
+      for (const addOn of byId.get(id)?.addOns ?? []) {
+        if (!inCart.has(addOn.toString())) wanted.set(addOn.toString(), addOn);
+      }
+    }
+    res.json({ items: (await buyableCards(db, [...wanted.values()])).slice(0, CART_ADD_ONS) });
+  });
+
   router.get('/products/:slug', async (req, res) => {
     const doc = await products.findOne({ slug: req.params.slug, active: true });
     if (!doc) throw new HttpError(404, 'Product not found');
     const mine = { userId: req.user?._id, productId: doc._id };
-    const [category, saved, alerts, prices] = await Promise.all([
+    const [category, saved, alerts, prices, addOns] = await Promise.all([
       categories.findOne({ _id: doc.categoryId }),
       req.user && db.collection('wishlist').findOne(mine),
       req.user &&
@@ -468,6 +518,7 @@ export function catalogRouter({ db }) {
           .find(mine, { projection: { variantId: 1 } })
           .toArray(),
       priceInsight(db, doc),
+      buyableCards(db, doc.addOns ?? []),
     ]);
     res.json({
       ...toProductCard(doc),
@@ -486,6 +537,8 @@ export function catalogRouter({ db }) {
       stockAlertVariants: alerts ? alerts.filter((a) => a.variantId).map((a) => a.variantId.toString()) : [],
       // { days, lowest, isLowest } over the last 30 days of price history (stage 112), or null with too little.
       priceInsight: prices,
+      // "Goes well with" (stage 114): the hand-picked add-ons that can be bought now.
+      addOns,
     });
   });
 

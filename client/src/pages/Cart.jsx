@@ -8,6 +8,7 @@ import { MAX_QTY, addToCart, cartCount, cartQuery, lineKey, removeFromCart, setQ
 import { formatPrice, mrpSavingOf, smallImage } from '../format.js';
 import { CartIcon, ShieldIcon } from '../components/Icons.jsx';
 import RecentlyViewed from '../components/RecentlyViewed.jsx';
+import ProductRow from '../components/ProductRow.jsx';
 import { RETURN_DAYS } from '../storeFacts.js';
 import { useFetch } from '../useFetch.js';
 
@@ -195,6 +196,14 @@ function SavedForLater({ version, onChange }) {
   );
 }
 
+// "Goes well with your cart" (stage 114): the add-ons the store picked for the cart's products, not already in it.
+// Keeps the last list while a changed cart's loads, so the row doesn't jump.
+function CartAddOns({ productIds }) {
+  const { data } = useFetch(`/add-ons?ids=${productIds.join(',')}`);
+  if (!data?.items.length) return null;
+  return <ProductRow title="Goes well with your cart" items={data.items} />;
+}
+
 export default function Cart() {
   const items = useCart();
   const navigate = useNavigate();
@@ -294,6 +303,7 @@ export default function Cart() {
           {saveError}
         </p>
       )}
+      <CartAddOns productIds={[...new Set(items.map((i) => i.productId))]} />
       {savedList}
       <RecentlyViewed />
     </>

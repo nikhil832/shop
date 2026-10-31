@@ -614,6 +614,8 @@ button.header-link {
   grid-auto-columns: 180px;
   gap: 12px;
   overflow-x: auto;
+  /* Holds the cards' .sr-only texts (Add's announcement), or those of cards scrolled out of view widen the page. */
+  position: relative;
   padding-bottom: 6px;
   scroll-snap-type: x proximity;
 }
@@ -3816,6 +3818,29 @@ textarea {
   justify-content: space-between;
   gap: 8px;
   overflow-wrap: anywhere;
+}
+/* "Goes well with" on the admin product form (stage 114) */
+.add-ons {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  min-width: 0;
+}
+.add-ons legend {
+  font-weight: 600;
+  padding: 0 4px;
+}
+.add-ons .sale-chosen li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 8px;
+  overflow-wrap: anywhere;
+}
+.add-on-actions {
+  display: flex;
+  gap: 12px;
 }
 .status.sale-ended,
 .status.sale-cancelled {

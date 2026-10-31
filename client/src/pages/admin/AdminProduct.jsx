@@ -1,12 +1,14 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { request } from '../../api.js';
+import { query, request } from '../../api.js';
 import { uploadProductPhoto } from '../../photos.js';
-import { formatDate, toPaise, toRupees, smallImage } from '../../format.js';
+import { formatDate, formatPrice, toPaise, toRupees, smallImage } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 import NotFound from '../NotFound.jsx';
 
 const MAX_IMAGES = 5;
+// "Goes well with" (stage 114), MAX_ADD_ONS in the server's catalog.js.
+const MAX_ADD_ONS = 6;
 // Photos are shrunk in the browser before uploading (photos.js), so phones' full-size photos are fine.
 const MAX_BYTES = 25 * 1024 * 1024;
 const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -402,6 +404,81 @@ function WriteForMe({ formRef, images }) {
   );
 }
 
+// "Goes well with" (stage 114): other products shown on this one's page and in carts holding it, with "Add". `chosen`
+// are { id, title, price, shown }, in the order shoppers see them.
+function AddOns({ productId, chosen, onChange }) {
+  const [q, setQ] = useState('');
+  const { data } = useFetch(q.trim().length >= 2 ? `/admin/products${query({ q: q.trim() })}` : null);
+  const results = data?.items.filter((p) => p.id !== productId).slice(0, 8) ?? [];
+  const move = (i, by) => {
+    const list = [...chosen];
+    [list[i], list[i + by]] = [list[i + by], list[i]];
+    onChange(list);
+  };
+  return (
+    <fieldset className="sale-picker add-ons">
+      <legend>Goes well with (optional)</legend>
+      <p className="muted small">
+        Up to {MAX_ADD_ONS} products, such as a case for a phone, shown on this product&apos;s page and in carts that
+        hold it, each with &ldquo;Add&rdquo;. Hidden or sold-out ones are left out until they can be bought.
+      </p>
+      <label>
+        Find products
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Type a title or brand" />
+      </label>
+      {results.length > 0 && (
+        <ul className="sale-results">
+          {results.map((p) => (
+            <li key={p.id}>
+              <span>
+                {p.title} <span className="muted small">{formatPrice(p.price)}</span>
+              </span>
+              <button
+                type="button"
+                className="link"
+                disabled={chosen.length >= MAX_ADD_ONS || chosen.some((c) => c.id === p.id)}
+                onClick={() => {
+                  onChange([...chosen, { id: p.id, title: p.title, price: p.price, shown: p.active }]);
+                  setQ('');
+                }}
+              >
+                Add<span className="sr-only"> {p.title}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {chosen.length > 0 && (
+        <ol className="sale-chosen" aria-label="Goes well with">
+          {chosen.map((c, i) => (
+            <li key={c.id}>
+              <span>
+                {c.title} <span className="muted small">{formatPrice(c.price)}</span>
+                {!c.shown && <span className="muted small"> (hidden)</span>}
+              </span>
+              <span className="add-on-actions">
+                <button type="button" className="link" disabled={i === 0} onClick={() => move(i, -1)}>
+                  Up<span className="sr-only"> {c.title}</span>
+                </button>
+                <button type="button" className="link" disabled={i === chosen.length - 1} onClick={() => move(i, 1)}>
+                  Down<span className="sr-only"> {c.title}</span>
+                </button>
+                <button
+                  type="button"
+                  className="link danger"
+                  onClick={() => onChange(chosen.filter((x) => x.id !== c.id))}
+                >
+                  Remove<span className="sr-only"> {c.title}</span>
+                </button>
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </fieldset>
+  );
+}
+
 function ProductForm({ product, categories }) {
   const navigate = useNavigate();
   const { data: guides } = useFetch('/admin/size-guides');
@@ -412,6 +489,7 @@ function ProductForm({ product, categories }) {
   // Variant rows, or null for a product without variants, and the names of their one or two options.
   const [variants, setVariants] = useState(product?.variants.length ? product.variants.map(newRow) : null);
   const [optionNames, setOptionNames] = useState(product?.options?.length ? product.options : ['']);
+  const [addOns, setAddOns] = useState(product?.addOnProducts ?? []);
 
   async function submit(e) {
     e.preventDefault();
@@ -464,6 +542,7 @@ function ProductForm({ product, categories }) {
         form.get('minQty') === '' && form.get('percentOff') === ''
           ? null
           : { minQty: Number(form.get('minQty')), percent: Number(form.get('percentOff')) },
+      addOns: addOns.map((p) => p.id),
     };
     setState({ busy: true, error: null });
     try {
@@ -649,6 +728,7 @@ function ProductForm({ product, categories }) {
       {variants && (
         <Variants names={optionNames} onNames={setOptionNames} rows={variants} photos={images} onChange={setVariants} />
       )}
+      <AddOns productId={product?.id} chosen={addOns} onChange={setAddOns} />
       {state.error && (
         <p className="error" role="alert">
           {state.error}
