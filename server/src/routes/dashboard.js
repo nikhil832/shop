@@ -2,7 +2,6 @@ import express from 'express';
 import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
 import { parse } from '../http.js';
-import { LOW_STOCK } from './admin.js';
 import { logActivity } from '../activity.js';
 import { UNANSWERED } from './questions.js';
 import { OPEN_REPORTS } from './errorReports.js';
@@ -12,6 +11,7 @@ import { storageUse } from '../storage.js';
 import { runningOut } from '../reorder.js';
 import { profitFor } from '../profit.js';
 import { repeatCustomers } from '../repeatCustomers.js';
+import { LOW, levelOf } from '../lowStock.js';
 
 // The `settings` document of the morning low-stock email (lowStockEmail.js): { day, at, enabled }.
 export const LOW_STOCK_EMAIL = 'lowStockEmail';
@@ -34,8 +34,8 @@ const BEST_SELLERS = 5;
 const LOW_STOCK_LIST = 10;
 const CANCEL_NOTES = 5;
 const TOP_CITIES = 10;
-// Low: the product, or one of its variants, has LOW_STOCK or fewer left.
-export const LOW = { $or: [{ stock: { $lte: LOW_STOCK } }, { 'variants.stock': { $lte: LOW_STOCK } }] };
+// Low: the product, or one of its variants, is at or below the product's low-stock level (lowStock.js, stage 131).
+export { LOW };
 
 // Products in the store running out, lowest first (a product with variants is as low as its lowest variant), at most
 // `limit`, each with the variants that are low themselves, e.g. [{ label: 'UK 10', stock: 2 }]. Also used by the daily
@@ -48,7 +48,7 @@ export async function lowStockProducts(db, limit) {
       { $addFields: { lowest: { $min: ['$stock', { $min: '$variants.stock' }] } } },
       { $sort: { lowest: 1, title: 1 } },
       { $limit: limit },
-      { $project: { slug: 1, title: 1, stock: 1, variants: 1 } },
+      { $project: { slug: 1, title: 1, stock: 1, variants: 1, lowStockAt: 1 } },
     ])
     .toArray();
   return docs.map((p) => ({
@@ -56,7 +56,9 @@ export async function lowStockProducts(db, limit) {
     slug: p.slug,
     title: p.title,
     stock: p.stock,
-    variants: (p.variants ?? []).filter((v) => v.stock <= LOW_STOCK).map((v) => ({ label: v.label, stock: v.stock })),
+    // Its low-stock level (stage 131): its own, or LOW_STOCK.
+    lowAt: levelOf(p),
+    variants: (p.variants ?? []).filter((v) => v.stock <= levelOf(p)).map((v) => ({ label: v.label, stock: v.stock })),
   }));
 }
 

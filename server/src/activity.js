@@ -103,6 +103,9 @@ export function productChanges(before, after, categoryName) {
   // Restock reminder (stage 129).
   const restock = (doc) => (doc.restockDays ? `after ${doc.restockDays} days` : 'none');
   push(changes, 'Restock reminder', restock(before), restock(after));
+  // Low-stock level (stage 131).
+  const level = (doc) => ((doc.lowStockAt ?? null) === null ? 'the default' : String(doc.lowStockAt));
+  push(changes, 'Low-stock level', level(before), level(after));
   // Video (stage 118), as its YouTube link.
   push(changes, 'Video', watchUrl(before.video) ?? 'none', watchUrl(after.video) ?? 'none');
   // "Goes well with" (stage 114): ids only, so the count.

@@ -26,7 +26,10 @@ test('once a day from 9:00 India time, each admin gets the list of products runn
   const total = await t.db.collection('products').countDocuments(low);
   assert.match(mails[0].subject, new RegExp(`^Low stock: ${total} products to restock \\(\\d+ sold out\\)$`));
   // Sold out first; a product with sizes names the ones that are low.
-  assert.match(mails[0].text, /^These products in the store have 5 or fewer left\.\n\n[^\n]+: sold out/);
+  assert.match(
+    mails[0].text,
+    /^These products in the store are at or below their low-stock level \(5 unless set on the product\)\.\n\n[^\n]+: sold out/,
+  );
   assert.match(mails[0].text, /Urbane Men Slim Fit Jeans: \d+ left \([^)]*Blue \/ 30: sold out/);
   assert.ok(mails[0].text.includes('https://bazaar.test/admin/products?status=low'));
   assert.ok(mails[0].html.includes('Open low stock'));

@@ -777,7 +777,7 @@ export default function AdminDashboard() {
               )}
               <h3>Low stock</h3>
               {data.lowStock.length === 0 ? (
-                <p className="muted">Every product in the store has more than 5 left.</p>
+                <p className="muted">Every product in the store is above its low-stock level.</p>
               ) : (
                 <div className="table-wrap">
                   <table className="admin-table">
@@ -792,6 +792,7 @@ export default function AdminDashboard() {
                         <tr key={p.id}>
                           <td>
                             <Link to={`/admin/products/${p.id}`}>{p.title}</Link>
+                            {p.lowAt !== 5 && <span className="muted small block">Low at {p.lowAt}</span>}
                             {p.variants.length > 0 && (
                               <span className="muted small block">
                                 {p.variants
@@ -810,7 +811,7 @@ export default function AdminDashboard() {
                 </div>
               )}
               <p className="muted small">
-                Products in the store with 5 or fewer left.
+                Products in the store at or below their low-stock level (5 unless set on the product).
                 {data.lowStockCount > data.lowStock.length && (
                   <>
                     {' '}

@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-11-01 (seventh list), roughly in the order they'd help most. All free (no new services).
 
-- **Low-stock level per product**: each product (or option) gets its own "low at" number instead of 5 for everything,
-  used by the dashboard, the morning email and the admin filter. Fast sellers warn earlier, slow ones less often. To
-  start: "start low-stock levels".
 - **Nearly gone emails**: customers with an item on their wishlist get one email when it's down to its last few, so
   they don't miss it. With a switch on the account page, like the price-drop emails. To start: "start nearly gone
   emails".
@@ -168,3 +165,4 @@ Suggested on 2026-11-01 (seventh list), roughly in the order they'd help most. A
 | Bought this week: "N people bought this in the last 7 days" on product pages, from 5 people                                                                                             | Stage 128 (`git log --grep "Stage 128"`) |
 | Restock reminders: one "Running low?" email N days after delivery for products the admin marks, with a switch for customers                                                             | Stage 129 (`git log --grep "Stage 129"`) |
 | Store FAQ: questions and answers by topic, searchable on their own page and above the Help page's contact form                                                                          | Stage 130 (`git log --grep "Stage 130"`) |
+| Low-stock levels: each product's own "low at" number, used by the dashboard, the morning email and the admin filter                                                                     | Stage 131 (`git log --grep "Stage 131"`) |

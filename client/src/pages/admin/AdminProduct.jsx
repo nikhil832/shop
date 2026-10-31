@@ -624,6 +624,8 @@ function ProductForm({ product, categories }) {
           : { minQty: Number(form.get('minQty')), percent: Number(form.get('percentOff')) },
       // Remind buyers to restock after this many days (stage 129); empty for none.
       restockDays: form.get('restockDays') === '' ? null : Number(form.get('restockDays')),
+      // Its own low-stock level (stage 131); empty for the store's default.
+      lowStockAt: form.get('lowStockAt') === '' ? null : Number(form.get('lowStockAt')),
       addOns: addOns.map((p) => p.id),
       // A YouTube link (stage 118); empty for none.
       video: form.get('video'),
@@ -799,6 +801,22 @@ function ProductForm({ product, categories }) {
           <span id="restock-help" className="muted small">
             For everyday things like coffee or shampoo: buyers get one email this long after delivery, asking if
             they&apos;re running low. Leave empty for none.
+          </span>
+        </label>
+        <label>
+          Warn when this many are left (optional)
+          <input
+            name="lowStockAt"
+            type="number"
+            min="0"
+            max="1000"
+            step="1"
+            defaultValue={product?.lowStockAt ?? ''}
+            aria-describedby="low-level-help"
+          />
+          <span id="low-level-help" className="muted small">
+            Shown as low on the dashboard and in the morning email at this many or fewer (for any size or colour too).
+            Empty: 5.
           </span>
         </label>
         {guides?.items.length > 0 && (

@@ -1,5 +1,6 @@
 import { quantityDiscountField } from '../quantityDiscounts.js';
 import { restockDaysField } from '../restockReminders.js';
+import { LOW, lowStockAtField } from '../lowStock.js';
 import express from 'express';
 import { ObjectId } from 'mongodb';
 import { z } from 'zod';
@@ -66,6 +67,8 @@ const productFields = z.object({
     .nullable(),
   // "Buy N or more, P% off each" (stage 99, quantityDiscounts.js); null for none.
   quantityDiscount: quantityDiscountField,
+  // Low at this many left (stage 131, lowStock.js); null for the store's default.
+  lowStockAt: lowStockAtField,
   // Remind buyers to restock after this many days (stage 129, restockReminders.js); null for no reminder.
   restockDays: restockDaysField,
   // "Goes well with" (stage 114): up to MAX_ADD_ONS other products, in the order shown.
@@ -129,6 +132,7 @@ const createProduct = productFields
     comingSoon: productFields.shape.comingSoon.default(null),
     quantityDiscount: productFields.shape.quantityDiscount.default(null),
     restockDays: productFields.shape.restockDays.default(null),
+    lowStockAt: productFields.shape.lowStockAt.default(null),
     addOns: productFields.shape.addOns.default([]),
     video: productFields.shape.video.default(null),
     // With variants, the product's own price, MRP and stock come from them.
@@ -294,7 +298,8 @@ const NEXT_FROM = { shipped: ['placed'], delivered: ['shipped'], cancelled: ['aw
 
 const PRODUCT_PAGE = 50;
 const ORDER_PAGE = 25;
-export const LOW_STOCK = 5;
+// The default low-stock level (stage 131 moved it, with each product's own, to lowStock.js).
+export { LOW_STOCK } from '../lowStock.js';
 const DEFAULT_ICON = '🛍️';
 
 const toAdminProduct = (doc) => ({
@@ -316,6 +321,7 @@ const toAdminProduct = (doc) => ({
   comingSoon: doc.comingSoon ?? null,
   quantityDiscount: doc.quantityDiscount ?? null,
   restockDays: doc.restockDays ?? null,
+  lowStockAt: doc.lowStockAt ?? null,
   addOns: (doc.addOns ?? []).map(String),
   video: watchUrl(doc.video),
   images: doc.images,
@@ -458,9 +464,8 @@ export function adminRouter(ctx) {
     if (query.category) filter.categoryId = new ObjectId(query.category);
     if (query.status === 'active') filter.active = true;
     if (query.status === 'hidden') filter.active = false;
-    // Low: the product, or any one of its variants, has LOW_STOCK or fewer left.
-    if (query.status === 'low')
-      filter.$and = [{ $or: [{ stock: { $lte: LOW_STOCK } }, { 'variants.stock': { $lte: LOW_STOCK } }] }];
+    // Low: the product, or any one of its variants, is at or below its low-stock level (lowStock.js).
+    if (query.status === 'low') filter.$and = [LOW];
     const [items, total] = await Promise.all([
       products
         .find(filter)
@@ -677,6 +682,7 @@ export function adminRouter(ctx) {
       comingSoon: null,
       quantityDiscount: source.quantityDiscount ?? null,
       restockDays: source.restockDays ?? null,
+      lowStockAt: source.lowStockAt ?? null,
       addOns: source.addOns ?? [],
       video: source.video ?? null,
       images: source.images,

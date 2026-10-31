@@ -1,5 +1,6 @@
 import { variantTitle } from './variants.js';
 import { SET_PASSWORD_DAYS, setPasswordLink } from './passwordLinks.js';
+import { LOW_STOCK } from './lowStock.js';
 
 // Customer emails: order confirmed (placed), shipped, delivered and cancelled, sent after the change is saved (a failure
 // is logged and never undoes or fails the change itself), the password reset link and back-in-stock alerts. And one for
@@ -645,13 +646,17 @@ export function lowStockEmail(products, total, publicUrl = DEFAULT_PUBLIC_URL, s
   const soonIntro = 'Running out within two weeks at the last month’s sales:';
   const soonMore = soon.total > soon.items.length ? `And ${soon.total - soon.items.length} more.` : '';
   const left = (stock) => (stock === 0 ? 'sold out' : `${stock} left`);
+  // A product's own low-stock level (stage 131) is mentioned when it isn't the store's default.
   const rows = products.map((p) => ({
     title: p.title,
-    detail: p.variants.map((v) => `${v.label}: ${left(v.stock)}`).join(' · '),
+    detail: [
+      ...(p.lowAt !== undefined && p.lowAt !== LOW_STOCK ? [`low at ${p.lowAt}`] : []),
+      ...p.variants.map((v) => `${v.label}: ${left(v.stock)}`),
+    ].join(' · '),
     left: left(p.stock),
   }));
   const more = total > products.length ? `And ${total - products.length} more.` : '';
-  const intro = 'These products in the store have 5 or fewer left.';
+  const intro = `These products in the store are at or below their low-stock level (${LOW_STOCK} unless set on the product).`;
 
   const text = [
     ...(total ? [intro, rows.map((r) => `${r.title}: ${r.left}${r.detail ? ` (${r.detail})` : ''}`).join('\n')] : []),

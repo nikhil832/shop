@@ -10,7 +10,7 @@ const STATUSES = [
   ['', 'All'],
   ['active', 'Active'],
   ['hidden', 'Hidden'],
-  ['low', 'Low stock (≤5)'],
+  ['low', 'Low stock'],
 ];
 
 // Stock can be changed right in the list. Remounted (key) when the saved value changes.
