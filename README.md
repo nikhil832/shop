@@ -147,6 +147,7 @@ Built in stages. Done so far:
 112. **Lowest price in 30 days**: the store now keeps each product's lowest price per day (daily, and whenever a price changes: admin edits, CSV imports, sales). With a week or more of history, the product page says "Lowest price in N days" when today's price is the lowest, or shows the lowest price of those days; with less, it says nothing.
 113. **Delivery instructions**: an optional note at checkout ("Call before coming"), shown on both order pages, the packing slip, the new-order alert and the export, and changeable by the customer or an admin until the order ships (a customer's change emails the admins; an admin's is logged).
 114. **Goes well with**: on the admin product form, pick up to 6 other products that go with it (a case for a phone), in the order you want. They're shown on the product's page and, for products in the cart, under the cart ("Goes well with your cart"), each with "Add"; hidden or sold-out ones are left out until they can be bought again.
+115. **Recent searches**: tapping the empty search box lists the shopper's last 6 searches, newest first, to search again with one tap (or the arrow keys), and "Clear recent searches" forgets them. They're kept only in that browser, never sent to the store.
 
 What's next: see [ROADMAP.md](ROADMAP.md).
 

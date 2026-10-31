@@ -9,8 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-30 (fourth list), roughly in the order they'd help most. All free (no new services).
 
-- **Recent searches**: the search box shows the shopper's last few searches (kept in their browser, with "Clear")
-  before they type. Saves typing on phones. To start: "start recent searches".
 - **Shipping labels**: printable address labels for chosen orders (several to a sheet), with the order number in large
   print, the COD amount to collect and the courier, beside the packing slips. Saves writing addresses by hand. To
   start: "start shipping labels".
@@ -151,3 +149,4 @@ Suggested on 2026-10-30 (fourth list), roughly in the order they'd help most. Al
 | Lowest price in 30 days: a daily price history, and the product page's "Lowest price in N days" (from a week of history)                                                              | Stage 112 (`git log --grep "Stage 112"`) |
 | Delivery instructions: a note at checkout for the courier and packer, on the order pages and packing slip, changeable until it ships                                                  | Stage 113 (`git log --grep "Stage 113"`) |
 | Goes well with: up to 6 hand-picked add-ons per product, on its page and in the cart with Add                                                                                         | Stage 114 (`git log --grep "Stage 114"`) |
+| Recent searches: the empty search box offers the shopper's last 6 searches (kept in their browser), with Clear                                                                        | Stage 115 (`git log --grep "Stage 115"`) |

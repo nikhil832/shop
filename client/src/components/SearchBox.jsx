@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { formatPrice } from '../format.js';
-import { SearchIcon } from './Icons.jsx';
+import { ClockIcon, SearchIcon } from './Icons.jsx';
 import { useFetch } from '../useFetch.js';
+import { clearSearches, rememberSearch, useRecentSearches } from '../recentSearches.js';
 
 // Suggestions are asked for once typing pauses this long, and only from this many characters.
 const DELAY_MS = 150;
@@ -11,7 +12,9 @@ const MIN_LENGTH = 2;
 const searchUrl = (q) => (q ? `/search?q=${encodeURIComponent(q)}` : '/search');
 
 // The header's search box. While typing it suggests categories and products (a combobox: arrow keys move through
-// them, Enter opens the highlighted one or searches, Escape closes). `initial` is the query in the URL.
+// them, Enter opens the highlighted one or searches, Escape closes). While empty, it offers this browser's recent
+// searches (stage 115) the same way, with "Clear recent searches" as the last option (a listbox holds only options, so
+// it can't be a button). `initial` is the query in the URL.
 export default function SearchBox({ initial }) {
   const navigate = useNavigate();
   const listId = useId();
@@ -23,10 +26,16 @@ export default function SearchBox({ initial }) {
   const timer = useRef(null);
   useEffect(() => () => clearTimeout(timer.current), []);
 
+  const recent = useRecentSearches();
   const q = query.trim();
   const { data } = useFetch(open && q.length >= MIN_LENGTH ? `/search/suggest?q=${encodeURIComponent(q)}` : null);
-  const options =
-    open && q.length >= MIN_LENGTH && data
+  const showRecent = open && !text.trim() && recent.length > 0;
+  const options = showRecent
+    ? [
+        ...recent.map((term) => ({ key: `r-${term}`, to: searchUrl(term), recent: term })),
+        { key: 'clear', clear: true },
+      ]
+    : open && text.trim() && q.length >= MIN_LENGTH && data
       ? [
           ...data.categories.map((c) => ({ key: `c-${c.slug}`, to: `/search?category=${c.slug}`, category: c })),
           ...data.products.map((p) => ({ key: `p-${p.slug}`, to: `/p/${p.slug}`, product: p })),
@@ -40,7 +49,15 @@ export default function SearchBox({ initial }) {
   }
 
   function go(option) {
+    if (option.clear) {
+      clearSearches();
+      setActive(-1);
+      return;
+    }
     close();
+    // A recent search moves to the top; "See all results" counts as searching for the words.
+    if (option.recent) rememberSearch(option.recent);
+    if (option.total) rememberSearch(q);
     navigate(option.to);
   }
 
@@ -73,6 +90,7 @@ export default function SearchBox({ initial }) {
   function submit(e) {
     e.preventDefault();
     close();
+    rememberSearch(text);
     navigate(searchUrl(text.trim()));
   }
 
@@ -106,7 +124,7 @@ export default function SearchBox({ initial }) {
         <ul
           id={listId}
           role="listbox"
-          aria-label="Search suggestions"
+          aria-label={showRecent ? 'Recent searches' : 'Search suggestions'}
           className="suggestions"
           onMouseDown={(e) => e.preventDefault()}
         >
@@ -120,6 +138,13 @@ export default function SearchBox({ initial }) {
               onClick={() => go(o)}
               onMouseMove={() => i !== active && setActive(i)}
             >
+              {o.recent && (
+                <span className="recent-search">
+                  <ClockIcon size={16} />
+                  <span className="suggestion-title">{o.recent}</span>
+                </span>
+              )}
+              {o.clear && <span className="clear-searches">Clear recent searches</span>}
               {o.category && (
                 <>
                   <span>{o.category.name}</span>
