@@ -7,10 +7,7 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Suggested on 2026-10-31 (fifth list), roughly in the order they'd help most. All free (no new services).
-
-- **Sales by place**: a dashboard panel of orders and revenue by state and city for the chosen period. Shows where
-  customers are, for delivery areas, charges and ads. To start: "start sales by place".
+All five of the fifth list (2026-10-31) are built. Ask for new ideas ("new ideas") to fill this list again.
 
 ## Set aside
 
@@ -151,3 +148,4 @@ Suggested on 2026-10-31 (fifth list), roughly in the order they'd help most. All
 | Share a product: a Share button on product pages (the phone's share menu, or Copy link / WhatsApp / Email), with shares counted in Performance                                          | Stage 121 (`git log --grep "Stage 121"`) |
 | Cancellation reasons: customers say why they cancel; the dashboard shows the main reasons and latest notes                                                                              | Stage 122 (`git log --grep "Stage 122"`) |
 | Delivery feedback: customers say how the delivery went; a courier report with answers and late deliveries                                                                               | Stage 123 (`git log --grep "Stage 123"`) |
+| Sales by place: a dashboard panel of orders and revenue by state and top cities                                                                                                         | Stage 124 (`git log --grep "Stage 124"`) |

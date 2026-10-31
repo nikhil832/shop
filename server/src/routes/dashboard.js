@@ -32,6 +32,7 @@ const DAY = 86_400_000;
 const BEST_SELLERS = 5;
 const LOW_STOCK_LIST = 10;
 const CANCEL_NOTES = 5;
+const TOP_CITIES = 10;
 // Low: the product, or one of its variants, has LOW_STOCK or fewer left.
 export const LOW = { $or: [{ stock: { $lte: LOW_STOCK } }, { 'variants.stock': { $lte: LOW_STOCK } }] };
 
@@ -147,6 +148,28 @@ export function dashboardRouter({ db, config }) {
                     orders: { $sum: 1 },
                   },
                 },
+              ],
+              // Where this period's sales went (stage 124): by the delivery address's state, and the top cities.
+              byState: [
+                { $match: current },
+                { $group: { _id: '$address.state', orders: { $sum: 1 }, revenue: { $sum: '$total' } } },
+                { $sort: { revenue: -1, _id: 1 } },
+              ],
+              byCity: [
+                { $match: current },
+                { $addFields: { cityName: { $trim: { input: { $ifNull: ['$address.city', ''] } } } } },
+                // So each city is named as its earliest order spelled it.
+                { $sort: { createdAt: 1 } },
+                {
+                  $group: {
+                    _id: { city: { $toLower: '$cityName' }, state: '$address.state' },
+                    city: { $first: '$cityName' },
+                    orders: { $sum: 1 },
+                    revenue: { $sum: '$total' },
+                  },
+                },
+                { $sort: { revenue: -1, '_id.city': 1 } },
+                { $limit: TOP_CITIES },
               ],
               bestSellers: [
                 { $match: current },
@@ -286,6 +309,16 @@ export function dashboardRouter({ db, config }) {
         refunds: refunded.refunds,
         itemsReturned: refunded.items,
         netRevenue: totals.revenue - refunded.refunds,
+      },
+      // Sales by the delivery address (stage 124): every state with sales, and the top cities. Revenue as in totals.
+      places: {
+        states: stats.byState.map((r) => ({ state: r._id ?? '', orders: r.orders, revenue: r.revenue })),
+        cities: stats.byCity.map((r) => ({
+          city: r.city,
+          state: r._id.state ?? '',
+          orders: r.orders,
+          revenue: r.revenue,
+        })),
       },
       // Customers' own cancellations of this period's orders: reason null is one cancelled without saying.
       cancelReasons: {

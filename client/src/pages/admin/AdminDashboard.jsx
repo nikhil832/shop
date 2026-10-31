@@ -375,6 +375,82 @@ function ShoppingAssistant() {
 }
 
 // The morning low-stock email, on or off for every admin. Saved as soon as it's ticked; back as it was if that fails.
+// Where this period's sales were delivered (stage 124): every state with sales, and the top cities, by revenue.
+function SalesByPlace({ places, revenue }) {
+  const [view, setView] = useState('states');
+  const rows = view === 'states' ? places.states : places.cities;
+  const share = (r) => (revenue ? Math.round((r.revenue * 100) / revenue) : 0);
+  return (
+    <section className="panel sales-by-place" aria-labelledby="sales-by-place-heading">
+      <div className="admin-head">
+        <h2 id="sales-by-place-heading">Sales by place</h2>
+        <div className="place-views" role="group" aria-label="Show">
+          <button
+            type="button"
+            className="btn small"
+            aria-pressed={view === 'states'}
+            onClick={() => setView('states')}
+          >
+            States
+          </button>
+          <button
+            type="button"
+            className="btn small"
+            aria-pressed={view === 'cities'}
+            onClick={() => setView('cities')}
+          >
+            Top cities
+          </button>
+        </div>
+      </div>
+      {rows.length === 0 ? (
+        <p className="muted">No sales in this period.</p>
+      ) : (
+        // Focusable, so keyboards can scroll it when long names make it wider than a phone.
+        <div
+          className="table-wrap"
+          tabIndex={0}
+          role="region"
+          aria-label={view === 'states' ? 'Sales by state' : 'Sales by city'}
+        >
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>{view === 'states' ? 'State' : 'City'}</th>
+                <th className="num">Orders</th>
+                <th className="num">Revenue</th>
+                <th className="num">Share</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={`${r.city ?? ''}|${r.state}`}>
+                  <td>
+                    {view === 'states' ? r.state || 'Not given' : r.city || 'Not given'}
+                    {view === 'cities' && <span className="muted small block">{r.state}</span>}
+                  </td>
+                  <td className="num">{r.orders.toLocaleString('en-IN')}</td>
+                  <td className="num">{formatPrice(r.revenue)}</td>
+                  <td className="num place-share">
+                    <span className="place-track" aria-hidden="true">
+                      <span className="place-bar" style={{ width: `${share(r)}%` }} />
+                    </span>
+                    {share(r)}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="muted small">
+        Orders placed in this period, by the state and city they were delivered to. Revenue is as in the totals above
+        (with delivery, after discounts, before refunds).
+      </p>
+    </section>
+  );
+}
+
 // Why customers cancelled this period's orders (stage 122), most common first, with their latest notes.
 function CancelReasons({ cancelReasons }) {
   const { reasons, notes } = cancelReasons;
@@ -742,6 +818,7 @@ export default function AdminDashboard() {
             </section>
           </div>
 
+          <SalesByPlace places={data.places} revenue={data.totals.revenue} />
           <CancelReasons cancelReasons={data.cancelReasons} />
           <ExportOrders key={days} from={data.daily[0].date} to={data.daily.at(-1).date} />
           <StorageMeter storage={data.storage} />

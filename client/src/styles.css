@@ -4861,3 +4861,41 @@ textarea {
 .delivery-feedback form p {
   margin: 0;
 }
+
+/* ---- Sales by place (stage 124) ---- */
+.place-views {
+  display: flex;
+  gap: 6px;
+}
+.place-views .btn[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.place-share {
+  min-width: 120px;
+}
+/* A bar as long as the share, beside the percentage (hidden on phones, where the table is narrow). */
+.place-track {
+  display: inline-block;
+  width: 70px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 4px;
+  background: var(--bg);
+  vertical-align: middle;
+  overflow: hidden;
+}
+.place-bar {
+  display: block;
+  height: 100%;
+  background: var(--chart);
+}
+@media (max-width: 800px) {
+  .place-share {
+    min-width: 0;
+  }
+  .place-track {
+    display: none;
+  }
+}
