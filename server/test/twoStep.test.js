@@ -24,13 +24,15 @@ const now =
   (secret) =>
     codeAt(secret, stepOf() + offset);
 
-// Turns two-step login on for a logged-in `call`; returns the secret and the recovery codes.
+// Turns two-step login on for a logged-in `call`; returns the secret, the recovery codes and the 30-second step whose
+// code it used (a test asking for "the current code" later may be in the next step by then).
 async function enable(call) {
   const setup = await call('POST', '/account/two-step/setup', { password: 'password123' });
   assert.equal(setup.status, 200);
-  const res = await call('POST', '/account/two-step/enable', { code: now()(setup.body.secret) });
+  const step = stepOf();
+  const res = await call('POST', '/account/two-step/enable', { code: codeAt(setup.body.secret, step) });
   assert.equal(res.status, 200, JSON.stringify(res.body));
-  return { secret: setup.body.secret, recoveryCodes: res.body.recoveryCodes, uri: setup.body.uri };
+  return { secret: setup.body.secret, recoveryCodes: res.body.recoveryCodes, uri: setup.body.uri, step };
 }
 const login = (call, password = 'password123') => call('POST', '/auth/login', { email: call.email, password });
 
@@ -94,7 +96,7 @@ test('setting it up needs the password and a code from the app; recovery codes a
 
 test('logging in then takes the password and a code, each code once; recovery codes work once each', async () => {
   const owner = await register();
-  const { secret, recoveryCodes } = await enable(owner);
+  const { secret, recoveryCodes, step } = await enable(owner);
   const call = t.browser();
   call.email = owner.email;
 
@@ -108,9 +110,10 @@ test('logging in then takes the password and a code, each code once; recovery co
   const wrong = await call('POST', '/auth/login/code', { ticket: first.body.ticket, code: '123456' });
   assert.equal(wrong.status, 401);
   assert.equal(wrong.body.error, 'That code is wrong or was already used');
-  // The setup used the current code, so it can't be used again: the next one works.
+  // The setup's code can't be used again (asked for by its step: CI failed once when the clock moved on to the next
+  // 30 seconds between the setup and here, making "the current code" a new one): the next one works.
   assert.equal(
-    (await call('POST', '/auth/login/code', { ticket: first.body.ticket, code: now()(secret) })).status,
+    (await call('POST', '/auth/login/code', { ticket: first.body.ticket, code: codeAt(secret, step) })).status,
     401,
   );
   const ok = await call('POST', '/auth/login/code', { ticket: first.body.ticket, code: now(1)(secret) });
