@@ -955,6 +955,28 @@ p a:not(.btn) {
   user-select: none;
   -webkit-user-drag: none;
 }
+/* Product videos (stage 118) */
+.video-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+}
+.video-frame {
+  margin-top: 10px;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #000000;
+}
+.video-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
 .gallery-enlarge {
   position: absolute;
   right: 10px;

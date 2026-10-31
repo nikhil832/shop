@@ -29,14 +29,14 @@ test('every response carries the security headers, errors and 404s included', as
   }
 });
 
-test('the policy allows only the store itself and Razorpay, and no framing', () => {
+test("the policy allows only the store itself, Razorpay and YouTube's privacy-enhanced player, and no framing", () => {
   const csp = directives(CONTENT_SECURITY_POLICY);
   assert.deepEqual(csp['default-src'], ["'self'"]);
   assert.deepEqual(csp['script-src'], ["'self'", 'https://checkout.razorpay.com']);
   assert.ok(!csp['script-src'].includes("'unsafe-inline'") && !csp['script-src'].includes("'unsafe-eval'"));
   assert.deepEqual(csp['frame-ancestors'], ["'none'"]);
   assert.deepEqual(csp['object-src'], ["'none'"]);
-  assert.deepEqual(csp['frame-src'], ['https://*.razorpay.com']);
+  assert.deepEqual(csp['frame-src'], ['https://*.razorpay.com', 'https://www.youtube-nocookie.com']);
   // The sample catalog's drawings are data: addresses.
   assert.ok(csp['img-src'].includes('data:'));
 });

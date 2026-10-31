@@ -21,6 +21,7 @@ import { RTO_REASONS } from '../cod.js';
 import { notePrices } from '../priceHistory.js';
 import { toAdminNote } from '../customerTags.js';
 import { MAX_ADD_ONS } from './catalog.js';
+import { videoField, watchUrl } from '../videos.js';
 
 const hexId = (what) => z.string().regex(/^[0-9a-f]{24}$/, `Choose a ${what}`);
 
@@ -62,6 +63,8 @@ const productFields = z.object({
     .array(hexId('product'))
     .max(MAX_ADD_ONS, `Choose at most ${MAX_ADD_ONS} products that go well with it`)
     .refine((ids) => new Set(ids).size === ids.length, 'Choose each product that goes well with it once'),
+  // A YouTube link (stage 118, videos.js), stored as the video's id; null or '' for none.
+  video: videoField,
   images: z.array(imageRef).max(5),
   // Descriptions of uploaded photos for screen readers, by photo address (stage 59); empty ones are dropped.
   imageAlts: z
@@ -110,6 +113,7 @@ const createProduct = productFields
     comingSoon: productFields.shape.comingSoon.default(null),
     quantityDiscount: productFields.shape.quantityDiscount.default(null),
     addOns: productFields.shape.addOns.default([]),
+    video: productFields.shape.video.default(null),
     // With variants, the product's own price, MRP and stock come from them.
     price: productFields.shape.price.optional(),
     mrp: productFields.shape.mrp.optional(),
@@ -290,6 +294,7 @@ const toAdminProduct = (doc) => ({
   comingSoon: doc.comingSoon ?? null,
   quantityDiscount: doc.quantityDiscount ?? null,
   addOns: (doc.addOns ?? []).map(String),
+  video: watchUrl(doc.video),
   images: doc.images,
   imageAlts: imageAltsOf(doc),
   active: doc.active,
@@ -615,6 +620,7 @@ export function adminRouter(ctx) {
       comingSoon: null,
       quantityDiscount: source.quantityDiscount ?? null,
       addOns: source.addOns ?? [],
+      video: source.video ?? null,
       images: source.images,
       imageAlts: source.imageAlts ?? {},
       active: false,

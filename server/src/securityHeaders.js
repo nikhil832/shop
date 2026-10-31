@@ -20,7 +20,8 @@ export const CONTENT_SECURITY_POLICY = [
   `img-src 'self' data: blob: ${RAZORPAY}`,
   "font-src 'self' data:",
   `connect-src 'self' ${RAZORPAY}`,
-  `frame-src ${RAZORPAY}`,
+  // Product videos (stage 118): YouTube's privacy-enhanced player, loaded only when a shopper presses play.
+  `frame-src ${RAZORPAY} https://www.youtube-nocookie.com`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

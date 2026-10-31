@@ -573,6 +573,8 @@ function ProductForm({ product, categories }) {
           ? null
           : { minQty: Number(form.get('minQty')), percent: Number(form.get('percentOff')) },
       addOns: addOns.map((p) => p.id),
+      // A YouTube link (stage 118); empty for none.
+      video: form.get('video'),
     };
     setState({ busy: true, error: null });
     try {
@@ -737,6 +739,20 @@ function ProductForm({ product, categories }) {
             </select>
           </label>
         )}
+        <label className="wide">
+          YouTube video (optional)
+          <input
+            name="video"
+            inputMode="url"
+            maxLength={300}
+            placeholder="https://www.youtube.com/watch?v=…"
+            defaultValue={product?.video ?? ''}
+          />
+          <span className="muted small">
+            A link to the video on YouTube (a Short works too). Shoppers see a &ldquo;Watch the video&rdquo; button
+            under the photos; YouTube loads only when they press it.
+          </span>
+        </label>
         <label className="wide">
           Highlights (one per line, up to 8)
           <textarea name="highlights" rows="3" defaultValue={product?.highlights.join('\n')} />

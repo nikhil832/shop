@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { smallImage } from '../format.js';
+import { PlayIcon } from './Icons.jsx';
 
 // How far a finger (or mouse) has to move sideways to count as a swipe, in pixels.
 const SWIPE = 50;
@@ -32,6 +33,33 @@ function useSwipe(go) {
   };
 }
 
+// The product's YouTube video (stage 118): a button of our own until pressed, then YouTube's privacy-enhanced player
+// (no cookies until played), so nothing is fetched from Google for shoppers who don't watch. The player takes focus,
+// as the button it replaces had it.
+function ProductVideo({ video, title }) {
+  const [playing, setPlaying] = useState(false);
+  if (!playing) {
+    return (
+      <button type="button" className="btn video-button" onClick={() => setPlaying(true)}>
+        <PlayIcon size={20} />
+        Watch the video
+        <span className="muted small">from YouTube</span>
+      </button>
+    );
+  }
+  return (
+    <div className="video-frame">
+      <iframe
+        ref={(el) => el?.focus()}
+        src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.youtubeId)}?autoplay=1&rel=0`}
+        title={`Video of ${title}`}
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        referrerPolicy="strict-origin-when-cross-origin"
+      />
+    </div>
+  );
+}
+
 // Where on the photo the pointer is, as a CSS transform origin ("30% 62%"), so zooming in keeps that spot under it.
 function originAt(e) {
   const r = e.currentTarget.getBoundingClientRect();
@@ -44,7 +72,7 @@ function originAt(e) {
 // phone moves between them. "Enlarge" (or a tap on the photo) opens the browser's own <dialog> (focus stays inside,
 // Escape closes) with the photo as large as the screen allows: previous/next buttons, arrow keys and swipes move
 // between photos, and a tap (or "Zoom in") zooms in where it was tapped; moving across it then looks around.
-export default function Gallery({ images, title, alts = {} }) {
+export default function Gallery({ images, title, alts = {}, video = null }) {
   const [selected, setSelected] = useState(0);
   const [zoomed, setZoomed] = useState(false);
   const [origin, setOrigin] = useState('50% 50%');
@@ -91,6 +119,7 @@ export default function Gallery({ images, title, alts = {} }) {
           ))}
         </div>
       )}
+      {video && <ProductVideo key={video.youtubeId} video={video} title={title} />}
       <dialog
         ref={dialog}
         className="photo-viewer"

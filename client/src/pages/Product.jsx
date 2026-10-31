@@ -235,6 +235,7 @@ export default function Product() {
           images={photoSource?.images ?? product.images}
           title={choiceText ? `${product.title}, ${choiceText}` : product.title}
           alts={product.imageAlts}
+          video={product.video}
         />
         <div className="product-info">
           <span className="brand">{product.brand}</span>

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { requireAdmin } from './auth.js';
 import { parse } from './http.js';
 import { optionsOf } from './variants.js';
+import { watchUrl } from './videos.js';
 
 // The admin activity log: who changed what, and when. Each admin route that changes something calls logActivity()
 // after the change is saved, as do the command-line scripts that grant admin or switch off two-step login. Entries are
@@ -97,6 +98,8 @@ export function productChanges(before, after, categoryName) {
   const offer = (doc) =>
     doc.quantityDiscount ? `${doc.quantityDiscount.percent}% off from ${doc.quantityDiscount.minQty}` : 'none';
   push(changes, 'Quantity discount', offer(before), offer(after));
+  // Video (stage 118), as its YouTube link.
+  push(changes, 'Video', watchUrl(before.video) ?? 'none', watchUrl(after.video) ?? 'none');
   // "Goes well with" (stage 114): ids only, so the count.
   const addOns = (doc) => (doc.addOns ?? []).map(String);
   if (JSON.stringify(addOns(before)) !== JSON.stringify(addOns(after))) {

@@ -7,11 +7,8 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Suggested on 2026-10-30 (fourth list), roughly in the order they'd help most. All free (no new services).
-
-- **Product videos**: an admin adds a YouTube link to a product, shown in its gallery in YouTube's privacy-enhanced
-  mode (no cookies until played), with the security policy allowing only that. Videos sell clothes and gadgets better
-  than photos. To start: "start product videos".
+Nothing waiting: all five ideas of the fourth list (suggested on 2026-10-30) were built on 2026-10-31 (stages 114–118).
+Ask for new ideas and they'll be listed here.
 
 ## Set aside
 
@@ -146,3 +143,4 @@ Suggested on 2026-10-30 (fourth list), roughly in the order they'd help most. Al
 | Recent searches: the empty search box offers the shopper's last 6 searches (kept in their browser), with Clear                                                                        | Stage 115 (`git log --grep "Stage 115"`) |
 | Shipping labels: printable labels for chosen orders (four to an A4 sheet or one per 4 × 6 inch label), beside the packing slips                                                       | Stage 116 (`git log --grep "Stage 116"`) |
 | Duplicate a product: a hidden copy (details, photos, options, prices; no stock) to edit into a similar product                                                                        | Stage 117 (`git log --grep "Stage 117"`) |
+| Product videos: a YouTube link per product, played in YouTube's privacy-enhanced player only when the shopper presses "Watch the video"                                               | Stage 118 (`git log --grep "Stage 118"`) |

@@ -539,6 +539,8 @@ export function catalogRouter({ db }) {
       priceInsight: prices,
       // "Goes well with" (stage 114): the hand-picked add-ons that can be bought now.
       addOns,
+      // A YouTube video (stage 118): { youtubeId } or null.
+      video: doc.video ?? null,
     });
   });
 
