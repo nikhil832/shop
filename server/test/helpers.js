@@ -6,13 +6,41 @@ import { seedCatalog } from '../src/seed.js';
 import { FAKE_KEYS, startFakeRazorpay } from './fake-razorpay.js';
 import { aiClient } from '../src/ai.js';
 import { FAKE_ANTHROPIC_KEY, startFakeAnthropic } from './fake-anthropic.js';
+import { basename } from 'node:path';
+
+// CI hung four times with one test file (variants.test.js) never finishing, past the runner's per-test timeout, so
+// the job sat silent until GitHub's 20-minute limit. Each file therefore notes what it is doing, and one still running
+// after FILE_LIMIT_MS says so and exits: CI then fails within minutes, naming the file and the step it was stuck in.
+// The timer is unref'd, so it never keeps a finished file alive. TEST_FILE_LIMIT_MS overrides it (to try it out).
+const FILE_LIMIT_MS = Number(process.env.TEST_FILE_LIMIT_MS) || 4 * 60_000;
+let step = 'loading';
+setTimeout(() => {
+  console.error(
+    `${basename(process.argv[1] ?? 'test file')} was still ${step} after ${FILE_LIMIT_MS / 1000} s; stopping it.`,
+  );
+  process.exit(1);
+}, FILE_LIMIT_MS).unref();
+// Gives up on `promise` after `ms`, saying what took too long (used for shutting things down).
+const within = (promise, ms, what) =>
+  Promise.race([
+    promise,
+    new Promise((resolve) =>
+      setTimeout(() => {
+        console.error(`${what} took more than ${ms / 1000} s; carrying on.`);
+        resolve();
+      }, ms).unref(),
+    ),
+  ]);
 
 // Starts the API on a fresh in-memory replica set seeded with the sample catalog.
 // With { razorpay: true }, online payments are on, talking to a stand-in Razorpay (t.fake).
 // With { ai: 'model-id' }, the writing assistant is on, talking to a stand-in Claude API (t.claude).
 export async function startTestServer({ razorpay = false, ai = null } = {}) {
+  step = 'starting the in-memory MongoDB';
   const mongo = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
+  step = 'connecting to the in-memory MongoDB';
   const { client, db } = await connectDb(mongo.getUri(), 'test');
+  step = 'seeding the sample catalog';
   await seedCatalog(db);
   const fake = razorpay ? await startFakeRazorpay() : null;
   const claude = ai ? await startFakeAnthropic() : null;
@@ -43,6 +71,7 @@ export async function startTestServer({ razorpay = false, ai = null } = {}) {
   const server = createApp(ctx).listen(0);
   await new Promise((resolve) => server.once('listening', resolve));
   const base = `http://localhost:${server.address().port}/api`;
+  step = 'running its tests';
 
   // A client with its own cookie jar, like one browser (`extraHeaders`, e.g. a User-Agent, go with every request).
   // `call` is a client that never logs in.
@@ -82,11 +111,14 @@ export async function startTestServer({ razorpay = false, ai = null } = {}) {
   }
 
   async function stop() {
+    step = 'stopping its servers';
     server.close();
     await fake?.stop();
     await claude?.stop();
-    await client.close();
-    await mongo.stop();
+    await within(client.close(), 30_000, 'Closing the database connection');
+    step = 'stopping the in-memory MongoDB';
+    await within(mongo.stop(), 30_000, 'Stopping the in-memory MongoDB');
+    step = 'finishing after stop()';
   }
 
   // `uri` is the in-memory database's, for tests that run a command-line script against it (never Atlas).
