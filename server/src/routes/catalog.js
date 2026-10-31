@@ -45,6 +45,10 @@ const BOUGHT_TOGETHER_ORDERS = 1000;
 // Orders that are sales, like SOLD in dashboard.js (importing it from there would make an import cycle through admin.js
 // and orders.js, which import this file).
 const SOLD = ['placed', 'shipped', 'delivered'];
+// "N people bought this in the last 7 days" (stage 128): shown only from BOUGHT_SHOWN_FROM people, so a quiet product
+// isn't labelled with a small number and one person's orders never show.
+export const BOUGHT_DAYS = 7;
+export const BOUGHT_SHOWN_FROM = 5;
 // Recently viewed products are remembered in the browser (slugs, newest first); the page asks for their cards.
 export const RECENTLY_VIEWED = 10;
 const recentQuery = z.object({
@@ -505,11 +509,30 @@ export function catalogRouter({ db }) {
     res.json({ items: (await buyableCards(db, [...wanted.values()])).slice(0, CART_ADD_ONS) });
   });
 
+  // How many different customers bought the product in the last BOUGHT_DAYS (sold orders), or null under the threshold.
+  async function boughtRecently(productId) {
+    const [row] = await db
+      .collection('orders')
+      .aggregate([
+        {
+          $match: {
+            'items.productId': productId,
+            createdAt: { $gte: new Date(Date.now() - BOUGHT_DAYS * 86_400_000) },
+            status: { $in: SOLD },
+          },
+        },
+        { $group: { _id: '$userId' } },
+        { $count: 'people' },
+      ])
+      .toArray();
+    return row && row.people >= BOUGHT_SHOWN_FROM ? { people: row.people, days: BOUGHT_DAYS } : null;
+  }
+
   router.get('/products/:slug', async (req, res) => {
     const doc = await products.findOne({ slug: req.params.slug, active: true });
     if (!doc) throw new HttpError(404, 'Product not found');
     const mine = { userId: req.user?._id, productId: doc._id };
-    const [category, saved, alerts, prices, addOns] = await Promise.all([
+    const [category, saved, alerts, prices, addOns, bought] = await Promise.all([
       categories.findOne({ _id: doc.categoryId }),
       req.user && db.collection('wishlist').findOne(mine),
       req.user &&
@@ -519,6 +542,7 @@ export function catalogRouter({ db }) {
           .toArray(),
       priceInsight(db, doc),
       buyableCards(db, doc.addOns ?? []),
+      boughtRecently(doc._id),
     ]);
     res.json({
       ...toProductCard(doc),
@@ -543,6 +567,8 @@ export function catalogRouter({ db }) {
       addOns,
       // A YouTube video (stage 118): { youtubeId } or null.
       video: doc.video ?? null,
+      // { people, days }: how many customers bought it lately (stage 128), or null when fewer than 5.
+      boughtRecently: bought,
     });
   });
 

@@ -258,6 +258,12 @@ export default function Product() {
                 Lowest in the last {product.priceInsight.days} days: {formatPrice(product.priceInsight.lowest)}
               </p>
             ))}
+          {/* From real orders (stage 128), only when at least five people bought it lately. */}
+          {product.boughtRecently && (
+            <p className="bought-recently">
+              {product.boughtRecently.people} people bought this in the last {product.boughtRecently.days} days
+            </p>
+          )}
           {product.quantityDiscount && <p className="quantity-note">{quantityOfferText(product.quantityDiscount)}</p>}
           {product.variants.length > 0 && product.stock > 0 && (
             <>

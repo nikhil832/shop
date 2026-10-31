@@ -160,6 +160,7 @@ Built in stages. Done so far:
 125. **Return reasons**: Admin → Returns → Return reasons shows, for orders placed in the last 30, 90 or 365 days, why items came back (returns and exchanges, with each reason's share), each product's units sold, returned and exchanged and how many per 100 sold came back, with its main reasons, and the latest notes customers wrote, linked to their orders.
 126. **Repeat customers**: a dashboard panel for the period: how many customers bought, how many were new (first order in the period) and how many came back, what each group spent, how many ordered more than once, and the usual number of days between a customer's orders; plus, since the store opened, how many customers have bought more than once.
 127. **Holiday mode**: on Admin → Delivery, set a break (first and last day away, up to 60 days) with an optional message, and choose whether orders are still taken. The shop shows a notice from a week before until it ends; delivery dates for orders placed during the break count from the day after it; with orders paused, checkout is closed until then. "End the holiday" stops it at once. Changes are in the activity log.
+128. **Bought this week**: product pages say "N people bought this in the last 7 days", counted from real orders (different customers, cancelled and unpaid orders left out), shown only from 5 people so a quiet product isn't labelled with a small number. Nothing about who bought is shown.
 
 What's next: see [ROADMAP.md](ROADMAP.md).
 

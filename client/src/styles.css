@@ -4996,3 +4996,11 @@ textarea {
 .holiday-form .form-actions {
   align-self: flex-start;
 }
+
+/* ---- Bought recently (stage 128) ---- */
+.bought-recently {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
