@@ -26,6 +26,7 @@ test('registers, stays logged in with the cookie, and logs out', async () => {
     'name',
     'permissions',
     'priceDropEmails',
+    'restockReminderEmails',
     'reviewReminderEmails',
     'role',
     'twoStep',

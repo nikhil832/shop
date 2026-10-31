@@ -173,6 +173,8 @@ const INDEXES = {
   // "Helpful" votes (stage 96): one per customer per review; found by customer when closing an account.
   reviewVotes: [[{ reviewId: 1, userId: 1 }, { unique: true }], [{ userId: 1 }]],
   wishlist: [[{ userId: 1, productId: 1 }, { unique: true }], [{ userId: 1, addedAt: -1 }]],
+  // Restock reminders (stage 129): one per order and product; found by customer when closing an account.
+  restockReminders: [[{ orderId: 1, productId: 1 }, { unique: true }], [{ userId: 1, at: 1 }], [{ productId: 1 }]],
   // The unused-upload sweep looks at uploads older than a day.
   images: [[{ createdAt: 1 }]],
   // Coupons by code; each customer uses a coupon once; a cancelled order's use is found by order.

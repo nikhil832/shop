@@ -499,6 +499,15 @@ export default function Account() {
           />
           Ask me once for reviews a few days after an order arrives
         </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={user.restockReminderEmails}
+            disabled={updates.busy}
+            onChange={changeEmails('restockReminderEmails', 'Restock reminders are')}
+          />
+          Remind me when everyday things I bought may be running low
+        </label>
         <Feedback state={updates} />
         <p className="muted small">Emails about your orders always come.</p>
       </section>

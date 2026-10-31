@@ -43,6 +43,7 @@ const OWN = [
   'loginCodes',
   'helpRequests',
   'sessions',
+  'restockReminders',
   // Store credit's history; the balance goes with the account (closing gives up any credit left).
   'creditLedger',
 ];
@@ -102,6 +103,7 @@ export function accountDataRouter(ctx) {
           priceDrops: u.priceDropEmails !== false,
           cartReminders: u.cartReminderEmails !== false,
           reviewReminders: u.reviewReminderEmails !== false,
+          restockReminders: u.restockReminderEmails !== false,
         },
         addresses: (u.addresses ?? []).map(toAddress),
         // What the store's staff noted about this account (stage 82).

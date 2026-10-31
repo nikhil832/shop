@@ -100,6 +100,9 @@ export function productChanges(before, after, categoryName) {
   const offer = (doc) =>
     doc.quantityDiscount ? `${doc.quantityDiscount.percent}% off from ${doc.quantityDiscount.minQty}` : 'none';
   push(changes, 'Quantity discount', offer(before), offer(after));
+  // Restock reminder (stage 129).
+  const restock = (doc) => (doc.restockDays ? `after ${doc.restockDays} days` : 'none');
+  push(changes, 'Restock reminder', restock(before), restock(after));
   // Video (stage 118), as its YouTube link.
   push(changes, 'Video', watchUrl(before.video) ?? 'none', watchUrl(after.video) ?? 'none');
   // "Goes well with" (stage 114): ids only, so the count.

@@ -1,4 +1,5 @@
 import { quantityDiscountField } from '../quantityDiscounts.js';
+import { restockDaysField } from '../restockReminders.js';
 import express from 'express';
 import { ObjectId } from 'mongodb';
 import { z } from 'zod';
@@ -65,6 +66,8 @@ const productFields = z.object({
     .nullable(),
   // "Buy N or more, P% off each" (stage 99, quantityDiscounts.js); null for none.
   quantityDiscount: quantityDiscountField,
+  // Remind buyers to restock after this many days (stage 129, restockReminders.js); null for no reminder.
+  restockDays: restockDaysField,
   // "Goes well with" (stage 114): up to MAX_ADD_ONS other products, in the order shown.
   addOns: z
     .array(hexId('product'))
@@ -125,6 +128,7 @@ const createProduct = productFields
     sizeGuide: productFields.shape.sizeGuide.default(null),
     comingSoon: productFields.shape.comingSoon.default(null),
     quantityDiscount: productFields.shape.quantityDiscount.default(null),
+    restockDays: productFields.shape.restockDays.default(null),
     addOns: productFields.shape.addOns.default([]),
     video: productFields.shape.video.default(null),
     // With variants, the product's own price, MRP and stock come from them.
@@ -311,6 +315,7 @@ const toAdminProduct = (doc) => ({
   sizeGuide: doc.sizeGuide ?? null,
   comingSoon: doc.comingSoon ?? null,
   quantityDiscount: doc.quantityDiscount ?? null,
+  restockDays: doc.restockDays ?? null,
   addOns: (doc.addOns ?? []).map(String),
   video: watchUrl(doc.video),
   images: doc.images,
@@ -671,6 +676,7 @@ export function adminRouter(ctx) {
       sizeGuide: source.sizeGuide ?? null,
       comingSoon: null,
       quantityDiscount: source.quantityDiscount ?? null,
+      restockDays: source.restockDays ?? null,
       addOns: source.addOns ?? [],
       video: source.video ?? null,
       images: source.images,

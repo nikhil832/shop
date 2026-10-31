@@ -160,6 +160,7 @@ export function customersRouter(ctx) {
           priceDrops: user.priceDropEmails !== false,
           cartReminders: user.cartReminderEmails !== false,
           reviewReminders: user.reviewReminderEmails !== false,
+          restockReminders: user.restockReminderEmails !== false,
         },
       },
       totals: {

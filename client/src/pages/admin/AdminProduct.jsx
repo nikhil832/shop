@@ -622,6 +622,8 @@ function ProductForm({ product, categories }) {
         form.get('minQty') === '' && form.get('percentOff') === ''
           ? null
           : { minQty: Number(form.get('minQty')), percent: Number(form.get('percentOff')) },
+      // Remind buyers to restock after this many days (stage 129); empty for none.
+      restockDays: form.get('restockDays') === '' ? null : Number(form.get('restockDays')),
       addOns: addOns.map((p) => p.id),
       // A YouTube link (stage 118); empty for none.
       video: form.get('video'),
@@ -783,6 +785,22 @@ function ProductForm({ product, categories }) {
             />
           </label>
         </fieldset>
+        <label>
+          Running-low reminder after (days, optional)
+          <input
+            name="restockDays"
+            type="number"
+            min="7"
+            max="365"
+            step="1"
+            defaultValue={product?.restockDays ?? ''}
+            aria-describedby="restock-help"
+          />
+          <span id="restock-help" className="muted small">
+            For everyday things like coffee or shampoo: buyers get one email this long after delivery, asking if
+            they&apos;re running low. Leave empty for none.
+          </span>
+        </label>
         {guides?.items.length > 0 && (
           <label>
             Size guide

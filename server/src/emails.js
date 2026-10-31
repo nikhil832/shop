@@ -385,6 +385,39 @@ ${only ? button('Write a review', lines[0].url) : ''}
   return { subject, text, html };
 }
 
+// Restock reminders (stage 129): products bought a while ago that are likely running out, each with a link to its
+// page. `products` [{ title, slug }].
+export function restockReminderEmail(user, products, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = user.name.split(/\s+/)[0];
+  const only = products.length === 1 ? products[0] : null;
+  const subject = only ? `Running low on ${only.title}?` : 'Time to restock?';
+  const lines = products.map((p) => ({ title: p.title, url: `${publicUrl}/p/${p.slug}` }));
+  const accountUrl = `${publicUrl}/account`;
+  const intro = only
+    ? `You bought ${only.title} a while ago, so it may be running low. It's here when you need more:`
+    : "You bought these a while ago, so they may be running low. They're here when you need more:";
+  const text = [
+    `Hi ${firstName},`,
+    intro,
+    lines.map((l) => `${l.title}\n${l.url}`).join('\n\n'),
+    `To stop these emails, untick them on your account page: ${accountUrl}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const cell = 'padding:8px 0;border-bottom:1px solid #e5e7eb';
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p>${escapeHtml(intro)}</p>
+<table style="width:100%;border-collapse:collapse;margin:8px 0 16px">
+${lines.map((l) => `<tr><td style="${cell}">${escapeHtml(l.title)}</td><td style="${cell};text-align:right;white-space:nowrap"><a href="${escapeHtml(l.url)}" style="color:#1d4ed8">Buy again</a></td></tr>`).join('\n')}
+</table>
+${only ? button('Buy again', lines[0].url) : ''}
+<p style="font-size:13px;color:#6b7280">To stop these emails, untick them on <a href="${escapeHtml(accountUrl)}">your account page</a>.</p>`,
+    "You're getting this email because you bought these from us.",
+  );
+  return { subject, text, html };
+}
+
 // The asker's question has its first answer. `question` is the stored document, `product` { title, slug }.
 export function questionAnsweredEmail(user, question, product, publicUrl = DEFAULT_PUBLIC_URL) {
   const subject = `Your question about ${product.title} was answered`;

@@ -61,7 +61,12 @@ test('customers download everything the store holds about them, without secrets'
   const data = res.body;
   assert.equal(data.account.email, 'asha@example.com');
   assert.equal(data.account.addresses[0].line1, '12 MG Road');
-  assert.deepEqual(data.account.emails, { priceDrops: true, cartReminders: true, reviewReminders: true });
+  assert.deepEqual(data.account.emails, {
+    priceDrops: true,
+    cartReminders: true,
+    reviewReminders: true,
+    restockReminders: true,
+  });
   assert.deepEqual(
     data.orders.map((o) => o.id),
     [order.id],

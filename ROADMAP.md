@@ -7,11 +7,7 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Suggested on 2026-10-31 (sixth list), roughly in the order they'd help most. All free (no new services).
-
-- **Restock reminders**: for everyday products (coffee, shampoo), the admin sets "remind after N days"; customers who
-  bought one get one email when it's likely running out, with Buy again and a switch to turn them off. To start:
-  "start restock reminders".
+All five of the sixth list (2026-10-31) are built. Ask for new ideas ("new ideas") to fill this list again.
 
 ## Set aside
 
@@ -157,3 +153,4 @@ Suggested on 2026-10-31 (sixth list), roughly in the order they'd help most. All
 | Repeat customers: new and returning customers on the dashboard, what each spent, and the usual time between orders                                                                      | Stage 126 (`git log --grep "Stage 126"`) |
 | Holiday mode: a break when nothing ships, with a shop notice, later delivery dates and optionally paused orders                                                                         | Stage 127 (`git log --grep "Stage 127"`) |
 | Bought this week: "N people bought this in the last 7 days" on product pages, from 5 people                                                                                             | Stage 128 (`git log --grep "Stage 128"`) |
+| Restock reminders: one "Running low?" email N days after delivery for products the admin marks, with a switch for customers                                                             | Stage 129 (`git log --grep "Stage 129"`) |
