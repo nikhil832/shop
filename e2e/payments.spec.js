@@ -94,6 +94,9 @@ test('cancelling a paid order refunds it', async ({ page }) => {
   await expect(page.locator('.order-head .status')).toHaveText('Placed');
 
   await page.getByRole('button', { name: 'Cancel order' }).click();
+  await expect(page.getByText('Your payment will be refunded in full.')).toBeVisible();
+  await page.getByRole('radio', { name: 'Changed my mind' }).check();
+  await page.getByRole('button', { name: 'Confirm cancellation' }).click();
   await expect(page.locator('.order-head .status')).toHaveText('Cancelled');
   await expect(summary(page)).toContainText('Payment: Paid online · refund started');
 });

@@ -31,6 +31,7 @@ const IST_OFFSET = 330 * 60_000;
 const DAY = 86_400_000;
 const BEST_SELLERS = 5;
 const LOW_STOCK_LIST = 10;
+const CANCEL_NOTES = 5;
 // Low: the product, or one of its variants, has LOW_STOCK or fewer left.
 export const LOW = { $or: [{ stock: { $lte: LOW_STOCK } }, { 'variants.stock': { $lte: LOW_STOCK } }] };
 
@@ -118,6 +119,25 @@ export function dashboardRouter({ db, config }) {
                 { $group: { _id: null, revenue: { $sum: '$total' }, orders: { $sum: 1 } } },
               ],
               cancelled: [{ $match: { createdAt: { $gte: from }, status: 'cancelled' } }, { $count: 'n' }],
+              // Why customers cancelled orders from this period (stage 122): counts per reason, and the latest notes.
+              cancelReasons: [
+                { $match: { createdAt: { $gte: from }, status: 'cancelled', cancelledBy: 'customer' } },
+                { $group: { _id: { $ifNull: ['$cancelReason.reason', null] }, count: { $sum: 1 } } },
+                { $sort: { count: -1, _id: 1 } },
+              ],
+              cancelNotes: [
+                {
+                  $match: {
+                    createdAt: { $gte: from },
+                    status: 'cancelled',
+                    cancelledBy: 'customer',
+                    'cancelReason.note': { $type: 'string' },
+                  },
+                },
+                { $sort: { cancelledAt: -1 } },
+                { $limit: CANCEL_NOTES },
+                { $project: { number: 1, cancelReason: 1, cancelledAt: 1 } },
+              ],
               daily: [
                 { $match: current },
                 {
@@ -266,6 +286,17 @@ export function dashboardRouter({ db, config }) {
         refunds: refunded.refunds,
         itemsReturned: refunded.items,
         netRevenue: totals.revenue - refunded.refunds,
+      },
+      // Customers' own cancellations of this period's orders: reason null is one cancelled without saying.
+      cancelReasons: {
+        reasons: stats.cancelReasons.map((r) => ({ reason: r._id, count: r.count })),
+        notes: stats.cancelNotes.map((o) => ({
+          orderId: o._id.toString(),
+          number: o.number ?? null,
+          reason: o.cancelReason.reason,
+          note: o.cancelReason.note,
+          at: o.cancelledAt,
+        })),
       },
       // Over items sold with a cost price, before delivery charges (profit.js).
       profit: {

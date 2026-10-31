@@ -9,8 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-31 (fifth list), roughly in the order they'd help most. All free (no new services).
 
-- **Cancellation reasons**: customers pick why they cancel (ordered by mistake, found it cheaper, delivery too slow…),
-  and the dashboard shows the main reasons. Tells you what to fix. To start: "start cancellation reasons".
 - **Delivery feedback**: after delivery, the order page asks "How was your delivery?" (on time, late, damaged), and
   admins see the answers per courier. Shows which courier to keep. To start: "start delivery feedback".
 - **Sales by place**: a dashboard panel of orders and revenue by state and city for the chosen period. Shows where
@@ -153,3 +151,4 @@ Suggested on 2026-10-31 (fifth list), roughly in the order they'd help most. All
 | Specifications: name and value facts per product, on its page, side by side in Compare, in the spreadsheet and for search engines                                                       | Stage 119 (`git log --grep "Stage 119"`) |
 | SKUs and barcodes: the store's code and the maker's barcode per product and option, unique, searchable (a USB scanner works), on packing slips and stocktake sheets, in the spreadsheet | Stage 120 (`git log --grep "Stage 120"`) |
 | Share a product: a Share button on product pages (the phone's share menu, or Copy link / WhatsApp / Email), with shares counted in Performance                                          | Stage 121 (`git log --grep "Stage 121"`) |
+| Cancellation reasons: customers say why they cancel; the dashboard shows the main reasons and latest notes                                                                              | Stage 122 (`git log --grep "Stage 122"`) |

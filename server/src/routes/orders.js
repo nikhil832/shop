@@ -20,6 +20,7 @@ import { giftBody, giftSettings, giftWrapFee } from '../giftOptions.js';
 import { cashbackOn, cashbackSettings } from '../cashback.js';
 import { statesForPin } from '../pinStates.js';
 import { friendDiscount } from '../referrals.js';
+import { cancelBody, cancelReasonOf } from '../cancelReasons.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
 export const FREE_DELIVERY_MIN = 49900;
@@ -228,6 +229,8 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   deliveredAt: doc.deliveredAt ?? null,
   cancelledAt: doc.cancelledAt ?? null,
   cancelledBy: doc.cancelledBy ?? null,
+  // Why the customer cancelled (stage 122, cancelReasons.js): { reason, note? }, or null.
+  cancelReason: doc.cancelReason ?? null,
   // A shipped order that came back undelivered (cod.js): why, and when. The admin's note is for admins only.
   returnedToSender: doc.returnedToSender
     ? {
@@ -253,8 +256,13 @@ export const toOrder = (doc, { admin = false } = {}) => ({
 // Cancels the order matching `filter` if its status is one of `from`, and puts its stock back, in one transaction.
 // A paid online order is then refunded. `by` is 'customer', 'admin' or 'system' (unpaid and expired). The customer
 // is emailed unless `notify` is false. `user` is the admin cancelling, for the stock history. Returns the updated order
-// document. `returned` { reason, note } (stage 79, cod.js) marks a shipped order that came back undelivered.
-export async function cancelOrder(ctx, filter, { from, by, user = null, notify = true, returned = null }) {
+// document. `returned` { reason, note } (stage 79, cod.js) marks a shipped order that came back undelivered;
+// `cancelReason` { reason, note? } (stage 122) is why the customer cancelled.
+export async function cancelOrder(
+  ctx,
+  filter,
+  { from, by, user = null, notify = true, returned = null, cancelReason = null },
+) {
   const { db, client } = ctx;
   const orders = db.collection('orders');
   // An order still awaiting payment may in fact have been paid: settle that first, so a paid order is refunded.
@@ -274,6 +282,7 @@ export async function cancelOrder(ctx, filter, { from, by, user = null, notify =
             cancelledBy: by,
             updatedAt: now,
             ...(returned && { returnedToSender: { ...returned, at: now } }),
+            ...(cancelReason && { cancelReason }),
           },
         },
         { session, returnDocument: 'after' },
@@ -714,8 +723,13 @@ export function ordersRouter(ctx) {
 
   router.post('/orders/:id/cancel', requireUser, async (req, res) => {
     const filter = { _id: parseObjectId(req.params.id, 'order id'), userId: req.user._id };
+    const cancelReason = cancelReasonOf(parse(cancelBody, req.body));
     // Customers can cancel only until the order ships (or while it still awaits payment).
-    const order = await cancelOrder(ctx, filter, { from: ['awaiting_payment', 'placed'], by: 'customer' });
+    const order = await cancelOrder(ctx, filter, {
+      from: ['awaiting_payment', 'placed'],
+      by: 'customer',
+      cancelReason,
+    });
     res.json(toOrder(order));
   });
 

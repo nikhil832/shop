@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { ORDER_STATUS, formatPrice } from '../../format.js';
+import { ORDER_STATUS, formatDate, formatPrice, orderNumber } from '../../format.js';
+import { CANCEL_REASONS } from '../../cancelReasons.js';
 import { request } from '../../api.js';
 import { useFetch } from '../../useFetch.js';
 
@@ -374,6 +375,55 @@ function ShoppingAssistant() {
 }
 
 // The morning low-stock email, on or off for every admin. Saved as soon as it's ticked; back as it was if that fails.
+// Why customers cancelled this period's orders (stage 122), most common first, with their latest notes.
+function CancelReasons({ cancelReasons }) {
+  const { reasons, notes } = cancelReasons;
+  const total = reasons.reduce((n, r) => n + r.count, 0);
+  return (
+    <section className="panel cancel-reasons" aria-labelledby="cancel-reasons-heading">
+      <h2 id="cancel-reasons-heading">Why customers cancelled</h2>
+      {total === 0 ? (
+        <p className="muted">No customer cancelled an order from this period.</p>
+      ) : (
+        <>
+          <ol>
+            {reasons.map((r) => (
+              <li key={r.reason ?? 'none'}>
+                <span>{r.reason ? (CANCEL_REASONS[r.reason] ?? r.reason) : 'No reason given'}</span>
+                <span>
+                  {r.count} ({Math.round((r.count * 100) / total)}%)
+                </span>
+              </li>
+            ))}
+          </ol>
+          {notes.length > 0 && (
+            <>
+              <h3>What they said</h3>
+              <ul className="cancel-notes">
+                {notes.map((n) => (
+                  <li key={n.orderId}>
+                    &ldquo;{n.note}&rdquo;{' '}
+                    <span className="muted small">
+                      <Link to={`/admin/orders/${n.orderId}`}>
+                        Order #{orderNumber({ number: n.number, id: n.orderId })}
+                      </Link>
+                      , {formatDate(n.at)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
+      )}
+      <p className="muted small">
+        Orders placed in this period that the customer cancelled. Cancellations by the store and unpaid orders that
+        expired aren&apos;t counted.
+      </p>
+    </section>
+  );
+}
+
 function LowStockEmailSwitch({ enabled }) {
   const [state, setState] = useState({ on: enabled, busy: false, error: null });
   const change = async (on) => {
@@ -692,6 +742,7 @@ export default function AdminDashboard() {
             </section>
           </div>
 
+          <CancelReasons cancelReasons={data.cancelReasons} />
           <ExportOrders key={days} from={data.daily[0].date} to={data.daily.at(-1).date} />
           <StorageMeter storage={data.storage} />
           <WeeklyNote />

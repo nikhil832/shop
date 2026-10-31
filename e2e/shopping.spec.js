@@ -92,6 +92,8 @@ test('checkout offers to log in, places a COD order, and the order can be cancel
   await page.locator('.order-card').click();
 
   await page.getByRole('button', { name: 'Cancel order' }).click();
+  await page.getByRole('radio', { name: 'Ordered by mistake' }).check();
+  await page.getByRole('button', { name: 'Confirm cancellation' }).click();
   await expect(page.locator('.order-head .status')).toHaveText('Cancelled');
   await expect(page.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
 });

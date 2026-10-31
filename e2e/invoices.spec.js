@@ -52,8 +52,10 @@ test('a customer opens a printable invoice from their order', async ({ page }) =
 
   // A cancelled order has no invoice.
   await page.goto(`/orders/${order.id}`);
-  page.once('dialog', (d) => d.accept());
   await page.getByRole('button', { name: 'Cancel order' }).click();
+  await page.getByRole('radio', { name: 'Ordered by mistake' }).check();
+  await page.getByRole('button', { name: 'Confirm cancellation' }).click();
+  await expect(page.locator('.order-head .status')).toHaveText('Cancelled');
   await expect(page.getByRole('link', { name: 'Invoice' })).toHaveCount(0);
   await page.goto(`/orders/${order.id}/invoice`);
   await expect(page.getByRole('heading', { name: 'No invoice for this order' })).toBeVisible();

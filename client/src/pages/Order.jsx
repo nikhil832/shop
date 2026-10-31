@@ -6,6 +6,7 @@ import { useAuth } from '../auth.jsx';
 import OrderSummary from '../components/OrderSummary.jsx';
 import CancelItems, { CancelledItems } from '../components/CancelItems.jsx';
 import OrderProgress from '../components/OrderProgress.jsx';
+import CancelOrder from '../components/CancelOrder.jsx';
 import ChangeAddress from '../components/ChangeAddress.jsx';
 import {
   formatDate,
@@ -133,9 +134,7 @@ export default function Order() {
   }
 
   const paid = order.payment.status === 'paid';
-  const cancelOrder = () =>
-    window.confirm(paid ? 'Cancel this order? Your payment will be refunded in full.' : 'Cancel this order?') &&
-    run(() => request(`/orders/${order.id}/cancel`, { method: 'POST' }));
+  const cancelOrder = (reason) => run(() => request(`/orders/${order.id}/cancel`, { method: 'POST', body: reason }));
   // Reopens Razorpay for an order still awaiting payment.
   const payNow = () =>
     run(async () => {
@@ -406,9 +405,7 @@ export default function Order() {
             </p>
           )}
           {(order.status === 'placed' || order.status === 'awaiting_payment') && (
-            <button type="button" className="btn" onClick={cancelOrder} disabled={action.busy}>
-              Cancel order
-            </button>
+            <CancelOrder paid={paid} busy={action.busy} cancel={cancelOrder} />
           )}
           <Link to={`/help?order=${order.id}`} className="btn">
             Get help with this order

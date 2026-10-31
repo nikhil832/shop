@@ -4782,3 +4782,54 @@ textarea {
 .instructions-form {
   align-items: stretch;
 }
+
+/* ---- Cancellation reasons (stage 122) ---- */
+.cancel-order {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.cancel-order fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.cancel-order legend {
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.cancel-order .radio-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cancel-order textarea {
+  width: 100%;
+  margin-top: 4px;
+}
+.cancel-order p {
+  margin: 0;
+}
+.cancel-reasons ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cancel-reasons li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+.cancel-notes {
+  margin: 10px 0 0;
+  padding-left: 18px;
+}

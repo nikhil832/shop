@@ -30,6 +30,7 @@ import { can } from '../../permissions.js';
 import GiftDetails from '../../components/GiftDetails.jsx';
 import DeliveryInstructions from '../../components/DeliveryInstructions.jsx';
 import CustomerTags from '../../components/CustomerTags.jsx';
+import { cancelReasonText } from '../../cancelReasons.js';
 
 // The next steps an admin can take from each status (the server enforces the same rules). Cancelling needs an admin
 // (it can refund); delivering, like shipping, needs `orders.ship`.
@@ -257,7 +258,9 @@ export default function AdminOrder() {
     [
       order.returnedToSender
         ? `Returned to sender: ${RTO_REASONS[order.returnedToSender.reason]}${order.returnedToSender.note ? ` (${order.returnedToSender.note})` : ''}`
-        : ({ customer: 'Cancelled by customer', system: 'Expired unpaid' }[order.cancelledBy] ?? 'Cancelled'),
+        : order.cancelledBy === 'customer'
+          ? `Cancelled by customer${cancelReasonText(order.cancelReason)}`
+          : ({ system: 'Expired unpaid' }[order.cancelledBy] ?? 'Cancelled'),
       order.cancelledAt,
     ],
     [payment.refundedAt && 'Refund started', payment.refundedAt],
