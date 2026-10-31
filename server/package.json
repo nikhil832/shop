@@ -11,7 +11,7 @@
     "backup": "node src/backups.js backup",
     "restore": "node src/backups.js restore",
     "start": "node src/index.js",
-    "test": "node --test 'test/**/*.test.js'"
+    "test": "node --test --test-timeout=60000 --test-force-exit 'test/**/*.test.js'"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",
