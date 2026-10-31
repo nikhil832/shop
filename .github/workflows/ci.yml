@@ -8,8 +8,8 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # A full run takes about 7 minutes. Twice a run hung in `npm test` (never in the same test locally) and would have
-    # held a runner for GitHub's 6-hour default; this fails it instead, with the log showing where it stopped.
+    # A full run takes about 9 minutes. Runs have hung in `npm test` (never locally) and would have held a runner for
+    # GitHub's 6-hour default; this fails it instead, with the log showing where it stopped.
     timeout-minutes: 20
     env:
       # Where mongodb-memory-server keeps its MongoDB binary (cached below).
@@ -27,7 +27,31 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
-      - run: npm test
+      # The API tests hung here five times, always with variants.test.js unfinished, and neither the per-test timeout
+      # nor test/helpers.js's 4-minute watchdog fired, so the cause isn't visible from inside the tests. A normal run
+      # takes under 3 minutes: after 6, print every process (CPU use, parent, state) and what the node and mongod
+      # processes hold open, then stop at 7. Busy at ~100% CPU means an endless loop; an exited test file with mongod
+      # still holding its output open means the runner is waiting on a leftover process.
+      - name: API tests
+        run: |
+          (
+            sleep 360
+            echo "::group::Processes still running after 6 minutes"
+            ps -eo pid,ppid,stat,pcpu,etime,args --forest | grep -v ' \[' || true
+            for pid in $(pgrep -f 'node|mongod'); do
+              echo "--- $pid: $(tr '\0' ' ' < /proc/$pid/cmdline 2>/dev/null | cut -c1-200)"
+              echo "wchan: $(cat /proc/$pid/wchan 2>/dev/null)"
+              ls -l /proc/$pid/fd 2>/dev/null | grep -E 'pipe|socket' | head -20 || true
+            done
+            echo "::endgroup::"
+          ) &
+          watcher=$!
+          status=0
+          timeout --kill-after=30 420 npm test || status=$?
+          # Stop the watcher (and its sleep), or the step would wait for it to let go of the log.
+          pkill -P "$watcher" 2>/dev/null || true
+          kill "$watcher" 2>/dev/null || true
+          exit "$status"
       - run: npm run build
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
