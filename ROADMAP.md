@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-31 (fifth list), roughly in the order they'd help most. All free (no new services).
 
-- **Share a product**: a "Share" button on product pages: the phone's share menu (WhatsApp and the rest), or "copy
-  link" on a computer. Shoppers ask family before buying, and every share brings visitors. To start: "start share
-  button".
 - **Cancellation reasons**: customers pick why they cancel (ordered by mistake, found it cheaper, delivery too slow…),
   and the dashboard shows the main reasons. Tells you what to fix. To start: "start cancellation reasons".
 - **Delivery feedback**: after delivery, the order page asks "How was your delivery?" (on time, late, damaged), and
@@ -155,3 +152,4 @@ Suggested on 2026-10-31 (fifth list), roughly in the order they'd help most. All
 | Product videos: a YouTube link per product, played in YouTube's privacy-enhanced player only when the shopper presses "Watch the video"                                                 | Stage 118 (`git log --grep "Stage 118"`) |
 | Specifications: name and value facts per product, on its page, side by side in Compare, in the spreadsheet and for search engines                                                       | Stage 119 (`git log --grep "Stage 119"`) |
 | SKUs and barcodes: the store's code and the maker's barcode per product and option, unique, searchable (a USB scanner works), on packing slips and stocktake sheets, in the spreadsheet | Stage 120 (`git log --grep "Stage 120"`) |
+| Share a product: a Share button on product pages (the phone's share menu, or Copy link / WhatsApp / Email), with shares counted in Performance                                          | Stage 121 (`git log --grep "Stage 121"`) |

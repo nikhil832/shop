@@ -35,6 +35,7 @@ export default function AdminProductPerformance() {
           <select aria-label="Sort by" value={sort} onChange={(e) => set({ sort: e.target.value })}>
             <option value="views">Most viewed</option>
             <option value="carts">Most added to cart</option>
+            <option value="shares">Most shared</option>
             <option value="orders">Most ordered</option>
             <option value="conversion">Best views to orders</option>
           </select>
@@ -63,6 +64,7 @@ export default function AdminProductPerformance() {
                   <th>Product</th>
                   <th className="num">Views</th>
                   <th className="num">Added to cart</th>
+                  <th className="num">Shared</th>
                   <th className="num">Orders</th>
                   <th className="num">Units</th>
                   <th className="num">Views to orders</th>
@@ -78,6 +80,7 @@ export default function AdminProductPerformance() {
                     </td>
                     <td className="num">{r.views.toLocaleString('en-IN')}</td>
                     <td className="num">{r.carts.toLocaleString('en-IN')}</td>
+                    <td className="num">{r.shares.toLocaleString('en-IN')}</td>
                     <td className="num">{r.orders.toLocaleString('en-IN')}</td>
                     <td className="num">{r.units.toLocaleString('en-IN')}</td>
                     <td className="num">{r.conversion === null ? '—' : `${r.conversion}%`}</td>

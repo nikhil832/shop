@@ -37,7 +37,7 @@ test('views and adds to cart from the product page show on Admin â†’ Products â†
     await admin.getByRole('link', { name: 'Performance' }).click();
     await admin.getByLabel('Period').selectOption('7');
     const row = admin.getByRole('row').filter({ hasText: title });
-    await expect(row.getByRole('cell')).toHaveText([title, '2', '1', '0', '0', '0%']);
+    await expect(row.getByRole('cell')).toHaveText([title, '2', '1', '0', '0', '0', '0%']);
   } finally {
     await admin.request.patch(`/api/admin/products/${planner.id}`, { data: { active: false } });
   }

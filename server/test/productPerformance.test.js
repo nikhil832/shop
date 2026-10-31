@@ -118,3 +118,26 @@ test('admins see views, carts and orders per product, sorted and filtered', asyn
   );
   assert.equal(notBought.notBoughtViews, 10);
 });
+
+test('shares from the product page are counted too, and can be sorted by (stage 121)', async () => {
+  await t.db.collection('productStats').deleteMany({});
+  for (let i = 0; i < 3; i++) assert.equal((await seen(t.call, PHONE, 'share')).status, 204);
+  await seen(t.call, BOOK, 'share');
+  await seen(t.call, BOOK, 'view');
+  await seen(admin, PHONE, 'share'); // staff: not counted
+
+  const [doc] = await t.db
+    .collection('productStats')
+    .find({ productId: (await product(PHONE))._id })
+    .toArray();
+  assert.equal(doc.shares, 3);
+  const data = await report('?sort=shares');
+  assert.deepEqual(
+    data.items.slice(0, 2).map((r) => [r.slug, r.shares]),
+    [
+      [PHONE, 3],
+      [BOOK, 1],
+    ],
+  );
+  assert.equal(rowOf(data, BOOK).views, 1);
+});

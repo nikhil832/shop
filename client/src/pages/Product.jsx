@@ -8,6 +8,7 @@ import Questions from '../components/Questions.jsx';
 import StockAlertButton from '../components/StockAlertButton.jsx';
 import WishlistButton from '../components/WishlistButton.jsx';
 import CompareToggle from '../components/CompareToggle.jsx';
+import ShareButton from '../components/ShareButton.jsx';
 import DeliveryCheck from '../components/DeliveryCheck.jsx';
 import BundleOffers from '../components/BundleOffers.jsx';
 import SizeGuide from '../components/SizeGuide.jsx';
@@ -287,6 +288,7 @@ export default function Product() {
           <div className="product-extras">
             <WishlistButton key={`wish-${product.id}`} product={product} />
             <CompareToggle product={product} />
+            <ShareButton key={product.slug} product={product} />
           </div>
           <DeliveryCheck />
           <BundleOffers key={product.slug} slug={product.slug} />

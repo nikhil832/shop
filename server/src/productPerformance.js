@@ -9,9 +9,10 @@ import { isStaff } from './staff.js';
 // Product performance (stage 100): how often each product is looked at and added to the cart, next to how often it
 // is bought, so an admin can see what is looked at but not bought. The product page reports a view once per page load
 // and a click on "Add to cart" (POST /products/:slug/seen with `event`), counted per product per India-time day in
-// `productStats` { productId, day ('YYYY-MM-DD'), views, carts, expiresAt } (unique pair, TTL KEEP_DAYS). Nothing
-// about the visitor is stored; staff are not counted; each network may report EVENTS_PER_HOUR an hour (hashed, in
-// rateLimits like other public limits). Orders come from sold orders, like the dashboard's best sellers.
+// `productStats` { productId, day ('YYYY-MM-DD'), views, carts, shares (stage 121), expiresAt } (unique pair, TTL
+// KEEP_DAYS). Nothing about the visitor is stored; staff are not counted; each network may report EVENTS_PER_HOUR an
+// hour (hashed, in rateLimits like other public limits). Orders come from sold orders, like the dashboard's best
+// sellers.
 export const KEEP_DAYS = 100;
 export const EVENTS_PER_HOUR = 300;
 // Looked at this many times in the period without an order: "looked at, not bought".
@@ -25,13 +26,15 @@ const istDay = (date) => new Date(date.getTime() + IST_OFFSET).toISOString().sli
 // Midnight India time at the start of the day `n` days before today's.
 const dayStart = (now, n) => new Date(Date.parse(istDay(new Date(now - n * DAY))) - IST_OFFSET);
 
-const seenBody = z.object({ event: z.enum(['view', 'cart']) });
+const seenBody = z.object({ event: z.enum(['view', 'cart', 'share']) });
+// The counter each event adds to (shares since stage 121: the product page's Share button).
+const COUNTERS = { view: 'views', cart: 'carts', share: 'shares' };
 const listQuery = z.object({
   days: z.coerce
     .number()
     .refine((d) => PERIODS.includes(d), 'Choose 7, 30 or 90 days')
     .default(30),
-  sort: z.enum(['views', 'carts', 'orders', 'conversion']).default('views'),
+  sort: z.enum(['views', 'carts', 'shares', 'orders', 'conversion']).default('views'),
   notBought: z.literal('1').optional(),
 });
 
@@ -58,7 +61,7 @@ export function productPerformanceRouter({ db, config }) {
     await stats.updateOne(
       { productId: product._id, day },
       {
-        $inc: { [event === 'view' ? 'views' : 'carts']: 1 },
+        $inc: { [COUNTERS[event]]: 1 },
         $setOnInsert: { expiresAt: new Date(Date.parse(day) - IST_OFFSET + KEEP_DAYS * DAY) },
       },
       { upsert: true },
@@ -66,7 +69,7 @@ export function productPerformanceRouter({ db, config }) {
     res.status(204).end();
   });
 
-  // Per product over the last `days` days (today included): views, adds to cart, orders and units sold.
+  // Per product over the last `days` days (today included): views, adds to cart, shares, orders and units sold.
   router.get('/admin/product-performance', requireAdmin, async (req, res) => {
     const { days, sort, notBought } = parse(listQuery, req.query);
     const now = new Date();
@@ -75,7 +78,14 @@ export function productPerformanceRouter({ db, config }) {
       stats
         .aggregate([
           { $match: { day: { $gte: istDay(from) } } },
-          { $group: { _id: '$productId', views: { $sum: '$views' }, carts: { $sum: '$carts' } } },
+          {
+            $group: {
+              _id: '$productId',
+              views: { $sum: '$views' },
+              carts: { $sum: '$carts' },
+              shares: { $sum: '$shares' },
+            },
+          },
         ])
         .toArray(),
       db
@@ -97,10 +107,10 @@ export function productPerformanceRouter({ db, config }) {
     const rows = new Map();
     const row = (id) => {
       const key = id.toString();
-      if (!rows.has(key)) rows.set(key, { productId: key, views: 0, carts: 0, orders: 0, units: 0 });
+      if (!rows.has(key)) rows.set(key, { productId: key, views: 0, carts: 0, shares: 0, orders: 0, units: 0 });
       return rows.get(key);
     };
-    for (const s of seen) Object.assign(row(s._id), { views: s.views, carts: s.carts });
+    for (const s of seen) Object.assign(row(s._id), { views: s.views, carts: s.carts, shares: s.shares });
     for (const s of sold) Object.assign(row(s._id), { orders: s.orders, units: s.units });
     const products = await db
       .collection('products')
