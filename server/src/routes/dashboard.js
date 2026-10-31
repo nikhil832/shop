@@ -11,6 +11,7 @@ import { WAITING } from './help.js';
 import { storageUse } from '../storage.js';
 import { runningOut } from '../reorder.js';
 import { profitFor } from '../profit.js';
+import { repeatCustomers } from '../repeatCustomers.js';
 
 // The `settings` document of the morning low-stock email (lowStockEmail.js): { day, at, enabled }.
 export const LOW_STOCK_EMAIL = 'lowStockEmail';
@@ -257,7 +258,11 @@ export function dashboardRouter({ db, config }) {
       db.collection('exchanges').countDocuments({ status: 'approved' }),
     ]);
     // Profit from cost prices (profit.js), this period and the one before.
-    const [profit, profitBefore] = await Promise.all([profitFor(db, from, now), profitFor(db, previousFrom, from)]);
+    const [profit, profitBefore, customers] = await Promise.all([
+      profitFor(db, from, now),
+      profitFor(db, previousFrom, from),
+      repeatCustomers(db, from, now, SOLD),
+    ]);
 
     const totals = stats.current[0] ?? { revenue: 0, orders: 0, discount: 0, itemsSold: 0 };
     const previous = stats.previous[0] ?? { revenue: 0, orders: 0 };
@@ -310,6 +315,8 @@ export function dashboardRouter({ db, config }) {
         itemsReturned: refunded.items,
         netRevenue: totals.revenue - refunded.refunds,
       },
+      // New and returning customers of the period, and repeat buying over all time (stage 126, repeatCustomers.js).
+      customers,
       // Sales by the delivery address (stage 124): every state with sales, and the top cities. Revenue as in totals.
       places: {
         states: stats.byState.map((r) => ({ state: r._id ?? '', orders: r.orders, revenue: r.revenue })),

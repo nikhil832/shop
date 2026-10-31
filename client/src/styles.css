@@ -4925,3 +4925,35 @@ textarea {
 .return-reasons-table td:last-child {
   min-width: 220px;
 }
+
+/* ---- Repeat customers (stage 126) ---- */
+.split-bar {
+  display: flex;
+  height: 10px;
+  margin: 4px 0 14px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--bg);
+}
+.split-new {
+  background: var(--chart);
+  opacity: 0.35;
+}
+.split-returning {
+  background: var(--chart);
+}
+.repeat-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 0 0 12px;
+}
+.repeat-figures dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.repeat-figures dd {
+  margin: 2px 0 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}

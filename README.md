@@ -158,6 +158,7 @@ Built in stages. Done so far:
 123. **Delivery feedback**: for 30 days after an order arrives, its page asks "How was your delivery?" (on time and in good condition, came late, or the package was damaged) with an optional note, and the answer can be changed. Admin → Delivery → Courier report shows, per courier and for the last 30, 90 or 365 days, the orders delivered, how many arrived after the date promised at checkout, and customers' answers, with the latest notes linked to their orders.
 124. **Sales by place**: a "Sales by place" panel on the dashboard lists the period's orders and revenue by the state they were delivered to, with each state's share, and can switch to the top 10 cities. Shows where customers are, for delivery areas, charges and ads.
 125. **Return reasons**: Admin → Returns → Return reasons shows, for orders placed in the last 30, 90 or 365 days, why items came back (returns and exchanges, with each reason's share), each product's units sold, returned and exchanged and how many per 100 sold came back, with its main reasons, and the latest notes customers wrote, linked to their orders.
+126. **Repeat customers**: a dashboard panel for the period: how many customers bought, how many were new (first order in the period) and how many came back, what each group spent, how many ordered more than once, and the usual number of days between a customer's orders; plus, since the store opened, how many customers have bought more than once.
 
 What's next: see [ROADMAP.md](ROADMAP.md).
 

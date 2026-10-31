@@ -375,6 +375,67 @@ function ShoppingAssistant() {
 }
 
 // The morning low-stock email, on or off for every admin. Saved as soon as it's ticked; back as it was if that fails.
+// New and returning customers of the period, and repeat buying over all time (stage 126).
+function RepeatCustomers({ customers: c, days }) {
+  const pct = (n, of) => (of ? Math.round((n * 100) / of) : 0);
+  const revenue = c.newRevenue + c.returningRevenue;
+  return (
+    <section className="panel repeat-customers" aria-labelledby="repeat-customers-heading">
+      <h2 id="repeat-customers-heading">Repeat customers</h2>
+      {c.customers === 0 ? (
+        <p className="muted">No one bought in the last {days} days.</p>
+      ) : (
+        <>
+          <p>
+            {c.customers} {c.customers === 1 ? 'customer' : 'customers'} bought in the last {days} days:{' '}
+            <strong>{c.new} new</strong> and <strong>{c.returning} returning</strong> ({pct(c.returning, c.customers)}%
+            came back).
+          </p>
+          <div className="split-bar" aria-hidden="true">
+            <span className="split-new" style={{ width: `${pct(c.new, c.customers)}%` }} />
+            <span className="split-returning" style={{ width: `${pct(c.returning, c.customers)}%` }} />
+          </div>
+          <dl className="repeat-figures">
+            <div>
+              <dt>Spent by new customers</dt>
+              <dd>
+                {formatPrice(c.newRevenue)} <span className="muted small">({pct(c.newRevenue, revenue)}%)</span>
+              </dd>
+            </div>
+            <div>
+              <dt>Spent by returning customers</dt>
+              <dd>
+                {formatPrice(c.returningRevenue)}{' '}
+                <span className="muted small">({pct(c.returningRevenue, revenue)}%)</span>
+              </dd>
+            </div>
+            <div>
+              <dt>Ordered more than once in the period</dt>
+              <dd>{c.orderedAgain}</dd>
+            </div>
+            <div>
+              <dt>Usual time between orders</dt>
+              <dd>
+                {c.daysBetween === null
+                  ? 'No repeat orders yet'
+                  : c.daysBetween === 0
+                    ? 'Same day'
+                    : `${c.daysBetween} ${c.daysBetween === 1 ? 'day' : 'days'}`}
+              </dd>
+            </div>
+          </dl>
+        </>
+      )}
+      <p className="muted small">
+        Since the store opened, {c.allTime.repeat} of {c.allTime.customers}{' '}
+        {c.allTime.customers === 1 ? 'customer has' : 'customers have'} bought more than once (
+        {pct(c.allTime.repeat, c.allTime.customers)}%). New means their first order is in this period. The usual time is
+        the middle value of the days between a customer&apos;s orders. Cancelled and unpaid orders aren&apos;t counted.
+      </p>
+    </section>
+  );
+}
+
 // Where this period's sales were delivered (stage 124): every state with sales, and the top cities, by revenue.
 function SalesByPlace({ places, revenue }) {
   const [view, setView] = useState('states');
@@ -818,6 +879,7 @@ export default function AdminDashboard() {
             </section>
           </div>
 
+          <RepeatCustomers customers={data.customers} days={data.days} />
           <SalesByPlace places={data.places} revenue={data.totals.revenue} />
           <CancelReasons cancelReasons={data.cancelReasons} />
           <ExportOrders key={days} from={data.daily[0].date} to={data.daily.at(-1).date} />
