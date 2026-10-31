@@ -161,6 +161,7 @@ export function customersRouter(ctx) {
           cartReminders: user.cartReminderEmails !== false,
           reviewReminders: user.reviewReminderEmails !== false,
           restockReminders: user.restockReminderEmails !== false,
+          nearlyGone: user.nearlyGoneEmails !== false,
         },
       },
       totals: {

@@ -192,6 +192,7 @@ export const toUser = (doc) => ({
   // One email a few days after each delivery asking for reviews (reviewReminders.js); on unless switched off.
   reviewReminderEmails: doc.reviewReminderEmails !== false,
   restockReminderEmails: doc.restockReminderEmails !== false,
+  nearlyGoneEmails: doc.nearlyGoneEmails !== false,
   // Store credit in paise (credit.js), spent at checkout.
   credit: doc.credit ?? 0,
   // False for an account made at checkout (stage 84) until a password is set from the emailed link.

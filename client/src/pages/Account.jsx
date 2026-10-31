@@ -508,6 +508,15 @@ export default function Account() {
           />
           Remind me when everyday things I bought may be running low
         </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={user.nearlyGoneEmails}
+            disabled={updates.busy}
+            onChange={changeEmails('nearlyGoneEmails', 'Nearly-gone emails are')}
+          />
+          Tell me when something on my wishlist is down to its last few
+        </label>
         <Feedback state={updates} />
         <p className="muted small">Emails about your orders always come.</p>
       </section>

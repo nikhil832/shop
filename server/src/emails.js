@@ -325,6 +325,44 @@ ${button('See your wishlist', wishlistUrl)}
   return { subject, text, html };
 }
 
+// "Nearly gone" (stage 132): wishlist products down to their last few. `products` are product documents.
+export function nearlyGoneEmail(user, products, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = user.name.split(/\s+/)[0];
+  const only = products.length === 1 ? products[0] : null;
+  const subject = only ? `Nearly gone: ${only.title}` : `${products.length} things on your wishlist are nearly gone`;
+  const lines = products.map((p) => ({
+    title: p.title,
+    url: `${publicUrl}/p/${p.slug}`,
+    text: `only ${p.stock} left`,
+  }));
+  const wishlistUrl = `${publicUrl}/wishlist`;
+  const accountUrl = `${publicUrl}/account`;
+  const intro = only
+    ? 'Something on your wishlist is down to its last few:'
+    : 'Some things on your wishlist are down to their last few:';
+  const text = [
+    `Hi ${firstName},`,
+    intro,
+    lines.map((l) => `${l.title}: ${l.text}\n${l.url}`).join('\n\n'),
+    `Your wishlist: ${wishlistUrl}`,
+    `To stop these emails, untick them on your account page: ${accountUrl}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const cell = 'padding:8px 0;border-bottom:1px solid #e5e7eb';
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p>${escapeHtml(intro)}</p>
+<table style="width:100%;border-collapse:collapse;margin:8px 0 16px">
+${lines.map((l) => `<tr><td style="${cell}"><a href="${escapeHtml(l.url)}" style="color:#1d4ed8">${escapeHtml(l.title)}</a></td><td style="${cell};text-align:right;white-space:nowrap">${escapeHtml(l.text)}</td></tr>`).join('\n')}
+</table>
+${button(only ? 'See it' : 'See your wishlist', only ? lines[0].url : wishlistUrl)}
+<p style="font-size:13px;color:#6b7280">To stop these emails, untick them on <a href="${escapeHtml(accountUrl)}">your account page</a>.</p>`,
+    "You're getting this email because these products are on your wishlist.",
+  );
+  return { subject, text, html };
+}
+
 // An online order not paid yet (stage 103, paymentReminders.js): what's held, until when, and a link back to Pay now.
 export function paymentReminderEmail(order, user, publicUrl = DEFAULT_PUBLIC_URL) {
   const subject = `Complete your payment for order #${orderNumber(order)}`;

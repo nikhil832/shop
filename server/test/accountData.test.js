@@ -66,6 +66,7 @@ test('customers download everything the store holds about them, without secrets'
     cartReminders: true,
     reviewReminders: true,
     restockReminders: true,
+    nearlyGone: true,
   });
   assert.deepEqual(
     data.orders.map((o) => o.id),

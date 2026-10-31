@@ -30,6 +30,7 @@ const emailPreferencesBody = z
     cartReminderEmails: z.boolean().optional(),
     reviewReminderEmails: z.boolean().optional(),
     restockReminderEmails: z.boolean().optional(),
+    nearlyGoneEmails: z.boolean().optional(),
   })
   .refine((b) => Object.keys(b).length > 0, 'Say which emails to switch');
 const passwordBody = z.object({

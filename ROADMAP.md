@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-11-01 (seventh list), roughly in the order they'd help most. All free (no new services).
 
-- **Nearly gone emails**: customers with an item on their wishlist get one email when it's down to its last few, so
-  they don't miss it. With a switch on the account page, like the price-drop emails. To start: "start nearly gone
-  emails".
 - **Customer answers**: customers who bought a product can answer other customers' questions about it, marked "Bought
   this"; the store's answer stays first and admins can hide any. More answers without more work. To start: "start
   customer answers".
@@ -166,3 +163,4 @@ Suggested on 2026-11-01 (seventh list), roughly in the order they'd help most. A
 | Restock reminders: one "Running low?" email N days after delivery for products the admin marks, with a switch for customers                                                             | Stage 129 (`git log --grep "Stage 129"`) |
 | Store FAQ: questions and answers by topic, searchable on their own page and above the Help page's contact form                                                                          | Stage 130 (`git log --grep "Stage 130"`) |
 | Low-stock levels: each product's own "low at" number, used by the dashboard, the morning email and the admin filter                                                                     | Stage 131 (`git log --grep "Stage 131"`) |
+| Nearly gone emails: one email when a wishlist item is down to its last 3, with a switch for customers                                                                                   | Stage 132 (`git log --grep "Stage 132"`) |

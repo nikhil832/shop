@@ -104,6 +104,7 @@ export function accountDataRouter(ctx) {
           cartReminders: u.cartReminderEmails !== false,
           reviewReminders: u.reviewReminderEmails !== false,
           restockReminders: u.restockReminderEmails !== false,
+          nearlyGone: u.nearlyGoneEmails !== false,
         },
         addresses: (u.addresses ?? []).map(toAddress),
         // What the store's staff noted about this account (stage 82).
