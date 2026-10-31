@@ -143,7 +143,7 @@ export const RTO_REASONS = {
 
 // When an order should arrive (stage 86): "by Thu, 31 Oct" or "between Thu, 31 Oct and Mon, 4 Nov". The dates are
 // India-time days ('YYYY-MM-DD'), the same wording as the confirmation email.
-const arrivalDay = (iso) =>
+export const arrivalDay = (iso) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', {
     weekday: 'short',
     day: 'numeric',

@@ -4957,3 +4957,42 @@ textarea {
   font-size: 1.15rem;
   font-weight: 600;
 }
+
+/* ---- Holiday mode (stage 127) ---- */
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.form-row label {
+  display: flex;
+  flex: 1 1 160px;
+  flex-direction: column;
+  gap: 4px;
+}
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.radio-group legend {
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.holiday-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.holiday-form > label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.holiday-form .form-actions {
+  align-self: flex-start;
+}

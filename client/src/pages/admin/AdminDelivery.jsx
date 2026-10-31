@@ -77,6 +77,92 @@ function CodRules() {
 }
 
 // Gift wrapping (stage 104): offered at checkout for a fee, or not. Gift messages are always free.
+// Holiday mode (stage 127): a break between two days, when nothing ships. Delivery dates for orders placed during it
+// count from the day after; orders can be paused meanwhile. The shop shows a notice from a week before.
+function HolidayMode() {
+  const [version, setVersion] = useState(0);
+  const { data } = useFetch('/admin/holiday', version);
+  const [state, setState] = useState({ busy: false, error: null, done: null });
+  if (!data) return null;
+  const h = data.holiday;
+
+  async function run(change, done) {
+    setState({ busy: true, error: null, done: null });
+    try {
+      await change();
+      setState({ busy: false, error: null, done });
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setState({ busy: false, error: err.message, done: null });
+    }
+  }
+  function save(e) {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.currentTarget));
+    const body = { from: f.from, to: f.to, message: f.message, takeOrders: f.orders === 'take' };
+    run(() => request('/admin/holiday', { method: 'PUT', body }), 'Saved.');
+  }
+  const end = () =>
+    window.confirm('End the store holiday now? Delivery dates go back to normal.') &&
+    run(() => request('/admin/holiday', { method: 'DELETE' }), 'Holiday ended.');
+
+  return (
+    <form
+      key={JSON.stringify(h)}
+      className="panel delivery-rule holiday-form"
+      onSubmit={save}
+      aria-labelledby="holiday-mode"
+    >
+      <h2 id="holiday-mode">Holiday mode</h2>
+      <p className="muted small">
+        For festivals and time off: nothing ships between these days. Orders placed during the break are promised from
+        the day after it, and the shop shows a notice from a week before until it ends.
+      </p>
+      <div className="form-row">
+        <label>
+          First day away
+          <input name="from" type="date" required defaultValue={h?.from} />
+        </label>
+        <label>
+          Last day away
+          <input name="to" type="date" required defaultValue={h?.to} />
+        </label>
+      </div>
+      <fieldset className="radio-group">
+        <legend>During the break</legend>
+        <label className="check">
+          <input name="orders" type="radio" value="take" defaultChecked={h?.takeOrders ?? true} />
+          Keep taking orders (they ship when we're back)
+        </label>
+        <label className="check">
+          <input name="orders" type="radio" value="pause" defaultChecked={h ? !h.takeOrders : false} />
+          Pause orders (checkout is closed)
+        </label>
+      </fieldset>
+      <label>
+        Message for the shop (optional)
+        <input name="message" maxLength={160} defaultValue={h?.message} placeholder="Happy Diwali from all of us!" />
+      </label>
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
+      {state.done && <p role="status">{state.done}</p>}
+      <div className="form-actions">
+        <button type="submit" className="btn primary" disabled={state.busy}>
+          {h ? 'Save the holiday' : 'Set a holiday'}
+        </button>
+        {h && (
+          <button type="button" className="btn" onClick={end} disabled={state.busy}>
+            End the holiday
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}
+
 function GiftWrap() {
   const [version, setVersion] = useState(0);
   const { data } = useFetch('/admin/gift-wrap', version);
@@ -332,6 +418,7 @@ export default function AdminDelivery() {
           </button>
         </div>
       </form>
+      <HolidayMode />
       <CodRules />
       <GiftWrap />
     </div>

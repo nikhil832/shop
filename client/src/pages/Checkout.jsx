@@ -11,6 +11,7 @@ import { GIFT_MESSAGE_MAX } from '../storeFacts.js';
 import { payOrder } from '../razorpay.js';
 import { useFetch } from '../useFetch.js';
 import { referralCode } from '../referral.js';
+import { holidayText } from '../components/HolidayNotice.jsx';
 
 // Inside the checkout form, so it is not a form itself: Enter applies the code instead of placing the order, and the
 // input has no name, so it isn't sent as part of the address.
@@ -189,6 +190,9 @@ export default function Checkout() {
   const [method, setMethod] = useState(null);
   const couponInput = useRef(null);
   const { data: options } = useFetch('/payments/options');
+  // A store holiday with orders paused (stage 127) closes checkout until it ends.
+  const { data: holidayData } = useFetch('/holiday');
+  const paused = holidayData?.holiday?.active && !holidayData.holiday.takeOrders;
   const {
     data: quote,
     error,
@@ -463,6 +467,11 @@ export default function Checkout() {
             {state.error}
           </p>
         )}
+        {paused && (
+          <p className="error" role="alert">
+            {holidayText(holidayData.holiday)}
+          </p>
+        )}
         {!quote.canCheckout && !state.error && (
           <p className="error small">
             Some items can't be ordered. <Link to="/cart">Review your cart</Link>.
@@ -471,7 +480,7 @@ export default function Checkout() {
         <button
           type="submit"
           className="btn primary"
-          disabled={state.busy || loading || !quote.canCheckout || !options || cannotPay}
+          disabled={state.busy || loading || !quote.canCheckout || !options || cannotPay || paused}
         >
           {state.busy ? 'Placing order…' : `Place order · ${formatPrice(due)}`}
         </button>

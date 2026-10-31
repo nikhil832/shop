@@ -4,6 +4,7 @@ import { logActivity } from '../activity.js';
 import { instructionsChangedEmail, sendAddressChanged, sendToAdmins } from '../emails.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
 import { deliveryFor, istDate } from './delivery.js';
+import { dispatchDelay, holidaySettings } from '../holiday.js';
 import { address, deliveryInstructions, toOrder } from './orders.js';
 import { z } from 'zod';
 
@@ -38,6 +39,8 @@ async function changeAddress(db, filter, next, user, role) {
   }
   const delivery = await deliveryFor(db, next.pincode);
   if (!delivery.deliverable) throw new HttpError(409, `Sorry, we don't deliver to ${next.pincode} yet.`);
+  // An order placed during a store holiday (stage 127) counts from the day after it, as at checkout.
+  const wait = dispatchDelay(await holidaySettings(db), order.createdAt);
 
   const now = new Date();
   const after = await orders.findOneAndUpdate(
@@ -53,8 +56,8 @@ async function changeAddress(db, filter, next, user, role) {
         address: next,
         ...(order.deliveryEstimate && {
           deliveryEstimate: {
-            from: istDate(order.createdAt, delivery.minDays),
-            to: istDate(order.createdAt, delivery.maxDays),
+            from: istDate(order.createdAt, wait + delivery.minDays),
+            to: istDate(order.createdAt, wait + delivery.maxDays),
           },
         }),
         updatedAt: now,

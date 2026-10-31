@@ -21,6 +21,7 @@ import { cashbackOn, cashbackSettings } from '../cashback.js';
 import { statesForPin } from '../pinStates.js';
 import { friendDiscount } from '../referrals.js';
 import { cancelBody, cancelReasonOf } from '../cancelReasons.js';
+import { assertTakingOrders, dispatchDelay, holidaySettings } from '../holiday.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
 export const FREE_DELIVERY_MIN = 49900;
@@ -491,10 +492,12 @@ export function ordersRouter(ctx) {
     const online = body.paymentMethod === 'razorpay';
     if (online && !razorpay) throw new HttpError(400, 'Online payment is not available. Choose Cash on Delivery.');
     // An address the store doesn't deliver to (Admin → Delivery) is refused before anything is reserved.
-    const delivery = await deliveryFor(db, body.address.pincode);
+    const [delivery, holiday] = await Promise.all([deliveryFor(db, body.address.pincode), holidaySettings(db)]);
     if (!delivery.deliverable) {
       throw new HttpError(409, `Sorry, we don't deliver to ${body.address.pincode} yet.`);
     }
+    // A store holiday with orders paused (stage 127).
+    assertTakingOrders(holiday);
     const session = client.startSession();
     let order;
     try {
@@ -656,7 +659,10 @@ export function ordersRouter(ctx) {
           // Its discount is a referred friend's welcome (stage 87); the referrer's reward is set later.
           ...(referral && { referral }),
           // When it should arrive (stage 86), from the delivery area's days, kept as promised at the time.
-          deliveryEstimate: { from: istDate(now, delivery.minDays), to: istDate(now, delivery.maxDays) },
+          deliveryEstimate: {
+            from: istDate(now, dispatchDelay(holiday, now) + delivery.minDays),
+            to: istDate(now, dispatchDelay(holiday, now) + delivery.maxDays),
+          },
           payment: paidByCredit
             ? { method: 'credit' }
             : online

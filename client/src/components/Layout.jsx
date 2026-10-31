@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router';
 import Header from './Header.jsx';
 import AssistantButton from './AssistantButton.jsx';
 import AnnouncementBar from './AnnouncementBar.jsx';
+import HolidayNotice from './HolidayNotice.jsx';
 import CompareTray from './CompareTray.jsx';
 import { formatPrice } from '../format.js';
 import { FREE_DELIVERY_MIN, RETURN_DAYS } from '../storeFacts.js';
@@ -109,6 +110,7 @@ export default function Layout() {
   const { pathname } = useLocation();
   return (
     <>
+      <HolidayNotice />
       <AnnouncementBar />
       <Header />
       <main className="page">

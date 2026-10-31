@@ -50,6 +50,7 @@ import { stocktakesRouter } from './stocktakes.js';
 import { productPerformanceRouter } from './productPerformance.js';
 import { deliveryFeedbackRouter } from './deliveryFeedback.js';
 import { returnReasonsRouter } from './returnReasons.js';
+import { holidayRouter } from './holiday.js';
 import { purchaseOrdersRouter } from './purchaseOrders.js';
 import { bundlesRouter } from './bundles.js';
 import { collectionsRouter } from './collections.js';
@@ -87,6 +88,7 @@ export function createApp(ctx) {
   api.use(orderTrackingRouter(ctx));
   api.use(deliveryFeedbackRouter(ctx));
   api.use(returnReasonsRouter(ctx));
+  api.use(holidayRouter(ctx));
   api.use(paymentsRouter(ctx));
   api.use(imagesRouter(ctx));
   api.use(reviewsRouter(ctx));

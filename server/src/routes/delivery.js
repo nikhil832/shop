@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
 import { HttpError, parse, parseObjectId } from '../http.js';
 import { logActivity } from '../activity.js';
+import { dispatchDelay, holidaySettings } from '../holiday.js';
 
 // Where the store delivers, and how fast: areas by PIN code prefix ("560" = Bengaluru, 1–2 days; "79" = not
 // delivered), the longest matching prefix winning, and a rule for everywhere else. Customers check a PIN on the product
@@ -98,12 +99,14 @@ export function deliveryRouter({ db }) {
   // For anyone: does the store deliver to this PIN, and by when (India-time dates, from today).
   router.get('/delivery', async (req, res) => {
     const pin = parse(z.object({ pincode }), req.query).pincode;
-    const d = await deliveryFor(db, pin);
+    const [d, holiday] = await Promise.all([deliveryFor(db, pin), holidaySettings(db)]);
     const now = new Date();
+    // During a store holiday (stage 127) the days count from the day after it.
+    const wait = dispatchDelay(holiday, now);
     res.json({
       pincode: pin,
       ...d,
-      ...(d.deliverable && { from: istDate(now, d.minDays), to: istDate(now, d.maxDays) }),
+      ...(d.deliverable && { from: istDate(now, wait + d.minDays), to: istDate(now, wait + d.maxDays) }),
     });
   });
 
