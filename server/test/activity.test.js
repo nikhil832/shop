@@ -1,6 +1,5 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
 import { startTestServer } from './helpers.js';
 
 let t;
@@ -204,12 +203,8 @@ test('filters by area and person, newest first; the command line is logged too',
   assert.equal(byHelper.body.total, 3);
   assert.ok(byHelper.body.items.every((e) => e.area === 'categories'));
 
-  // npm run make-admin, against this test database.
-  const run = spawnSync(process.execPath, ['src/make-admin.js', 'customer@example.com'], {
-    cwd: new URL('..', import.meta.url),
-    env: { PATH: process.env.PATH, MONGODB_URI: t.uri, MONGODB_DB: 'test' },
-    encoding: 'utf8',
-  });
+  // npm run make-admin, against this test database, without blocking (helpers.js says why).
+  const run = await t.runScript(['src/make-admin.js', 'customer@example.com']);
   assert.equal(run.status, 0, run.stderr);
   const entry = await latest('accounts');
   assert.deepEqual([entry.by, entry.action, entry.target.label], [null, 'Made an admin', 'customer@example.com']);

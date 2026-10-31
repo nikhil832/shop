@@ -7,11 +7,11 @@ import { FAKE_KEYS, startFakeRazorpay } from './fake-razorpay.js';
 import { aiClient } from '../src/ai.js';
 import { FAKE_ANTHROPIC_KEY, startFakeAnthropic } from './fake-anthropic.js';
 import { basename } from 'node:path';
+import { execFile } from 'node:child_process';
 
-// CI hung four times with one test file (variants.test.js) never finishing, past the runner's per-test timeout, so
-// the job sat silent until GitHub's 20-minute limit. Each file therefore notes what it is doing, and one still running
-// after FILE_LIMIT_MS says so and exits: CI then fails within minutes, naming the file and the step it was stuck in.
-// The timer is unref'd, so it never keeps a finished file alive. TEST_FILE_LIMIT_MS overrides it (to try it out).
+// A test file still running after FILE_LIMIT_MS says what it was doing and exits, so CI fails within minutes, naming
+// the file and the step it was stuck in (added while CI hung; the cause was spawnSync, see runScript below). The timer
+// is unref'd, so it never keeps a finished file alive. TEST_FILE_LIMIT_MS overrides it (to try it out).
 const FILE_LIMIT_MS = Number(process.env.TEST_FILE_LIMIT_MS) || 4 * 60_000;
 let step = 'loading';
 setTimeout(() => {
@@ -20,6 +20,27 @@ setTimeout(() => {
   );
   process.exit(1);
 }, FILE_LIMIT_MS).unref();
+// Runs one of the server's command-line scripts (`args`, e.g. ['src/make-admin.js', email]) with `env` and waits
+// for it without blocking. Tests used spawnSync, which froze the test process: it then stopped reading the in-memory
+// MongoDB's log pipe, and when the pipe filled MongoDB stalled, the script waited for it forever, and CI hung (five
+// times, seen in run 41238419033's process list). Stopped after 60 s, so a stuck script fails the test by itself.
+export function runScript(args, env) {
+  return new Promise((resolve) => {
+    execFile(
+      process.execPath,
+      args,
+      {
+        cwd: new URL('..', import.meta.url),
+        env: { PATH: process.env.PATH, ...env },
+        encoding: 'utf8',
+        timeout: 60_000,
+      },
+      (err, stdout, stderr) =>
+        resolve({ status: err ? (typeof err.code === 'number' ? err.code : 1) : 0, stdout, stderr }),
+    );
+  });
+}
+
 // Gives up on `promise` after `ms`, saying what took too long (used for shutting things down).
 const within = (promise, ms, what) =>
   Promise.race([
@@ -122,5 +143,8 @@ export async function startTestServer({ razorpay = false, ai = null } = {}) {
   }
 
   // `uri` is the in-memory database's, for tests that run a command-line script against it (never Atlas).
-  return { db, ctx, fake, claude, mail, base, call, browser, webhook, stop, uri: mongo.getUri() };
+  // `runScript(args)`: a command-line script against this test's own database (env vars win over server/.env, so Atlas
+  // is never touched).
+  const script = (args) => runScript(args, { MONGODB_URI: mongo.getUri(), MONGODB_DB: 'test' });
+  return { db, ctx, fake, claude, mail, base, call, browser, webhook, stop, uri: mongo.getUri(), runScript: script };
 }

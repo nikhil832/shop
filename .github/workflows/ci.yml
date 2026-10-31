@@ -27,11 +27,10 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
-      # The API tests hung here five times, always with variants.test.js unfinished, and neither the per-test timeout
-      # nor test/helpers.js's 4-minute watchdog fired, so the cause isn't visible from inside the tests. A normal run
-      # takes under 3 minutes: after 6, print every process (CPU use, parent, state) and what the node and mongod
-      # processes hold open, then stop at 7. Busy at ~100% CPU means an endless loop; an exited test file with mongod
-      # still holding its output open means the runner is waiting on a leftover process.
+      # The API tests hung here six times: a test ran a script with spawnSync, which froze it, so the in-memory
+      # MongoDB's log pipe filled and everything waited (fixed with runScript in server/test/helpers.js). Kept as a
+      # guard: after 6 minutes (a normal run takes under 3) print every process (CPU, parent, state) and what the node
+      # and mongod processes hold open, then stop at 7.
       - name: API tests
         run: |
           (

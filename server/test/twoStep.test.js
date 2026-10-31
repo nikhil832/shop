@@ -1,6 +1,5 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
 import { base32Decode, base32Encode, codeAt, stepOf, verifyCode } from '../src/totp.js';
 import { startTestServer } from './helpers.js';
 
@@ -210,20 +209,15 @@ test('turning it off needs the password and a code; recovery codes can be replac
 test('npm run reset-two-step switches it off for a lost phone, and logs the account out everywhere', async () => {
   const call = await register();
   await enable(call);
-  const run = (email) =>
-    spawnSync(process.execPath, ['src/reset-two-step.js', email], {
-      cwd: new URL('..', import.meta.url),
-      // The test's own in-memory database: env vars win over server/.env, so Atlas is never touched.
-      env: { PATH: process.env.PATH, MONGODB_URI: t.uri, MONGODB_DB: t.db.databaseName },
-      encoding: 'utf8',
-    });
-  const res = run(call.email);
+  // The test's own in-memory database, without blocking (helpers.js says why).
+  const run = (email) => t.runScript(['src/reset-two-step.js', email]);
+  const res = await run(call.email);
   assert.equal(res.status, 0, res.stderr);
   assert.match(res.stdout, /Two-step login is off for .+, and it is logged out everywhere/);
   assert.equal((await call('GET', '/auth/me')).body.user, null);
   const plain = t.browser();
   plain.email = call.email;
   assert.equal((await login(plain)).body.user.twoStep, false);
-  assert.match(run(call.email).stdout, /doesn't have two-step login on/);
-  assert.equal(run('nobody@example.com').status, 1);
+  assert.match((await run(call.email)).stdout, /doesn't have two-step login on/);
+  assert.equal((await run('nobody@example.com')).status, 1);
 });
