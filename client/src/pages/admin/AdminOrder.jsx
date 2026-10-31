@@ -31,6 +31,7 @@ import GiftDetails from '../../components/GiftDetails.jsx';
 import DeliveryInstructions from '../../components/DeliveryInstructions.jsx';
 import CustomerTags from '../../components/CustomerTags.jsx';
 import { cancelReasonText } from '../../cancelReasons.js';
+import { DELIVERY_RATINGS } from '../../deliveryFeedback.js';
 
 // The next steps an admin can take from each status (the server enforces the same rules). Cancelling needs an admin
 // (it can refund); delivering, like shipping, needs `orders.ship`.
@@ -264,6 +265,11 @@ export default function AdminOrder() {
       order.cancelledAt,
     ],
     [payment.refundedAt && 'Refund started', payment.refundedAt],
+    [
+      order.deliveryFeedback &&
+        `Customer said: ${DELIVERY_RATINGS[order.deliveryFeedback.rating].toLowerCase()}${order.deliveryFeedback.note ? ` (“${order.deliveryFeedback.note}”)` : ''}`,
+      order.deliveryFeedback?.at,
+    ],
   ].filter(([, at, always]) => at || always);
 
   return (

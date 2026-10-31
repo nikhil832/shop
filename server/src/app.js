@@ -48,6 +48,7 @@ import { giftOptionsRouter } from './giftOptions.js';
 import { stockReceiptsRouter } from './stockReceipts.js';
 import { stocktakesRouter } from './stocktakes.js';
 import { productPerformanceRouter } from './productPerformance.js';
+import { deliveryFeedbackRouter } from './deliveryFeedback.js';
 import { purchaseOrdersRouter } from './purchaseOrders.js';
 import { bundlesRouter } from './bundles.js';
 import { collectionsRouter } from './collections.js';
@@ -83,6 +84,7 @@ export function createApp(ctx) {
   api.use(orderAddressRouter(ctx));
   api.use(itemCancellationRouter(ctx));
   api.use(orderTrackingRouter(ctx));
+  api.use(deliveryFeedbackRouter(ctx));
   api.use(paymentsRouter(ctx));
   api.use(imagesRouter(ctx));
   api.use(reviewsRouter(ctx));

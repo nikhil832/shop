@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { useState } from 'react';
 import { request } from '../../api.js';
 import { useFetch } from '../../useFetch.js';
@@ -240,6 +241,9 @@ export default function AdminDelivery() {
       <section className="panel">
         <div className="admin-head">
           <h1>Delivery</h1>
+          <Link to="/admin/couriers" className="btn small">
+            Courier report
+          </Link>
         </div>
         <p className="muted small">
           Customers check their PIN code on product pages, and checkout refuses PIN codes you don&rsquo;t deliver to. An

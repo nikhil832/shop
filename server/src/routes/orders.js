@@ -231,6 +231,8 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   cancelledBy: doc.cancelledBy ?? null,
   // Why the customer cancelled (stage 122, cancelReasons.js): { reason, note? }, or null.
   cancelReason: doc.cancelReason ?? null,
+  // "How was your delivery?" (stage 123, deliveryFeedback.js): { rating, note?, at }, or null.
+  deliveryFeedback: doc.deliveryFeedback ?? null,
   // A shipped order that came back undelivered (cod.js): why, and when. The admin's note is for admins only.
   returnedToSender: doc.returnedToSender
     ? {

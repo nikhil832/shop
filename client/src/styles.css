@@ -4833,3 +4833,31 @@ textarea {
   margin: 10px 0 0;
   padding-left: 18px;
 }
+
+/* ---- Delivery feedback (stage 123) ---- */
+.delivery-feedback form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.delivery-feedback fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.delivery-feedback .radio-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.delivery-feedback textarea {
+  width: 100%;
+  margin-top: 4px;
+}
+.delivery-feedback form p {
+  margin: 0;
+}

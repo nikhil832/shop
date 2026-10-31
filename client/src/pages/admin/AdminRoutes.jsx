@@ -6,6 +6,7 @@ import AdminCategories from './AdminCategories.jsx';
 import AdminCoupons from './AdminCoupons.jsx';
 import AdminDashboard from './AdminDashboard.jsx';
 import AdminDelivery from './AdminDelivery.jsx';
+import AdminCouriers from './AdminCouriers.jsx';
 import AdminErrors from './AdminErrors.jsx';
 import AdminGst from './AdminGst.jsx';
 import AdminHelp from './AdminHelp.jsx';
@@ -72,6 +73,7 @@ export default function AdminRoutes() {
         <Route path="returns" element={<AdminReturns />} />
         <Route path="exchanges" element={<AdminExchanges />} />
         <Route path="delivery" element={<AdminDelivery />} />
+        <Route path="couriers" element={<AdminCouriers />} />
         <Route path="gst" element={<AdminGst />} />
         <Route path="activity" element={<AdminActivity />} />
         <Route path="errors" element={<AdminErrors />} />

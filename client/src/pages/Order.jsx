@@ -7,6 +7,7 @@ import OrderSummary from '../components/OrderSummary.jsx';
 import CancelItems, { CancelledItems } from '../components/CancelItems.jsx';
 import OrderProgress from '../components/OrderProgress.jsx';
 import CancelOrder from '../components/CancelOrder.jsx';
+import DeliveryFeedback from '../components/DeliveryFeedback.jsx';
 import ChangeAddress from '../components/ChangeAddress.jsx';
 import {
   formatDate,
@@ -262,6 +263,8 @@ export default function Order() {
           </section>
 
           {order.gift && <GiftDetails gift={order.gift} />}
+
+          {order.status === 'delivered' && order.deliveredAt && <DeliveryFeedback order={order} onDone={setUpdated} />}
 
           {order.shipment && order.status !== 'cancelled' && (
             <section className="panel" aria-labelledby="tracking-heading">
