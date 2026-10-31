@@ -184,6 +184,7 @@ export default function AdminHelp() {
     <section className="panel">
       <div className="admin-head">
         <h1>Help requests</h1>
+        <Link to="/admin/faq">FAQ</Link>
       </div>
       <p className="muted small">
         Customers&apos; messages from &ldquo;Contact us&rdquo; and &ldquo;Get help with this order&rdquo;. Replies are

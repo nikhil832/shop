@@ -153,6 +153,8 @@ export function sitemapXml(origin, { categories, products, collections = [] }) {
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     url('/'),
+    // The store's questions and answers (stage 130).
+    url('/faq'),
     ...categories.map((c) => url(`/search?category=${encodeURIComponent(c.slug)}`)),
     ...collections.map((c) => url(`/c/${encodeURIComponent(c.slug)}`, c.updatedAt)),
     ...products.map((p) => url(`/p/${encodeURIComponent(p.slug)}`, p.updatedAt)),

@@ -10,6 +10,7 @@ import AdminCouriers from './AdminCouriers.jsx';
 import AdminErrors from './AdminErrors.jsx';
 import AdminGst from './AdminGst.jsx';
 import AdminHelp from './AdminHelp.jsx';
+import AdminFaq from './AdminFaq.jsx';
 import AdminImport from './AdminImport.jsx';
 import AdminLayout, { ADMIN_TABS } from './AdminLayout.jsx';
 import AdminStaff from './AdminStaff.jsx';
@@ -80,6 +81,7 @@ export default function AdminRoutes() {
         <Route path="activity" element={<AdminActivity />} />
         <Route path="errors" element={<AdminErrors />} />
         <Route path="help" element={<AdminHelp />} />
+        <Route path="faq" element={<AdminFaq />} />
         <Route path="staff" element={<AdminStaff />} />
         <Route path="sales" element={<AdminSales />} />
         <Route path="announcements" element={<AdminAnnouncements />} />

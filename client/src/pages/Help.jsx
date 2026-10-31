@@ -4,6 +4,7 @@ import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import { HELP_STATUS, HELP_TOPICS, formatDate, orderNumber } from '../format.js';
 import { useFetch } from '../useFetch.js';
+import FaqList from '../components/FaqList.jsx';
 
 // "Contact us" (stage 64): a form for anyone, and for logged-in customers their own requests. `?order=<id>` (from
 // "Get help with this order") asks about that order.
@@ -40,6 +41,8 @@ export default function Help() {
     <div className="orders-page help-page">
       <section className="panel account-section" aria-labelledby="help-heading">
         <h1 id="help-heading">{orderId ? `Help with order #${order ? orderNumber(order) : '…'}` : 'Contact us'}</h1>
+        {/* The store's FAQ first (stage 130), searchable; nothing while it's empty. */}
+        {!orderId && !state.sentTo && <FaqList compact />}
         {state.sentTo ? (
           <p role="status">
             Thanks: we&apos;ve got your message and will reply to {state.sentTo}, usually within a working day.

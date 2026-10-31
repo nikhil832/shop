@@ -7,7 +7,20 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-All five of the sixth list (2026-10-31) are built. Ask for new ideas ("new ideas") to fill this list again.
+Suggested on 2026-11-01 (seventh list), roughly in the order they'd help most. All free (no new services).
+
+- **Low-stock level per product**: each product (or option) gets its own "low at" number instead of 5 for everything,
+  used by the dashboard, the morning email and the admin filter. Fast sellers warn earlier, slow ones less often. To
+  start: "start low-stock levels".
+- **Nearly gone emails**: customers with an item on their wishlist get one email when it's down to its last few, so
+  they don't miss it. With a switch on the account page, like the price-drop emails. To start: "start nearly gone
+  emails".
+- **Customer answers**: customers who bought a product can answer other customers' questions about it, marked "Bought
+  this"; the store's answer stays first and admins can hide any. More answers without more work. To start: "start
+  customer answers".
+- **Loyalty levels**: Silver and Gold by money spent on kept orders in the last 12 months, shown on the account page,
+  with a perk each (e.g. a lower free-delivery minimum, extra cashback) set by the admin. A reason to come back. To
+  start: "start loyalty levels".
 
 ## Set aside
 
@@ -154,3 +167,4 @@ All five of the sixth list (2026-10-31) are built. Ask for new ideas ("new ideas
 | Holiday mode: a break when nothing ships, with a shop notice, later delivery dates and optionally paused orders                                                                         | Stage 127 (`git log --grep "Stage 127"`) |
 | Bought this week: "N people bought this in the last 7 days" on product pages, from 5 people                                                                                             | Stage 128 (`git log --grep "Stage 128"`) |
 | Restock reminders: one "Running low?" email N days after delivery for products the admin marks, with a switch for customers                                                             | Stage 129 (`git log --grep "Stage 129"`) |
+| Store FAQ: questions and answers by topic, searchable on their own page and above the Help page's contact form                                                                          | Stage 130 (`git log --grep "Stage 130"`) |

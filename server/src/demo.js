@@ -25,6 +25,31 @@ await db.collection('users').insertOne({
   role: 'admin',
   createdAt: new Date(),
 });
+// A few questions for the FAQ page (stage 130), so the demo shows one.
+const now = new Date();
+await db.collection('faqs').insertMany(
+  [
+    ['delivery', 'How much is delivery?', 'Delivery is free on orders of ₹499 or more; below that it is ₹40.'],
+    [
+      'payment',
+      'Can I pay when my order arrives?',
+      'Yes: choose Cash on Delivery at checkout.\n\nYou can also pay online by card, UPI or net banking.',
+    ],
+    [
+      'returns',
+      'How do I return something?',
+      'Open the order under Your orders within 7 days of delivery and choose "Return items".',
+    ],
+  ].map(([topic, question, answer]) => ({
+    topic,
+    question,
+    answer,
+    position: 1,
+    active: true,
+    createdAt: now,
+    updatedAt: now,
+  })),
+);
 await client.close();
 
 console.log('Demo mode: in-memory database with sample products (data is lost when this stops).');

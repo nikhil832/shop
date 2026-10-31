@@ -73,6 +73,9 @@ function Footer() {
           <h2 id="footer-help">Help</h2>
           <ul>
             <li>
+              <Link to="/faq">Questions and answers</Link>
+            </li>
+            <li>
               <Link to="/help">Contact us</Link>
             </li>
             <li>

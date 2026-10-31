@@ -5004,3 +5004,83 @@ textarea {
   font-size: 0.88rem;
   font-weight: 600;
 }
+
+/* ---- Store FAQ (stage 130) ---- */
+.faq-search {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 420px;
+}
+.faq-topic h2 {
+  margin: 18px 0 8px;
+  font-size: 1.05rem;
+}
+.faq-entry {
+  border-bottom: 1px solid var(--border);
+}
+.faq-entry summary {
+  padding: 10px 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+.faq-entry p {
+  margin: 0 0 10px;
+}
+.faq-compact {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.faq-ask {
+  margin-top: 18px;
+}
+.faq-admin-list {
+  margin: 0;
+  padding-left: 20px;
+}
+.faq-admin-list > li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.faq-admin-question {
+  margin: 0;
+  font-weight: 600;
+}
+.faq-admin-answer {
+  margin: 2px 0 6px;
+  white-space: pre-line;
+}
+.faq-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.faq-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.faq-form > label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.faq-shown {
+  align-self: flex-end;
+}
+.form-row label.check.faq-shown {
+  flex-direction: row;
+  align-items: center;
+  align-self: flex-end;
+  padding-bottom: 10px;
+}
+.faq-admin-actions .link:disabled {
+  color: var(--muted);
+  cursor: default;
+  text-decoration: none;
+}
+.faq-form > .btn,
+.faq-form .form-actions {
+  align-self: flex-start;
+}

@@ -163,8 +163,9 @@ test('the sitemap lists the home page, every category and every shown product', 
   const xml = await res.text();
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
   const shown = await t.db.collection('products').countDocuments({ active: true });
-  assert.equal(locs.length, 1 + 6 + shown);
+  assert.equal(locs.length, 2 + 6 + shown); // the home page and the FAQ, the categories, the products
   assert.equal(locs[0], `${base}/`);
+  assert.equal(locs[1], `${base}/faq`);
   assert.ok(locs.includes(`${base}/search?category=books`));
   assert.ok(locs.includes(`${base}/p/the-quiet-engineer-paperback`));
   assert.match(xml, /<lastmod>\d{4}-\d\d-\d\dT[\d:.]+Z<\/lastmod>/);

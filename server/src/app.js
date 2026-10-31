@@ -51,6 +51,7 @@ import { productPerformanceRouter } from './productPerformance.js';
 import { deliveryFeedbackRouter } from './deliveryFeedback.js';
 import { returnReasonsRouter } from './returnReasons.js';
 import { holidayRouter } from './holiday.js';
+import { faqRouter } from './faq.js';
 import { purchaseOrdersRouter } from './purchaseOrders.js';
 import { bundlesRouter } from './bundles.js';
 import { collectionsRouter } from './collections.js';
@@ -110,6 +111,7 @@ export function createApp(ctx) {
   api.use(smartSearchRouter(ctx));
   api.use(assistantRouter(ctx));
   api.use(helpRouter(ctx));
+  api.use(faqRouter(ctx));
   api.use(staffRouter(ctx));
   api.use(salesRouter(ctx));
   api.use(stockHistoryRouter(ctx));
