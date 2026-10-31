@@ -58,7 +58,10 @@ export default function AdminReturns() {
     <section className="panel">
       <div className="admin-head">
         <h1>Returns</h1>
-        <Link to="/admin/exchanges">Exchanges</Link>
+        <span className="admin-head-links">
+          <Link to="/admin/return-reasons">Return reasons</Link>
+          <Link to="/admin/exchanges">Exchanges</Link>
+        </span>
       </div>
       <p className="muted small">
         Approve a return once the items are back with you. Online payments are refunded at once; for Cash on Delivery,

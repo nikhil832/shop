@@ -4899,3 +4899,29 @@ textarea {
     display: none;
   }
 }
+
+/* ---- Return reasons (stage 125) ---- */
+.admin-head-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.reason-totals {
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+.reason-totals li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+/* So names and reasons don't wrap word by word when the table scrolls on phones. */
+.return-reasons-table td:first-child {
+  min-width: 160px;
+}
+.return-reasons-table td:last-child {
+  min-width: 220px;
+}

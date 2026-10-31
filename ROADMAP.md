@@ -7,7 +7,18 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-All five of the fifth list (2026-10-31) are built. Ask for new ideas ("new ideas") to fill this list again.
+Suggested on 2026-10-31 (sixth list), roughly in the order they'd help most. All free (no new services).
+
+- **Repeat customers**: a dashboard panel of new and returning customers for the period, the share of revenue from
+  returning ones, and the usual time between orders. Shows whether people come back. To start: "start repeat
+  customers".
+- **Holiday mode**: pause dispatch between two dates with a message in the shop; delivery dates at checkout move past
+  the break, and orders can still be taken or paused. For festivals and time off. To start: "start holiday mode".
+- **Bought this week**: "N bought this week" on product pages, from real orders (shown from 5), as a nudge that
+  others trust it. Nothing about who bought. To start: "start bought this week".
+- **Restock reminders**: for everyday products (coffee, shampoo), the admin sets "remind after N days"; customers who
+  bought one get one email when it's likely running out, with Buy again and a switch to turn them off. To start:
+  "start restock reminders".
 
 ## Set aside
 
@@ -149,3 +160,4 @@ All five of the fifth list (2026-10-31) are built. Ask for new ideas ("new ideas
 | Cancellation reasons: customers say why they cancel; the dashboard shows the main reasons and latest notes                                                                              | Stage 122 (`git log --grep "Stage 122"`) |
 | Delivery feedback: customers say how the delivery went; a courier report with answers and late deliveries                                                                               | Stage 123 (`git log --grep "Stage 123"`) |
 | Sales by place: a dashboard panel of orders and revenue by state and top cities                                                                                                         | Stage 124 (`git log --grep "Stage 124"`) |
+| Return reasons by product: why items come back, and each product's returns and exchanges per units sold                                                                                 | Stage 125 (`git log --grep "Stage 125"`) |

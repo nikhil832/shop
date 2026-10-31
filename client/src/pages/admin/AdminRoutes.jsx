@@ -34,6 +34,7 @@ import AdminProduct from './AdminProduct.jsx';
 import AdminProducts from './AdminProducts.jsx';
 import AdminQuestions from './AdminQuestions.jsx';
 import AdminReturns from './AdminReturns.jsx';
+import AdminReturnReasons from './AdminReturnReasons.jsx';
 import AdminExchanges from './AdminExchanges.jsx';
 import AdminReviews from './AdminReviews.jsx';
 import AdminStockHistory from './AdminStockHistory.jsx';
@@ -71,6 +72,7 @@ export default function AdminRoutes() {
         <Route path="questions" element={<AdminQuestions />} />
         <Route path="coupons" element={<AdminCoupons />} />
         <Route path="returns" element={<AdminReturns />} />
+        <Route path="return-reasons" element={<AdminReturnReasons />} />
         <Route path="exchanges" element={<AdminExchanges />} />
         <Route path="delivery" element={<AdminDelivery />} />
         <Route path="couriers" element={<AdminCouriers />} />

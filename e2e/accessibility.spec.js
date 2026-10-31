@@ -85,6 +85,7 @@ const ADMIN_PAGES = (o, p) => [
   '/admin/products/import',
   '/admin/categories',
   '/admin/couriers',
+  '/admin/return-reasons',
   '/admin/reviews',
   '/admin/questions',
   '/admin/returns',
