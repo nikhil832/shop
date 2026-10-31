@@ -97,6 +97,8 @@ function sheetRows(products, reserved) {
         variantId: variant?._id.toString() ?? null,
         title: p.title,
         label: variant?.label ?? null,
+        // The store's code (stage 120), to find it on the shelf: the option's, else the product's.
+        sku: (variant ? variant.sku : p.sku) ?? null,
         active: p.active !== false,
         stock,
         reserved: held,
@@ -167,7 +169,7 @@ export function stocktakesRouter({ db, client }) {
     const category = await categoryOf(query.category);
     const list = await products
       .find(category ? { categoryId: category._id } : {}, {
-        projection: { title: 1, active: 1, stock: 1, variants: 1 },
+        projection: { title: 1, active: 1, stock: 1, sku: 1, variants: 1 },
       })
       .sort({ title: 1, _id: 1 })
       .toArray();

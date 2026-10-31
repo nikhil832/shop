@@ -144,6 +144,9 @@ const newRow = (v = {}) => ({
   // What it costs the store (stage 80); empty: not known.
   cost: v.cost != null ? toRupees(v.cost) : '',
   stock: v.stock ?? 0,
+  // The store's code and the maker's barcode (stage 120); empty: none.
+  sku: v.sku ?? '',
+  barcode: v.barcode ?? '',
   images: v.images ?? [],
 });
 const MAX_VARIANTS = 40;
@@ -230,6 +233,8 @@ function Variants({ names, onNames, rows, photos, onChange }) {
               <th>MRP (₹)</th>
               <th>Cost (₹)</th>
               <th>Stock</th>
+              <th>SKU</th>
+              <th>Barcode</th>
               {photos.length > 0 && <th>Photos</th>}
               <th>
                 <span className="sr-only">Remove</span>
@@ -293,6 +298,25 @@ function Variants({ names, onNames, rows, photos, onChange }) {
                     value={r.stock}
                     onChange={(e) => set(r.key, 'stock', e.target.value)}
                     aria-label={`Stock of variant ${i + 1}`}
+                  />
+                </td>
+                <td>
+                  <input
+                    className="code-input"
+                    maxLength={40}
+                    value={r.sku}
+                    onChange={(e) => set(r.key, 'sku', e.target.value)}
+                    aria-label={`SKU of variant ${i + 1}`}
+                  />
+                </td>
+                <td>
+                  <input
+                    className="code-input"
+                    inputMode="numeric"
+                    maxLength={20}
+                    value={r.barcode}
+                    onChange={(e) => set(r.key, 'barcode', e.target.value)}
+                    aria-label={`Barcode of variant ${i + 1}`}
                   />
                 </td>
                 {photos.length > 0 && (
@@ -568,6 +592,8 @@ function ProductForm({ product, categories }) {
               mrp: toPaise(v.mrp),
               cost: v.cost === '' ? null : toPaise(v.cost),
               stock: Number(v.stock),
+              sku: v.sku.trim() || null,
+              barcode: v.barcode.trim() || null,
               // Only photos the product still has, in the product's order.
               images: images.filter((src) => v.images.includes(src)),
             })),
@@ -578,6 +604,8 @@ function ProductForm({ product, categories }) {
             mrp: toPaise(form.get('mrp')),
             cost: form.get('cost') === '' ? null : toPaise(form.get('cost')),
             stock: Number(form.get('stock')),
+            sku: form.get('sku').trim() || null,
+            barcode: form.get('barcode').trim() || null,
           }),
       images,
       // Descriptions of the uploaded photos the product keeps (the server drops empty ones).
@@ -703,6 +731,14 @@ function ProductForm({ product, categories }) {
                 required
                 defaultValue={product?.stock ?? 0}
               />
+            </label>
+            <label>
+              SKU <span className="muted small">(your own code, optional)</span>
+              <input name="sku" maxLength={40} defaultValue={product?.sku ?? ''} />
+            </label>
+            <label>
+              Barcode <span className="muted small">(the number under the stripes, optional)</span>
+              <input name="barcode" inputMode="numeric" maxLength={20} defaultValue={product?.barcode ?? ''} />
             </label>
           </>
         )}

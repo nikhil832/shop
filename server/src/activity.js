@@ -119,6 +119,8 @@ export function productChanges(before, after, categoryName) {
     push(changes, 'MRP', rupees(before.mrp), rupees(after.mrp));
     push(changes, 'Stock', before.stock, after.stock);
     push(changes, 'Cost', costText(before.cost), costText(after.cost));
+    push(changes, 'SKU', before.sku ?? '(none)', after.sku ?? '(none)');
+    push(changes, 'Barcode', before.barcode ?? '(none)', after.barcode ?? '(none)');
     return changes;
   }
   const names = (doc) => (doc.variants?.length ? optionsOf(doc).join(', ') : '(none)');
@@ -136,6 +138,8 @@ export function productChanges(before, after, categoryName) {
     push(changes, `${v.label}: MRP`, rupees(old.mrp), rupees(v.mrp));
     push(changes, `${v.label}: stock`, old.stock, v.stock);
     push(changes, `${v.label}: cost`, costText(old.cost), costText(v.cost));
+    push(changes, `${v.label}: SKU`, old.sku ?? '(none)', v.sku ?? '(none)');
+    push(changes, `${v.label}: barcode`, old.barcode ?? '(none)', v.barcode ?? '(none)');
   }
   for (const v of byId.values()) changes.push({ field: v.label, to: 'removed' });
   return changes;

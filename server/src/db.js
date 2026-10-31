@@ -117,6 +117,12 @@ const INDEXES = {
     [{ categoryId: 1, price: 1 }],
     [{ brand: 1 }],
     [{ 'sale.id': 1 }, { partialFilterExpression: { 'sale.id': { $exists: true } } }],
+    // SKUs and barcodes (stage 120): unique between products (skus.js also checks products against options and
+    // within one product, which these indexes can't); found by the admin search and the scanner.
+    ...['sku', 'barcode', 'variants.sku', 'variants.barcode'].map((path) => [
+      { [path]: 1 },
+      { unique: true, partialFilterExpression: { [path]: { $type: 'string' } } },
+    ]),
   ],
   // Admin → Customers filters by tag (stage 82).
   // Referral codes are unique (stage 87); friends are counted by who referred them.

@@ -2827,6 +2827,17 @@ textarea {
   font-size: 1.1rem;
   line-height: 1.5;
 }
+/* An item's SKU (stage 120) on packing slips and stocktake sheets, under its name, for finding it on the shelf. */
+.slip-sku {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.code-input {
+  width: 9rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 .slip-qty {
   font-size: 1.1rem;
   font-weight: 700;

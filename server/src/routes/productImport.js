@@ -12,6 +12,7 @@ import { logActivity, productChanges } from '../activity.js';
 import { notePrices } from '../priceHistory.js';
 import { byOf, recordStock, savedEntries } from '../stockHistory.js';
 import { specsFromText, specsText } from '../specs.js';
+import { barcodeField, nameOf, repeatedCodes, skuField } from '../skus.js';
 
 // Products from a spreadsheet: download them all as CSV, edit, upload. An upload is checked first (a preview of what
 // each row adds or changes, and the rows with problems), then saved with the same file and the preview's `plan` id:
@@ -41,6 +42,9 @@ const COLUMNS = [
   ['description', 'Description'],
   // Specifications (stage 119), "Name: Value | Name: Value"; last, so the columns before keep their places.
   ['specs', 'Specifications'],
+  // The store's code and the maker's barcode (stage 120): a product's own on its row, an option's on its row.
+  ['sku', 'SKU'],
+  ['barcode', 'Barcode'],
 ];
 const headingKey = (h) => h.toLowerCase().replace(/\(₹\)|[^a-z]/g, '');
 const KEYS = new Map(COLUMNS.map(([key, heading]) => [headingKey(heading), key]));
@@ -136,6 +140,14 @@ function highlightsOf(s) {
   return list;
 }
 
+// An SKU or barcode cell, checked like the product form; undefined when empty (keeps what's there).
+function codeOf(field, s) {
+  if (!s) return undefined;
+  const result = field.safeParse(s);
+  if (!result.success) throw new RowError(result.error.issues[0].message);
+  return result.data;
+}
+
 function specsOf(s) {
   const specs = specsFromText(s);
   if (typeof specs === 'string') throw new RowError(specs);
@@ -185,6 +197,7 @@ async function makePlan(db, csv, session) {
   const seen = new Map(); // "slug|variant" → line, for rows given twice
   const updates = new Map(); // slug → { product, set, variants (copy, when changed), rows }
   const inserts = [];
+  const coded = new Map(); // owner ("productId|variantId", or "new|line") → { row, name, sku, barcode } as left
 
   for (const { line, cells } of named) {
     const get = (key) => {
@@ -198,6 +211,8 @@ async function makePlan(db, csv, session) {
       const mrp = get('mrp') && rupeesToPaise(get('mrp'), 'MRP');
       const cost = get('cost') ? rupeesToPaise(get('cost'), 'Cost') : null;
       const stock = get('stock') !== '' ? stockOf(get('stock')) : undefined;
+      const sku = codeOf(skuField, get('sku'));
+      const barcode = codeOf(barcodeField, get('barcode'));
 
       if (!row.slug) {
         if (row.variant) throw new RowError("Give the product's slug for a variant row");
@@ -218,7 +233,10 @@ async function makePlan(db, csv, session) {
           cost,
           stock,
           active: get('active') ? shownOf(get('active')) : true,
+          sku: sku ?? null,
+          barcode: barcode ?? null,
         };
+        if (sku || barcode) coded.set(`new|${line}`, { row, name: doc.title, sku: doc.sku, barcode: doc.barcode });
         row.action = 'new';
         row.changes = [
           { field: 'brand', to: doc.brand },
@@ -260,13 +278,23 @@ async function makePlan(db, csv, session) {
           mrp: mrp || v.mrp,
           stock: stock ?? v.stock,
           cost: cost ?? v.cost ?? null,
+          sku: sku ?? v.sku ?? null,
+          barcode: barcode ?? v.barcode ?? null,
         };
         if (next.mrp < next.price) throw new RowError('MRP must be at least the price');
         if (product.sale && (next.price !== v.price || next.mrp !== v.mrp)) throw new RowError(onSale(product));
-        for (const field of ['price', 'mrp', 'stock', 'cost']) {
+        for (const field of ['price', 'mrp', 'stock', 'cost', 'sku', 'barcode']) {
           if (next[field] !== (v[field] ?? null)) row.changes.push({ field, from: v[field] ?? null, to: next[field] });
         }
         Object.assign(v, next);
+        if (sku || barcode) {
+          coded.set(`${product._id}|${v._id}`, {
+            row,
+            name: nameOf(product.title, v.label),
+            sku: next.sku,
+            barcode: next.barcode,
+          });
+        }
         update.variants = variants;
       } else {
         if (product.variants?.length && (price || mrp || stock !== undefined || cost !== null)) {
@@ -287,6 +315,16 @@ async function makePlan(db, csv, session) {
         if (stock !== undefined) next.stock = stock;
         if (cost !== null) next.cost = cost;
         if (get('active')) next.active = shownOf(get('active'));
+        if (sku) next.sku = sku;
+        if (barcode) next.barcode = barcode;
+        if (sku || barcode) {
+          coded.set(`${product._id}|`, {
+            row,
+            name: product.title,
+            sku: next.sku ?? product.sku ?? null,
+            barcode: next.barcode ?? product.barcode ?? null,
+          });
+        }
         if ((next.mrp ?? product.mrp) < (next.price ?? product.price)) {
           throw new RowError('MRP must be at least the price');
         }
@@ -308,6 +346,37 @@ async function makePlan(db, csv, session) {
       if (!(err instanceof RowError)) throw err;
       row.action = 'error';
       row.error = err.message;
+      row.changes = [];
+    }
+  }
+
+  // Codes (stage 120) must stay unique across the store as the file would leave it: the store's codes, with those the
+  // file gives in their place. A row giving a repeated code is an error, like any other (so nothing can be saved).
+  if (coded.size) {
+    const owners = new Map();
+    const holders = await db
+      .collection('products')
+      .find(
+        { $or: ['sku', 'barcode', 'variants.sku', 'variants.barcode'].map((f) => ({ [f]: { $type: 'string' } })) },
+        { projection: { title: 1, sku: 1, barcode: 1, variants: 1 }, session },
+      )
+      .toArray();
+    for (const p of holders) {
+      owners.set(`${p._id}|`, { name: p.title, sku: p.sku ?? null, barcode: p.barcode ?? null });
+      for (const v of p.variants ?? []) {
+        owners.set(`${p._id}|${v._id}`, {
+          name: nameOf(p.title, v.label),
+          sku: v.sku ?? null,
+          barcode: v.barcode ?? null,
+        });
+      }
+    }
+    for (const [owner, codes] of coded) if (codes.row.action !== 'error') owners.set(owner, codes);
+    for (const { owner, message } of repeatedCodes(owners)) {
+      const row = coded.get(owner)?.row;
+      if (!row || row.action === 'error') continue;
+      row.action = 'error';
+      row.error = message;
       row.changes = [];
     }
   }
@@ -375,6 +444,8 @@ export function productImportRouter(ctx) {
           cell((p.highlights ?? []).join(HIGHLIGHT_SEPARATOR), { text: true }),
           cell(p.description ?? '', { text: true }),
           cell(specsText(p.specs), { text: true }),
+          cell(p.sku ?? '', { text: true }),
+          cell(p.barcode ?? ''),
         ].join(','),
       );
       for (const v of p.variants ?? []) {
@@ -393,6 +464,8 @@ export function productImportRouter(ctx) {
             '',
             '',
             '',
+            cell(v.sku ?? '', { text: true }),
+            cell(v.barcode ?? ''),
           ].join(','),
         );
       }

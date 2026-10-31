@@ -152,7 +152,7 @@ export default function AdminProducts() {
             name="q"
             type="search"
             defaultValue={q}
-            placeholder="Title, brand or slug"
+            placeholder="Title, brand, slug, SKU or barcode"
             aria-label="Find products"
           />
           <button type="submit" className="btn small">
@@ -199,7 +199,10 @@ export default function AdminProducts() {
                       <img src={smallImage(p.images[0])} alt="" width="44" height="44" />
                       <span>
                         <Link to={`/admin/products/${p.id}`}>{p.title}</Link>
-                        <span className="muted small block">{p.brand}</span>
+                        <span className="muted small block">
+                          {p.brand}
+                          {p.sku && ` · SKU ${p.sku}`}
+                        </span>
                       </span>
                     </div>
                   </td>

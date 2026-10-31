@@ -23,6 +23,7 @@ import { toAdminNote } from '../customerTags.js';
 import { MAX_ADD_ONS } from './catalog.js';
 import { videoField, watchUrl } from '../videos.js';
 import { specsField } from '../specs.js';
+import { assertCodesFree, barcodeField, skuField } from '../skus.js';
 
 const hexId = (what) => z.string().regex(/^[0-9a-f]{24}$/, `Choose a ${what}`);
 
@@ -44,6 +45,9 @@ const productFields = z.object({
   price: z.number().int().min(100, 'Price must be at least ₹1').max(100_000_000),
   mrp: z.number().int().min(100, 'MRP must be at least ₹1').max(100_000_000),
   stock: z.number().int().min(0).max(100_000),
+  // The store's code and the maker's barcode (stage 120, skus.js); null or '' for none.
+  sku: skuField,
+  barcode: barcodeField,
   // What it costs the store (stage 80, admins only), for profit; null clears it.
   cost: z.number().int().min(0).max(100_000_000).nullable(),
   // Its size guide (stage 88): a guide's id, 'none', or null for its category's.
@@ -94,6 +98,9 @@ const variantFields = z.object({
   stock: productFields.shape.stock,
   // Left out: keeps the variant's cost (forms and files from before stage 80 don't send it).
   cost: productFields.shape.cost.optional(),
+  // Left out: keeps the variant's SKU and barcode (stage 120).
+  sku: skuField.optional(),
+  barcode: barcodeField.optional(),
   // Some of the product's photos, shown when this variant is chosen; none means all of them.
   images: z.array(imageRef).max(5).default([]),
 });
@@ -113,6 +120,8 @@ const createProduct = productFields
     imageAlts: productFields.shape.imageAlts.default({}),
     active: productFields.shape.active.default(true),
     cost: productFields.shape.cost.default(null),
+    sku: productFields.shape.sku.default(null),
+    barcode: productFields.shape.barcode.default(null),
     sizeGuide: productFields.shape.sizeGuide.default(null),
     comingSoon: productFields.shape.comingSoon.default(null),
     quantityDiscount: productFields.shape.quantityDiscount.default(null),
@@ -193,6 +202,8 @@ function storedVariants(variants, current = []) {
     stock: v.stock,
     // Not sent: the existing variant's cost stays.
     cost: v.cost !== undefined ? v.cost : (known.get(v.id)?.cost ?? null),
+    sku: v.sku !== undefined ? v.sku : (known.get(v.id)?.sku ?? null),
+    barcode: v.barcode !== undefined ? v.barcode : (known.get(v.id)?.barcode ?? null),
     images: v.images,
   }));
   return { variants: list, ...variantTotals(list) };
@@ -295,6 +306,8 @@ const toAdminProduct = (doc) => ({
   mrp: doc.mrp,
   stock: doc.stock,
   cost: doc.cost ?? null,
+  sku: doc.sku ?? null,
+  barcode: doc.barcode ?? null,
   sizeGuide: doc.sizeGuide ?? null,
   comingSoon: doc.comingSoon ?? null,
   quantityDiscount: doc.quantityDiscount ?? null,
@@ -308,7 +321,12 @@ const toAdminProduct = (doc) => ({
   variantName: doc.variants?.length ? doc.variantName : '',
   options: doc.variants?.length ? optionsOf(doc) : [],
   // Admins see each option's cost too (toVariant leaves it out for customers).
-  variants: (doc.variants ?? []).map((v) => ({ ...toVariant(v), cost: v.cost ?? null })),
+  variants: (doc.variants ?? []).map((v) => ({
+    ...toVariant(v),
+    cost: v.cost ?? null,
+    sku: v.sku ?? null,
+    barcode: v.barcode ?? null,
+  })),
   updatedAt: doc.updatedAt,
 });
 
@@ -421,7 +439,16 @@ export function adminRouter(ctx) {
     const filter = {};
     if (query.q) {
       const pattern = { $regex: escapeRegex(query.q), $options: 'i' };
-      filter.$or = [{ title: pattern }, { brand: pattern }, { slug: pattern }];
+      // Also by SKU (stage 120), and by a whole barcode, as a scanner types it.
+      const digits = query.q.replace(/\s/g, '');
+      filter.$or = [
+        { title: pattern },
+        { brand: pattern },
+        { slug: pattern },
+        { sku: pattern },
+        { 'variants.sku': pattern },
+        ...(/^\d{8,14}$/.test(digits) ? [{ barcode: digits }, { 'variants.barcode': digits }] : []),
+      ];
     }
     if (query.category) filter.categoryId = new ObjectId(query.category);
     if (query.status === 'active') filter.active = true;
@@ -454,6 +481,7 @@ export function adminRouter(ctx) {
     const category = await findCategory(body.categoryId);
     await checkImages(body.images);
     body.addOns = await checkAddOns(body.addOns);
+    await assertCodesFree(db, { ...body, ...(variants.length && storedVariants(variants)) });
     const now = new Date();
     const base = slugify(body.title) || 'product';
     // The slug comes from the title and never changes afterwards, so product links keep working.
@@ -498,7 +526,10 @@ export function adminRouter(ctx) {
         await notePrices(db, { _id: insertedId }); // the price history (stage 112)
         return res.status(201).json(await withAddOns({ ...doc, _id: insertedId }));
       } catch (err) {
+        // Only a taken address is retried with the next one; a code taken in the meantime is the admin's to change.
         if (err.code !== 11000) throw err;
+        if (!err.keyPattern?.slug)
+          throw new HttpError(409, 'Another product just took one of these codes. Save again.');
       }
     }
     throw new HttpError(409, 'Too many products with this title');
@@ -556,6 +587,18 @@ export function adminRouter(ctx) {
         update.images ?? fields.images ?? current.images,
       );
     }
+    // Codes (stage 120) as the product will be: none repeated, none used by another product.
+    if (['sku', 'barcode', 'variants'].some((f) => f in update)) {
+      await assertCodesFree(
+        db,
+        {
+          sku: 'sku' in update ? update.sku : current.sku,
+          barcode: 'barcode' in update ? update.barcode : current.barcode,
+          variants: unset.variants !== undefined ? [] : (update.variants ?? current.variants),
+        },
+        _id,
+      );
+    }
     // With the product as it really was just before (an order may have taken stock since `current` was read), so the
     // stock history records exactly what this save changed.
     const doc = await inTransaction(ctx.client, async (session) => {
@@ -573,7 +616,7 @@ export function adminRouter(ctx) {
       return after;
     }).catch((err) => {
       // A copy's new address was taken by another product a moment ago.
-      if (err.code === 11000) throw new HttpError(409, 'Another product just took this address. Save again.');
+      if (err.code === 11000) throw new HttpError(409, 'Another product just took this address or code. Save again.');
       throw err;
     });
     const names = new Map(
@@ -607,6 +650,9 @@ export function adminRouter(ctx) {
       _id: new ObjectId(),
       price: regular.get(v._id.toString()) ?? v.price,
       stock: 0,
+      // Codes are unique (stage 120): the copy gets its own.
+      sku: null,
+      barcode: null,
     }));
     const now = new Date();
     const title = `${source.title.slice(0, 143)} (copy)`;

@@ -78,6 +78,8 @@ export function productJsonLd(product, origin) {
     ...(product.description && { description: product.description }),
     brand: { '@type': 'Brand', name: product.brand },
     ...(images.length && { image: images }),
+    // The maker's barcode (stage 120) of a product without options, for matching in search results.
+    ...(product.barcode && !product.variants?.length && { gtin: product.barcode }),
     // Specifications (stage 119) as schema.org properties.
     ...(product.specs?.length && {
       additionalProperty: product.specs.map((spec) => ({
@@ -207,6 +209,7 @@ export function previewRouter({ db, config }, page) {
           images: 1,
           highlights: 1,
           specs: 1,
+          barcode: 1,
           description: 1,
           rating: 1,
           'variants.price': 1,

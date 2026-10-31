@@ -87,6 +87,7 @@ export default function AdminPackingSlips() {
                     <td>
                       {i.title}
                       {i.brand && <span className="muted small"> · {i.brand}</span>}
+                      {i.sku && <span className="slip-sku">SKU {i.sku}</span>}
                     </td>
                     <td className="num slip-qty">{i.qty}</td>
                     <td className="num">

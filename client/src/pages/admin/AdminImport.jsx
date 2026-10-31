@@ -13,11 +13,15 @@ const FIELDS = {
   highlights: 'Highlights',
   description: 'Description',
   specs: 'Specifications',
+  cost: 'Cost',
+  sku: 'SKU',
+  barcode: 'Barcode',
 };
 
 function show(field, value) {
   if (value === undefined || value === '') return '(empty)';
-  if (field === 'price' || field === 'mrp') return formatPrice(value);
+  if (value === null) return '(none)';
+  if (field === 'price' || field === 'mrp' || field === 'cost') return formatPrice(value);
   if (field === 'active') return value ? 'yes' : 'no';
   if (field === 'highlights') return value.join(' | ') || '(none)';
   if (field === 'specs') return value.map((s) => `${s.name}: ${s.value}`).join(' | ') || '(none)';

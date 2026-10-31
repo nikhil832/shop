@@ -85,7 +85,7 @@ test('the spreadsheet has a Specifications column that reads back the same, and 
   const csv = (await admin('GET', '/admin/products/export')).body.toString('utf8');
   const rows = parseCsv(csv);
   const at = rows[0].indexOf('Specifications');
-  assert.equal(at, rows[0].length - 1);
+  assert.equal(at, rows[0].indexOf('Description') + 1); // added after the earlier columns, which keep their places
   const row = rows.find((r) => r[0] === book.slug && !r[1]);
   assert.equal(row[at], 'Pages: 320 | Binding: Paperback | Language: English');
 

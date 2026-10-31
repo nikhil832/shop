@@ -201,6 +201,7 @@ export function AdminStocktakeNew() {
                     <td>
                       {rowTitle(r)}
                       {!r.active && <span className="muted small"> · hidden</span>}
+                      {r.sku && <span className="slip-sku">SKU {r.sku}</span>}
                       {r.reserved > 0 && (
                         <span className="muted small block no-print">{r.reserved} sold, waiting to ship</span>
                       )}
