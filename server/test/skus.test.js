@@ -63,7 +63,7 @@ test('a product and its options get an SKU and a barcode; SKUs are kept in capit
   // A save that doesn't send an option's codes keeps them.
   res = await admin('PATCH', `/admin/products/${shoes._id}`, {
     options: ['Size'],
-    variants: variantsOf(await products().findOne({ _id: shoes._id })).map(({ sku, barcode, ...v }) => v),
+    variants: variantsOf(await products().findOne({ _id: shoes._id })), // sends no codes
   });
   assert.equal(res.body.variants.find((v) => v.label === 'UK 7').sku, 'STR-RUN-7');
 
