@@ -77,6 +77,7 @@ const ADMIN_PAGES = (o, p) => [
   `/admin/orders/${o.id}`,
   `/admin/orders/${o.id}/invoice`,
   `/admin/orders/slips?ids=${o.id}`,
+  `/admin/orders/labels?ids=${o.id}`,
   '/admin/products',
   '/admin/products/new',
   `/admin/products/${p.id}`,

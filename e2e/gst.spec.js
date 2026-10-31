@@ -63,6 +63,12 @@ test('with GST on, a new order gets a tax invoice with CGST and SGST', async ({ 
     expect(res.status()).toBe(201);
     const order = await res.json();
 
+    // Its shipping label has the store's registered name and address as the return address (stage 116).
+    await admin.goto(`/admin/orders/labels?ids=${order.id}`);
+    await expect(admin.getByRole('article', { name: /^Shipping label/ })).toContainText(
+      'FromBazaar Retail Pvt Ltd, 12 MG Road',
+    );
+
     await page.goto(`/orders/${order.id}/invoice`);
     await expect(page.getByRole('heading', { name: 'Tax invoice' })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Sold by' })).toContainText(`GSTIN ${GSTIN}`);

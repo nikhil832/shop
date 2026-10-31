@@ -23,6 +23,7 @@ export default function AdminPackingSlips() {
     <div className="slips-page">
       <div className="invoice-actions no-print">
         <Link to="/admin/orders">← Back to orders</Link>
+        {ids && <Link to={`/admin/orders/labels?ids=${ids}`}>Shipping labels</Link>}
         {orders.length > 0 && (
           <button type="button" className="btn primary" onClick={() => window.print()}>
             Print {orders.length} {orders.length === 1 ? 'slip' : 'slips'}

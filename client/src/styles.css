@@ -2805,6 +2805,106 @@ textarea {
   border-radius: 6px;
 }
 
+/* ---- Shipping labels (stage 116) ---- */
+.labels-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.labels-layout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+/* On screen, each printed page is previewed in its shape: two by two for A4, one narrow label for a label printer. */
+.label-sheet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  max-width: 820px;
+}
+.roll .label-sheet {
+  max-width: 420px;
+}
+.label {
+  position: relative; /* for the blanks' .sr-only text */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: var(--surface);
+  color: var(--text);
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.label p {
+  margin: 0;
+}
+.label-number {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+.label-tag {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.label-to address {
+  font-style: normal;
+  font-size: 1.1rem;
+  line-height: 1.45;
+}
+.label-pin {
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+.label-payment {
+  font-weight: 700;
+  padding: 8px 10px;
+  border: 2px solid var(--text);
+  border-radius: 6px;
+}
+.label-payment.cod {
+  font-size: 1.15rem;
+  background: var(--text);
+  color: var(--surface);
+}
+.label-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  margin: 0;
+}
+.label-details dt {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.label-details dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+.label-blank {
+  display: block;
+  height: 1.3em;
+  border-bottom: 1px solid var(--text);
+}
+.label-from {
+  margin-top: auto;
+  font-size: 0.85rem;
+}
+.label-from .pre-line {
+  white-space: normal;
+}
+
 /* Printing an invoice: only the invoice, in black on white whatever the screen's theme. */
 @media print {
   :root {
@@ -2852,6 +2952,51 @@ textarea {
     box-shadow: none;
     padding: 0;
   }
+  /* Shipping labels: each sheet is a printed page of its own size (named pages). */
+  .labels-page {
+    gap: 0;
+  }
+  .label-sheet {
+    break-after: page;
+  }
+  .label-sheet:last-child {
+    break-after: auto;
+  }
+  .sheet .label-sheet {
+    page: label-sheet;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    height: 277mm;
+    gap: 0;
+  }
+  .sheet .label {
+    border-radius: 0;
+    padding: 8mm;
+  }
+  .roll .label-sheet {
+    page: label-roll;
+    display: block;
+    height: 5.7in;
+  }
+  .roll .label {
+    height: 100%;
+    border: none;
+    padding: 0;
+  }
+  .label-payment.cod {
+    background: #000000;
+    color: #ffffff;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+@page label-sheet {
+  size: A4;
+  margin: 10mm;
+}
+@page label-roll {
+  size: 4in 6in;
+  margin: 0.15in;
 }
 
 /* ---- Mobile ---- */

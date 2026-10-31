@@ -28,6 +28,7 @@ import AdminSizeGuides from './AdminSizeGuides.jsx';
 import AdminOrder from './AdminOrder.jsx';
 import AdminOrders from './AdminOrders.jsx';
 import AdminPackingSlips from './AdminPackingSlips.jsx';
+import AdminShippingLabels from './AdminShippingLabels.jsx';
 import AdminProduct from './AdminProduct.jsx';
 import AdminProducts from './AdminProducts.jsx';
 import AdminQuestions from './AdminQuestions.jsx';
@@ -55,6 +56,7 @@ export default function AdminRoutes() {
         <Route index element={<AdminHome />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="orders/slips" element={<AdminPackingSlips />} />
+        <Route path="orders/labels" element={<AdminShippingLabels />} />
         <Route path="orders/:id" element={<AdminOrder />} />
         <Route path="orders/:id/invoice" element={<Invoice admin />} />
         <Route path="orders/:id/credit-notes/:returnId" element={<CreditNote admin />} />

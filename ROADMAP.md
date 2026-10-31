@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-10-30 (fourth list), roughly in the order they'd help most. All free (no new services).
 
-- **Shipping labels**: printable address labels for chosen orders (several to a sheet), with the order number in large
-  print, the COD amount to collect and the courier, beside the packing slips. Saves writing addresses by hand. To
-  start: "start shipping labels".
 - **Duplicate a product**: "Duplicate" on the admin product form makes a hidden copy (title, details, photos, options,
   prices; stock 0) to edit into a similar product. Faster than typing a near-identical one. To start: "start
   duplicate product".
@@ -150,3 +147,4 @@ Suggested on 2026-10-30 (fourth list), roughly in the order they'd help most. Al
 | Delivery instructions: a note at checkout for the courier and packer, on the order pages and packing slip, changeable until it ships                                                  | Stage 113 (`git log --grep "Stage 113"`) |
 | Goes well with: up to 6 hand-picked add-ons per product, on its page and in the cart with Add                                                                                         | Stage 114 (`git log --grep "Stage 114"`) |
 | Recent searches: the empty search box offers the shopper's last 6 searches (kept in their browser), with Clear                                                                        | Stage 115 (`git log --grep "Stage 115"`) |
+| Shipping labels: printable labels for chosen orders (four to an A4 sheet or one per 4 × 6 inch label), beside the packing slips                                                       | Stage 116 (`git log --grep "Stage 116"`) |

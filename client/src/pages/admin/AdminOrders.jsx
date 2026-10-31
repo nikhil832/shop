@@ -117,6 +117,9 @@ export default function AdminOrders() {
           <Link className="btn small" to={`/admin/orders/slips?ids=${selected.join(',')}`}>
             Print packing slips
           </Link>
+          <Link className="btn small" to={`/admin/orders/labels?ids=${selected.join(',')}`}>
+            Print shipping labels
+          </Link>
           {can(user, 'orders.ship') && (
             <button type="button" className="btn primary small" disabled={bulk.busy} onClick={shipSelected}>
               Mark shipped
