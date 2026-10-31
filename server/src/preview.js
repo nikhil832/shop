@@ -78,6 +78,14 @@ export function productJsonLd(product, origin) {
     ...(product.description && { description: product.description }),
     brand: { '@type': 'Brand', name: product.brand },
     ...(images.length && { image: images }),
+    // Specifications (stage 119) as schema.org properties.
+    ...(product.specs?.length && {
+      additionalProperty: product.specs.map((spec) => ({
+        '@type': 'PropertyValue',
+        name: spec.name,
+        value: spec.value,
+      })),
+    }),
     url,
     offers:
       low === high
@@ -198,6 +206,7 @@ export function previewRouter({ db, config }, page) {
           stock: 1,
           images: 1,
           highlights: 1,
+          specs: 1,
           description: 1,
           rating: 1,
           'variants.price': 1,

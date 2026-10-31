@@ -955,6 +955,29 @@ p a:not(.btn) {
   user-select: none;
   -webkit-user-drag: none;
 }
+/* Specifications on the product page (stage 119) */
+/* The info column aligns its pieces to the start (so buttons keep their size); the table takes the full width. */
+.product-info .specs {
+  align-self: stretch;
+}
+.specs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+.specs-table th,
+.specs-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.specs-table th {
+  width: 40%;
+  font-weight: 600;
+  color: var(--muted);
+}
 /* Product videos (stage 118) */
 .video-button {
   display: flex;

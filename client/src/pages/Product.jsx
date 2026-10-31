@@ -301,6 +301,22 @@ export default function Product() {
               </ul>
             </section>
           )}
+          {/* Specifications (stage 119): name and value pairs, in the admin's order. */}
+          {product.specs.length > 0 && (
+            <section className="specs">
+              <h2>Specifications</h2>
+              <table className="specs-table">
+                <tbody>
+                  {product.specs.map((spec) => (
+                    <tr key={spec.name}>
+                      <th scope="row">{spec.name}</th>
+                      <td>{spec.value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
           <section>
             <h2>Description</h2>
             <p>{product.description}</p>

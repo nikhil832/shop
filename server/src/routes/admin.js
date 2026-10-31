@@ -22,6 +22,7 @@ import { notePrices } from '../priceHistory.js';
 import { toAdminNote } from '../customerTags.js';
 import { MAX_ADD_ONS } from './catalog.js';
 import { videoField, watchUrl } from '../videos.js';
+import { specsField } from '../specs.js';
 
 const hexId = (what) => z.string().regex(/^[0-9a-f]{24}$/, `Choose a ${what}`);
 
@@ -38,6 +39,8 @@ const productFields = z.object({
   categoryId: hexId('category'),
   description: z.string().trim().max(5000),
   highlights: z.array(z.string().trim().min(1).max(100)).max(8),
+  // Specifications (stage 119, specs.js): [{ name, value }].
+  specs: specsField,
   price: z.number().int().min(100, 'Price must be at least ₹1').max(100_000_000),
   mrp: z.number().int().min(100, 'MRP must be at least ₹1').max(100_000_000),
   stock: z.number().int().min(0).max(100_000),
@@ -105,6 +108,7 @@ const createProduct = productFields
   .extend({
     description: productFields.shape.description.default(''),
     highlights: productFields.shape.highlights.default([]),
+    specs: productFields.shape.specs.default([]),
     images: productFields.shape.images.default([]),
     imageAlts: productFields.shape.imageAlts.default({}),
     active: productFields.shape.active.default(true),
@@ -286,6 +290,7 @@ const toAdminProduct = (doc) => ({
   categoryId: doc.categoryId.toString(),
   description: doc.description,
   highlights: doc.highlights ?? [],
+  specs: doc.specs ?? [],
   price: doc.price,
   mrp: doc.mrp,
   stock: doc.stock,
@@ -612,6 +617,7 @@ export function adminRouter(ctx) {
       categoryId: source.categoryId,
       description: source.description ?? '',
       highlights: source.highlights ?? [],
+      specs: source.specs ?? [],
       price: source.sale?.regularPrice ?? source.price,
       mrp: source.mrp,
       stock: 0,

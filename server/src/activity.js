@@ -5,6 +5,7 @@ import { requireAdmin } from './auth.js';
 import { parse } from './http.js';
 import { optionsOf } from './variants.js';
 import { watchUrl } from './videos.js';
+import { specsText } from './specs.js';
 
 // The admin activity log: who changed what, and when. Each admin route that changes something calls logActivity()
 // after the change is saved, as do the command-line scripts that grant admin or switch off two-step login. Entries are
@@ -83,6 +84,7 @@ export function productChanges(before, after, categoryName) {
   push(changes, 'Category', categoryName(before.categoryId), categoryName(after.categoryId));
   if ((before.description ?? '') !== (after.description ?? '')) changes.push({ field: 'Description', to: 'edited' });
   push(changes, 'Highlights', (before.highlights ?? []).join(' | '), (after.highlights ?? []).join(' | '));
+  push(changes, 'Specifications', specsText(before.specs), specsText(after.specs));
   if (JSON.stringify(before.images) !== JSON.stringify(after.images)) {
     changes.push({ field: 'Photos', from: String(before.images.length), to: `${after.images.length} (changed)` });
   }

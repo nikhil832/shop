@@ -58,7 +58,7 @@ test('the export lists every product, then a row per variant; re-importing it ch
   const text = res.body.toString('utf8');
   assert.ok(
     text.startsWith(
-      '\uFEFFSlug,Variant,Title,Brand,Category,Price (₹),MRP (₹),Cost (₹),Stock,Shown,Highlights,Description\r\n',
+      '\uFEFFSlug,Variant,Title,Brand,Category,Price (₹),MRP (₹),Cost (₹),Stock,Shown,Highlights,Description,Specifications\r\n',
     ),
   );
   const rows = parseCsv(text);

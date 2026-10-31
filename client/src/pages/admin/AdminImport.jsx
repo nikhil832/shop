@@ -12,6 +12,7 @@ const FIELDS = {
   active: 'Shown',
   highlights: 'Highlights',
   description: 'Description',
+  specs: 'Specifications',
 };
 
 function show(field, value) {
@@ -19,6 +20,7 @@ function show(field, value) {
   if (field === 'price' || field === 'mrp') return formatPrice(value);
   if (field === 'active') return value ? 'yes' : 'no';
   if (field === 'highlights') return value.join(' | ') || '(none)';
+  if (field === 'specs') return value.map((s) => `${s.name}: ${s.value}`).join(' | ') || '(none)';
   if (field === 'description' && value.length > 60) return `${value.slice(0, 60)}…`;
   return String(value);
 }
@@ -153,6 +155,9 @@ export default function AdminImport() {
         <li>Change any cell; an empty cell keeps what the store has. Rows you don&apos;t change can stay.</li>
         <li>Add a product on a row with no slug: it needs a title, brand, category, price, MRP and stock.</li>
         <li>Prices are in rupees (1499 or 1,499.50). Shown is yes or no. Separate highlights with |, up to 8.</li>
+        <li>
+          Specifications are written Name: Value and separated by |, e.g. RAM: 8 GB | Battery: 5000 mAh (up to 20).
+        </li>
         <li>Photos, and adding sizes or colours, are done in the product form.</li>
       </ul>
       <label className="import-file">

@@ -17,6 +17,45 @@ const CATEGORIES = [
 // Sample products with variants: [option name(s), [value(s), price ₹, mrp ₹, stock, photo views?]…]. The cheapest price and
 // the total stock match the product's row below, so catalog counts and price filters are the same with or without
 // them. Photo views pick from the product's own images (0–2) for that variant.
+// Specifications (stage 119) for some of the sample products, by title: [name, value].
+const SPECS = {
+  'Voltix Nova 5G (8GB RAM, 128GB)': [
+    ['RAM', '8 GB'],
+    ['Storage', '128 GB'],
+    ['Display', '6.6" AMOLED, 90 Hz'],
+    ['Battery', '5000 mAh'],
+    ['Main camera', '50 MP'],
+  ],
+  'Voltix Nova Pro 5G (12GB RAM, 256GB)': [
+    ['RAM', '12 GB'],
+    ['Storage', '256 GB'],
+    ['Display', '6.7" AMOLED, 120 Hz'],
+    ['Battery', '4800 mAh, 67 W charging'],
+    ['Main camera', '108 MP'],
+  ],
+  'Orbit A14 (4GB RAM, 64GB)': [
+    ['RAM', '4 GB'],
+    ['Storage', '64 GB'],
+    ['Display', '6.5" HD+'],
+    ['Battery', '5000 mAh'],
+    ['Main camera', '13 MP'],
+  ],
+  'Arcbook Air 14 (16GB, 512GB SSD)': [
+    ['Processor', 'Arc M3, 8 cores'],
+    ['RAM', '16 GB'],
+    ['Storage', '512 GB SSD'],
+    ['Display', '14" 2.5K'],
+    ['Weight', '1.2 kg'],
+  ],
+  'Arcbook Pro 16 (32GB, 1TB SSD)': [
+    ['Processor', 'Arc M3 Pro, 12 cores'],
+    ['RAM', '32 GB'],
+    ['Storage', '1 TB SSD'],
+    ['Display', '16" 3K, 120 Hz'],
+    ['Weight', '2.1 kg'],
+  ],
+};
+
 const VARIANTS = {
   'Stride Running Shoes': [
     'Size',
@@ -314,6 +353,7 @@ export async function seedCatalog(db, { force = false } = {}) {
         categoryId: categoryIds[category],
         description: `${title} from ${brand}. ${highlights.join('. ')}.`,
         highlights,
+        ...(SPECS[title] && { specs: SPECS[title].map(([name, value]) => ({ name, value })) }),
         price: price * 100,
         mrp: mrp * 100,
         stock,

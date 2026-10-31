@@ -120,7 +120,8 @@ export function catalogTools(db, shown) {
 
   const getProduct = betaZodTool({
     name: 'get_product',
-    description: "One product's details by its slug: description, highlights, options (sizes, colours) and stock.",
+    description:
+      "One product's details by its slug: description, highlights, specifications, options (sizes, colours) and stock.",
     inputSchema: z.object({ slug: z.string().max(160) }),
     run: async ({ slug }) => {
       const p = await products.findOne({ slug, active: true });
@@ -130,6 +131,7 @@ export function catalogTools(db, shown) {
         ...summary(p),
         category: category?.name,
         highlights: p.highlights ?? [],
+        specifications: (p.specs ?? []).map((spec) => `${spec.name}: ${spec.value}`),
         description: (p.description ?? '').slice(0, 1500),
         options: (p.variants ?? []).map((v) => `${v.label}: ${rupees(v.price)}, ${stockText(v.stock)}`),
       });

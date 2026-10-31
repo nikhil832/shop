@@ -404,6 +404,20 @@ function WriteForMe({ formRef, images }) {
   );
 }
 
+// Specifications (stage 119): one "Name: Value" per line, split at the first colon; a line without one is a mistake.
+function specsFrom(text) {
+  const lines = text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const bad = lines.findIndex((line) => !line.includes(':'));
+  if (bad >= 0) throw new Error(`Specifications: write “${lines[bad]}” as Name: Value`);
+  return lines.map((line) => {
+    const at = line.indexOf(':');
+    return { name: line.slice(0, at).trim(), value: line.slice(at + 1).trim() };
+  });
+}
+
 // "Goes well with" (stage 114): other products shown on this one's page and in carts holding it, with "Add". `chosen`
 // are { id, title, price, shown }, in the order shoppers see them.
 function AddOns({ productId, chosen, onChange }) {
@@ -524,6 +538,13 @@ function ProductForm({ product, categories }) {
   async function submit(e) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
+    let specs;
+    try {
+      specs = specsFrom(form.get('specs'));
+    } catch (err) {
+      setState({ busy: false, error: err.message });
+      return;
+    }
     const body = {
       title: form.get('title'),
       brand: form.get('brand'),
@@ -534,6 +555,7 @@ function ProductForm({ product, categories }) {
         .split('\n')
         .map((h) => h.trim())
         .filter(Boolean),
+      specs,
       // With variants their prices and stock are sent; without, the product's own (and `variants: []` switches
       // them off).
       ...(variants
@@ -756,6 +778,15 @@ function ProductForm({ product, categories }) {
         <label className="wide">
           Highlights (one per line, up to 8)
           <textarea name="highlights" rows="3" defaultValue={product?.highlights.join('\n')} />
+        </label>
+        <label className="wide">
+          Specifications (one per line as Name: Value, up to 20)
+          <textarea
+            name="specs"
+            rows="4"
+            placeholder={'RAM: 8 GB\nBattery: 5000 mAh'}
+            defaultValue={product?.specs.map((spec) => `${spec.name}: ${spec.value}`).join('\n')}
+          />
         </label>
         <label className="wide">
           Description

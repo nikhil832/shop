@@ -85,6 +85,11 @@ export default function Compare() {
           <span className="muted">—</span>
         ),
     ],
+    // A row per specification (stage 119) any of them has, in the order they first appear; "—" where one has none.
+    ...[...new Set(products.flatMap((p) => p.specs.map((spec) => spec.name)))].map((name) => [
+      name,
+      (p) => p.specs.find((spec) => spec.name === name)?.value ?? <span className="muted">—</span>,
+    ]),
     [
       'Options',
       (p) =>

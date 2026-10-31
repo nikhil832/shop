@@ -48,6 +48,7 @@ export function compareRouter({ db }) {
         ...toProductCard(doc),
         category: categories.get(doc.categoryId.toString()) ?? null,
         highlights: doc.highlights ?? [],
+        specs: doc.specs ?? [],
         // The kinds of option ("Size") and each combination with its own price and stock.
         options: doc.variants?.length ? optionsOf(doc) : [],
         variants: (doc.variants ?? []).map((v) => ({

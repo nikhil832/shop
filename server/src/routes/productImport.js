@@ -11,6 +11,7 @@ import { inTransaction } from './reviews.js';
 import { logActivity, productChanges } from '../activity.js';
 import { notePrices } from '../priceHistory.js';
 import { byOf, recordStock, savedEntries } from '../stockHistory.js';
+import { specsFromText, specsText } from '../specs.js';
 
 // Products from a spreadsheet: download them all as CSV, edit, upload. An upload is checked first (a preview of what
 // each row adds or changes, and the rows with problems), then saved with the same file and the preview's `plan` id:
@@ -38,6 +39,8 @@ const COLUMNS = [
   ['active', 'Shown'],
   ['highlights', 'Highlights'],
   ['description', 'Description'],
+  // Specifications (stage 119), "Name: Value | Name: Value"; last, so the columns before keep their places.
+  ['specs', 'Specifications'],
 ];
 const headingKey = (h) => h.toLowerCase().replace(/\(₹\)|[^a-z]/g, '');
 const KEYS = new Map(COLUMNS.map(([key, heading]) => [headingKey(heading), key]));
@@ -133,6 +136,12 @@ function highlightsOf(s) {
   return list;
 }
 
+function specsOf(s) {
+  const specs = specsFromText(s);
+  if (typeof specs === 'string') throw new RowError(specs);
+  return specs;
+}
+
 // ---- The plan ----
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -203,6 +212,7 @@ async function makePlan(db, csv, session) {
           categoryId: category._id,
           description: text(get('description'), 5000, 'Description'),
           highlights: highlightsOf(get('highlights')),
+          specs: get('specs') ? specsOf(get('specs')) : [],
           price,
           mrp,
           cost,
@@ -268,6 +278,7 @@ async function makePlan(db, csv, session) {
         if (get('category')) next.categoryId = categoryOf(get('category'))._id;
         if (get('description')) next.description = text(get('description'), 5000, 'Description');
         if (get('highlights')) next.highlights = highlightsOf(get('highlights'));
+        if (get('specs')) next.specs = specsOf(get('specs'));
         if (product.sale && ((price && price !== product.price) || (mrp && mrp !== product.mrp))) {
           throw new RowError(onSale(product));
         }
@@ -280,7 +291,7 @@ async function makePlan(db, csv, session) {
           throw new RowError('MRP must be at least the price');
         }
         for (const [field, to] of Object.entries(next)) {
-          const from = product[field] ?? (field === 'highlights' ? [] : '');
+          const from = product[field] ?? (['highlights', 'specs'].includes(field) ? [] : '');
           if (field === 'categoryId') {
             if (!to.equals(from)) {
               row.changes.push({ field: 'category', from: categoryName(from), to: categoryName(to) });
@@ -363,6 +374,7 @@ export function productImportRouter(ctx) {
           p.active ? 'yes' : 'no',
           cell((p.highlights ?? []).join(HIGHLIGHT_SEPARATOR), { text: true }),
           cell(p.description ?? '', { text: true }),
+          cell(specsText(p.specs), { text: true }),
         ].join(','),
       );
       for (const v of p.variants ?? []) {
@@ -377,6 +389,7 @@ export function productImportRouter(ctx) {
             rupees(v.mrp),
             v.cost == null ? '' : rupees(v.cost),
             v.stock,
+            '',
             '',
             '',
             '',

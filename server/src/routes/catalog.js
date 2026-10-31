@@ -524,6 +524,8 @@ export function catalogRouter({ db }) {
       ...toProductCard(doc),
       description: doc.description,
       highlights: doc.highlights ?? [],
+      // Specifications (stage 119): [{ name, value }].
+      specs: doc.specs ?? [],
       images: doc.images,
       // Descriptions of uploaded photos for screen readers, by address (the title stands in for the rest).
       imageAlts: imageAltsOf(doc),
