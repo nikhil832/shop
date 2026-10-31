@@ -25,6 +25,8 @@ export default function OrderSummary({
   giftWrap = 0,
   // The part of `delivery` that a far-off area adds (stage 111).
   deliveryExtra = 0,
+  // The customer's loyalty level (stage 134): { label, freeDeliveryMin }, for a note on their perk.
+  loyalty = null,
   children,
 }) {
   const short = freeDeliveryMin ? freeDeliveryMin - subtotal : 0;
@@ -81,6 +83,14 @@ export default function OrderSummary({
         )}
       </dl>
       {saving > 0 && <p className="saving-note">You save {formatPrice(saving)} on this order</p>}
+      {loyalty && (
+        <p className="small loyalty-note">
+          {loyalty.label} member:{' '}
+          {loyalty.freeDeliveryMin
+            ? `free delivery from ${formatPrice(loyalty.freeDeliveryMin)}`
+            : 'free delivery always'}
+        </p>
+      )}
       {/* How close the cart is to free delivery, as words and a bar. */}
       {freeDeliveryMin > 0 && delivery > 0 && short > 0 && (
         <div className="free-delivery">

@@ -5110,3 +5110,10 @@ textarea {
 .answer-form {
   margin-top: 6px;
 }
+
+/* ---- Loyalty levels (stage 134) ---- */
+.loyalty-note {
+  margin: 8px 0 0;
+  color: var(--success);
+  font-weight: 600;
+}

@@ -277,6 +277,7 @@ export default function Cart() {
           delivery={quote.delivery}
           total={quote.total}
           freeDeliveryMin={quote.freeDeliveryMin}
+          loyalty={quote.loyalty}
           mrpSaving={mrpSavingOf(lines)}
         >
           {quote.cashback?.amount > 0 && (

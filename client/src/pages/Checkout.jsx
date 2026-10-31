@@ -447,6 +447,7 @@ export default function Checkout() {
         deliveryExtra={quote.deliveryExtra}
         total={quote.total}
         freeDeliveryMin={quote.freeDeliveryMin}
+        loyalty={quote.loyalty}
         creditUsed={creditToUse}
       >
         {quote.cashback?.amount > 0 && (

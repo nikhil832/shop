@@ -22,6 +22,7 @@ import { statesForPin } from '../pinStates.js';
 import { friendDiscount } from '../referrals.js';
 import { cancelBody, cancelReasonOf } from '../cancelReasons.js';
 import { assertTakingOrders, dispatchDelay, holidaySettings } from '../holiday.js';
+import { loyaltyFor } from '../loyalty.js';
 
 // Amounts in paise. Delivery is free from ₹499 of items, otherwise ₹40.
 export const FREE_DELIVERY_MIN = 49900;
@@ -36,8 +37,9 @@ const FIRST_ORDER_NUMBER = 100001;
 // Totals after a coupon's discount (paise; at most the items plus delivery).
 const withDiscount = (totals, discount) => ({ ...totals, discount, total: totals.total - discount });
 
-export const orderTotals = (subtotal) => {
-  const delivery = subtotal >= FREE_DELIVERY_MIN ? 0 : DELIVERY_FEE;
+// `freeMin`: a loyalty level's lower free-delivery minimum (stage 134, loyalty.js), else the usual one.
+export const orderTotals = (subtotal, freeMin = FREE_DELIVERY_MIN) => {
+  const delivery = subtotal >= freeMin ? 0 : DELIVERY_FEE;
   return { subtotal, delivery, total: subtotal + delivery };
 };
 // A far-off area's extra charge (stage 111, routes/delivery.js) goes into `delivery`, so invoices, GST, emails and a
@@ -435,7 +437,13 @@ export function ordersRouter(ctx) {
     );
     // A far-off area's extra delivery charge (stage 111), when checkout says where it's going.
     const deliveryExtra = query.pincode ? (await deliveryFor(db, query.pincode)).extraCharge : 0;
-    const totals = withDeliveryExtra(orderTotals(itemsTotal - bundled.saving - quantity.saving), deliveryExtra);
+    // A logged-in customer's loyalty level may lower the free-delivery minimum (stage 134).
+    const loyalty = await loyaltyFor(db, req.user?._id);
+    const freeMin = loyalty?.freeDeliveryMin ?? FREE_DELIVERY_MIN;
+    const totals = withDeliveryExtra(
+      orderTotals(itemsTotal - bundled.saving - quantity.saving, freeMin),
+      deliveryExtra,
+    );
     // A coupon that can't be used is reported (couponError), not an error: the quote is still useful.
     let coupon = null;
     let couponError = null;
@@ -482,7 +490,11 @@ export function ordersRouter(ctx) {
       coupon,
       referral: referral ? { discount: referral } : null,
       couponError,
-      freeDeliveryMin: FREE_DELIVERY_MIN,
+      freeDeliveryMin: freeMin,
+      // { level, label, freeDeliveryMin } when the customer has a loyalty level, for the cart's note.
+      loyalty: loyalty?.level
+        ? { level: loyalty.level, label: loyalty.label, freeDeliveryMin: loyalty.freeDeliveryMin }
+        : null,
       canCheckout: lines.every((l) => !l.problem),
     });
   });
@@ -492,7 +504,12 @@ export function ordersRouter(ctx) {
     const online = body.paymentMethod === 'razorpay';
     if (online && !razorpay) throw new HttpError(400, 'Online payment is not available. Choose Cash on Delivery.');
     // An address the store doesn't deliver to (Admin → Delivery) is refused before anything is reserved.
-    const [delivery, holiday] = await Promise.all([deliveryFor(db, body.address.pincode), holidaySettings(db)]);
+    const [delivery, holiday, loyalty] = await Promise.all([
+      deliveryFor(db, body.address.pincode),
+      holidaySettings(db),
+      // A loyalty level's lower free-delivery minimum (stage 134), as in the quote the customer saw.
+      loyaltyFor(db, req.user._id),
+    ]);
     if (!delivery.deliverable) {
       throw new HttpError(409, `Sorry, we don't deliver to ${body.address.pincode} yet.`);
     }
@@ -591,7 +608,10 @@ export function ordersRouter(ctx) {
           );
         }
         const before = withDeliveryExtra(
-          orderTotals(items.reduce((sum, i) => sum + i.price * i.qty, 0)),
+          orderTotals(
+            items.reduce((sum, i) => sum + i.price * i.qty, 0),
+            loyalty?.freeDeliveryMin ?? FREE_DELIVERY_MIN,
+          ),
           delivery.extraCharge,
         );
         const orderId = new ObjectId();

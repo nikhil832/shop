@@ -155,6 +155,34 @@ function AddressBook({ user, setUser }) {
   );
 }
 
+// The customer's loyalty level (stage 134, #level) and how far the next one is. Nothing when loyalty is off.
+function LoyaltyLevel() {
+  const { data } = useFetch('/account/loyalty');
+  const mine = data?.loyalty;
+  if (!mine) return null;
+  const perk = (min) => (min ? `free delivery from ${formatPrice(min)}` : 'free delivery on every order');
+  return (
+    <section className="panel account-section" id="level" aria-labelledby="level-heading">
+      <h2 id="level-heading">Your level</h2>
+      {mine.level ? (
+        <p>
+          You&apos;re <strong>{mine.label}</strong>: {perk(mine.freeDeliveryMin)}.
+        </p>
+      ) : (
+        <p>You haven&apos;t reached a level yet.</p>
+      )}
+      {mine.next && (
+        <p className="muted small">
+          Spend {formatPrice(mine.next.needed)} more to reach {mine.next.label} ({perk(mine.next.freeDeliveryMin)}).
+        </p>
+      )}
+      <p className="muted small">
+        Based on {formatPrice(mine.spent)} spent on delivered orders in the last 12 months, less any refunds.
+      </p>
+    </section>
+  );
+}
+
 // "Your data" (stage 65): download everything the store holds about you, or close the account (password, and a two-step
 // Refer a friend (stage 87, #referral): the customer's link, what friends and they get, and how it's going. Nothing
 // when referrals are off.
@@ -557,6 +585,7 @@ export default function Account() {
       )}
 
       <StoreCredit user={user} />
+      <LoyaltyLevel />
       <ReferFriend />
       <TwoStepSection />
       <YourData

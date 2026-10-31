@@ -92,6 +92,90 @@ function Cashback() {
   );
 }
 
+// Loyalty levels (stage 134): Silver and Gold by a year's spending on delivered orders, each with its own
+// free-delivery minimum. Off until switched on.
+function Loyalty() {
+  const [version, setVersion] = useState(0);
+  const { data } = useFetch('/admin/loyalty', version);
+  const [state, setState] = useState({ busy: false, error: null, done: null });
+  if (!data) return null;
+  const paise = (v) => Math.round(Number(v) * 100);
+  async function save(e) {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.currentTarget));
+    setState({ busy: true, error: null, done: null });
+    try {
+      await request('/admin/loyalty', {
+        method: 'PUT',
+        body: {
+          enabled: f.enabled === 'on',
+          silver: { spend: paise(f.silverSpend), freeDeliveryMin: paise(f.silverFree) },
+          gold: { spend: paise(f.goldSpend), freeDeliveryMin: paise(f.goldFree) },
+        },
+      });
+      setState({ busy: false, error: null, done: 'Saved.' });
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setState({ busy: false, error: err.message, done: null });
+    }
+  }
+  return (
+    <form key={JSON.stringify(data)} className="panel" onSubmit={save} aria-labelledby="loyalty-heading">
+      <h2 id="loyalty-heading">Loyalty levels</h2>
+      <p className="muted small">
+        Customers become Silver or Gold by what they spent on delivered orders in the last 12 months (less refunds), and
+        get free delivery from a lower amount than the usual {formatPrice(data.usualFreeDeliveryMin)}; 0 means free
+        delivery on every order. They see their level on their account page.
+      </p>
+      <label className="check">
+        <input name="enabled" type="checkbox" defaultChecked={data.enabled} />
+        Give loyalty levels
+      </label>
+      <div className="address-grid">
+        <label>
+          Silver from (₹ a year)
+          <input name="silverSpend" type="number" min="1" step="1" required defaultValue={data.silver.spend / 100} />
+        </label>
+        <label>
+          Silver: free delivery from (₹)
+          <input
+            name="silverFree"
+            type="number"
+            min="0"
+            step="1"
+            required
+            defaultValue={data.silver.freeDeliveryMin / 100}
+          />
+        </label>
+        <label>
+          Gold from (₹ a year)
+          <input name="goldSpend" type="number" min="1" step="1" required defaultValue={data.gold.spend / 100} />
+        </label>
+        <label>
+          Gold: free delivery from (₹)
+          <input
+            name="goldFree"
+            type="number"
+            min="0"
+            step="1"
+            required
+            defaultValue={data.gold.freeDeliveryMin / 100}
+          />
+        </label>
+      </div>
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
+      {state.done && <p role="status">{state.done}</p>}
+      <button type="submit" className="btn primary" disabled={state.busy}>
+        Save loyalty levels
+      </button>
+    </form>
+  );
+}
+
 // Refer a friend (stage 87): what a referred friend gets off their first order and what the referrer earns when it's
 // kept. Off until switched on.
 function Referrals() {
@@ -316,6 +400,7 @@ export default function AdminCoupons() {
         </div>
       </form>
       <Cashback />
+      <Loyalty />
       <Referrals />
     </div>
   );
