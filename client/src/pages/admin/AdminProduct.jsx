@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { query, request } from '../../api.js';
 import { uploadProductPhoto } from '../../photos.js';
 import { formatDate, formatPrice, toPaise, toRupees, smallImage } from '../../format.js';
@@ -479,8 +479,38 @@ function AddOns({ productId, chosen, onChange }) {
   );
 }
 
+// "Duplicate" (stage 117): makes a hidden copy of the saved product (not of unsaved changes here) and opens it.
+function DuplicateButton({ product }) {
+  const navigate = useNavigate();
+  const [state, setState] = useState({ busy: false, error: null });
+  async function duplicate() {
+    if (!window.confirm(`Make a hidden copy of “${product.title}” as saved? Changes not saved yet aren't copied.`))
+      return;
+    setState({ busy: true, error: null });
+    try {
+      const copy = await request(`/admin/products/${product.id}/duplicate`, { method: 'POST' });
+      navigate(`/admin/products/${copy.id}`, { state: { copiedFrom: product.title } });
+    } catch (err) {
+      setState({ busy: false, error: err.message });
+    }
+  }
+  return (
+    <>
+      <button type="button" className="link duplicate-button" onClick={duplicate} disabled={state.busy}>
+        Duplicate
+      </button>
+      {state.error && (
+        <span className="error small" role="alert">
+          {state.error}
+        </span>
+      )}
+    </>
+  );
+}
+
 function ProductForm({ product, categories }) {
   const navigate = useNavigate();
+  const copiedFrom = useLocation().state?.copiedFrom;
   const { data: guides } = useFetch('/admin/size-guides');
   const formRef = useRef(null);
   const [images, setImages] = useState(product?.images ?? []);
@@ -562,12 +592,19 @@ function ProductForm({ product, categories }) {
         {product && (
           <div className="admin-head-actions">
             <Link to={`/admin/products/${product.id}/stock`}>Stock history</Link>
+            <DuplicateButton product={product} />
             <Link to={`/p/${product.slug}`} target="_blank" rel="noreferrer">
               View in store ↗
             </Link>
           </div>
         )}
       </div>
+      {copiedFrom && (
+        <p className="notice" role="status">
+          A copy of &ldquo;{copiedFrom}&rdquo;, hidden from the store with no stock. Change its title and anything else,
+          add stock, then tick &ldquo;Show in store&rdquo;.
+        </p>
+      )}
       {product?.sale && (
         <p className="notice" role="note">
           In the &ldquo;{product.sale.name}&rdquo; sale ({product.sale.percent}% off) until{' '}

@@ -3342,6 +3342,10 @@ textarea {
   gap: 8px;
   flex-wrap: wrap;
 }
+/* "Duplicate" on the product form is a button among links: the same size as them. */
+.link.duplicate-button {
+  font-size: inherit;
+}
 .import-page h2 {
   font-size: 1.05rem;
   margin: 24px 0 8px;

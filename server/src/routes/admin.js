@@ -336,6 +336,16 @@ export function adminRouter(ctx) {
     return category;
   }
 
+  // The first free address for a title ("title", "title-2", …), other than this product's own.
+  async function freeSlug(title, self) {
+    const base = slugify(title) || 'product';
+    for (let n = 1; n <= 50; n++) {
+      const slug = n === 1 ? base : `${base}-${n}`;
+      if (!(await products.findOne({ slug, _id: { $ne: self } }, { projection: { _id: 1 } }))) return slug;
+    }
+    throw new HttpError(409, 'Too many products with this title');
+  }
+
   // Add-ons must be other products that exist (hidden ones are allowed: the store skips them until shown).
   async function checkAddOns(ids, self) {
     const addOns = ids.map((id) => new ObjectId(id));
@@ -492,6 +502,11 @@ export function adminRouter(ctx) {
     const { variants, variantName, options, ...fields } = body;
     const update = { ...fields, updatedAt: new Date() };
     const unset = {};
+    // A copy (stage 117) takes its address from its new title until it's first shown; from then on it's fixed.
+    if (current.draftSlug) {
+      if (fields.title && fields.title !== current.title) update.slug = await freeSlug(fields.title, _id);
+      if (fields.active) unset.draftSlug = '';
+    }
     if (variants?.length) {
       checkVariantImages(variants, fields.images ?? current.images);
       // The product's price, MRP and stock follow its variants.
@@ -546,6 +561,10 @@ export function adminRouter(ctx) {
         session,
       );
       return after;
+    }).catch((err) => {
+      // A copy's new address was taken by another product a moment ago.
+      if (err.code === 11000) throw new HttpError(409, 'Another product just took this address. Save again.');
+      throw err;
     });
     const names = new Map(
       (await categories.find({ _id: { $in: [current.categoryId, doc.categoryId] } }).toArray()).map((c) => [
@@ -564,6 +583,71 @@ export function adminRouter(ctx) {
     }
     await notePrices(db, { _id: doc._id }); // the price history (stage 112)
     res.json(await withAddOns(doc));
+  });
+
+  // "Duplicate" (stage 117): a hidden copy to edit into a similar product. Copies the details, photos, options, prices
+  // (the regular ones if it's on sale), cost, size guide, quantity discount and add-ons; starts with no stock, reviews,
+  // rating or "coming soon". Photos are shared uploads, which the unused-upload sweep counts per product.
+  router.post('/admin/products/:id/duplicate', async (req, res) => {
+    const source = await products.findOne({ _id: parseObjectId(req.params.id, 'product id') });
+    if (!source) throw new HttpError(404, 'Product not found');
+    const regular = new Map((source.sale?.regularVariants ?? []).map((r) => [r.id.toString(), r.price]));
+    const variants = (source.variants ?? []).map((v) => ({
+      ...v,
+      _id: new ObjectId(),
+      price: regular.get(v._id.toString()) ?? v.price,
+      stock: 0,
+    }));
+    const now = new Date();
+    const title = `${source.title.slice(0, 143)} (copy)`;
+    const base = slugify(title) || 'product';
+    const doc = {
+      title,
+      brand: source.brand,
+      categoryId: source.categoryId,
+      description: source.description ?? '',
+      highlights: source.highlights ?? [],
+      price: source.sale?.regularPrice ?? source.price,
+      mrp: source.mrp,
+      stock: 0,
+      cost: source.cost ?? null,
+      sizeGuide: source.sizeGuide ?? null,
+      comingSoon: null,
+      quantityDiscount: source.quantityDiscount ?? null,
+      addOns: source.addOns ?? [],
+      images: source.images,
+      imageAlts: source.imageAlts ?? {},
+      active: false,
+      // Its address follows its title until it's first shown (see the PATCH), so it never keeps "-copy" for good.
+      draftSlug: true,
+      ...(variants.length && {
+        options: optionsOf(source),
+        variantName: source.variantName,
+        variants,
+        ...variantTotals(variants),
+      }),
+      rating: { avg: 0, count: 0 },
+      createdAt: now,
+      updatedAt: now,
+    };
+    for (let n = 1; n <= 50; n++) {
+      const slug = n === 1 ? base : `${base}-${n}`;
+      try {
+        const { insertedId } = await products.insertOne({ ...doc, slug });
+        const copy = { ...doc, slug, _id: insertedId };
+        await logActivity(db, req.user, {
+          area: 'products',
+          action: 'Duplicated product',
+          target: productTarget(copy),
+          changes: [{ field: 'Copied from', to: source.title }],
+        });
+        await notePrices(db, { _id: insertedId }); // the price history (stage 112)
+        return res.status(201).json(await withAddOns(copy));
+      } catch (err) {
+        if (err.code !== 11000) throw err;
+      }
+    }
+    throw new HttpError(409, 'Too many products with this title');
   });
 
   // ---- Categories ----
