@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-11-01 (seventh list), roughly in the order they'd help most. All free (no new services).
 
-- **Customer answers**: customers who bought a product can answer other customers' questions about it, marked "Bought
-  this"; the store's answer stays first and admins can hide any. More answers without more work. To start: "start
-  customer answers".
 - **Loyalty levels**: Silver and Gold by money spent on kept orders in the last 12 months, shown on the account page,
   with a perk each (e.g. a lower free-delivery minimum, extra cashback) set by the admin. A reason to come back. To
   start: "start loyalty levels".
@@ -164,3 +161,4 @@ Suggested on 2026-11-01 (seventh list), roughly in the order they'd help most. A
 | Store FAQ: questions and answers by topic, searchable on their own page and above the Help page's contact form                                                                          | Stage 130 (`git log --grep "Stage 130"`) |
 | Low-stock levels: each product's own "low at" number, used by the dashboard, the morning email and the admin filter                                                                     | Stage 131 (`git log --grep "Stage 131"`) |
 | Nearly gone emails: one email when a wishlist item is down to its last 3, with a switch for customers                                                                                   | Stage 132 (`git log --grep "Stage 132"`) |
+| Customer answers: buyers answer other customers' questions, marked "Bought this", hideable by admins                                                                                    | Stage 133 (`git log --grep "Stage 133"`) |

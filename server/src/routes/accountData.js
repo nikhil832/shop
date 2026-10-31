@@ -64,24 +64,39 @@ export function accountDataRouter(ctx) {
   router.get('/account/data', async (req, res) => {
     const u = req.user;
     const userId = u._id;
-    const [orders, returns, exchanges, reviews, questions, wishlist, alerts, cart, help, credit, giftCards, votes] =
-      await Promise.all([
-        db.collection('orders').find({ userId }).sort({ createdAt: -1 }).toArray(),
-        db.collection('returns').find({ userId }).sort({ createdAt: -1 }).toArray(),
-        db.collection('exchanges').find({ userId }).sort({ createdAt: -1 }).toArray(),
-        db.collection('reviews').find({ userId }).toArray(),
-        db.collection('questions').find({ userId }).toArray(),
-        db.collection('wishlist').find({ userId }).toArray(),
-        db.collection('stockAlerts').find({ userId }).toArray(),
-        db.collection('carts').findOne({ _id: userId }),
-        db.collection('helpRequests').find({ userId }).toArray(),
-        db.collection('creditLedger').find({ userId }).sort({ at: -1 }).toArray(),
-        db
-          .collection('giftCards')
-          .find({ buyerId: userId, status: { $ne: 'awaiting_payment' } })
-          .toArray(),
-        db.collection('reviewVotes').countDocuments({ userId }),
-      ]);
+    const [
+      orders,
+      returns,
+      exchanges,
+      reviews,
+      questions,
+      wishlist,
+      alerts,
+      cart,
+      help,
+      credit,
+      giftCards,
+      votes,
+      answered,
+    ] = await Promise.all([
+      db.collection('orders').find({ userId }).sort({ createdAt: -1 }).toArray(),
+      db.collection('returns').find({ userId }).sort({ createdAt: -1 }).toArray(),
+      db.collection('exchanges').find({ userId }).sort({ createdAt: -1 }).toArray(),
+      db.collection('reviews').find({ userId }).toArray(),
+      db.collection('questions').find({ userId }).toArray(),
+      db.collection('wishlist').find({ userId }).toArray(),
+      db.collection('stockAlerts').find({ userId }).toArray(),
+      db.collection('carts').findOne({ _id: userId }),
+      db.collection('helpRequests').find({ userId }).toArray(),
+      db.collection('creditLedger').find({ userId }).sort({ at: -1 }).toArray(),
+      db
+        .collection('giftCards')
+        .find({ buyerId: userId, status: { $ne: 'awaiting_payment' } })
+        .toArray(),
+      db.collection('reviewVotes').countDocuments({ userId }),
+      // Questions they answered for other customers (stage 133).
+      db.collection('questions').find({ 'customerAnswers.userId': userId }).toArray(),
+    ]);
     const productIds = [...reviews, ...questions, ...wishlist, ...alerts].map((d) => d.productId);
     const titles = new Map(
       (
@@ -118,6 +133,11 @@ export function accountDataRouter(ctx) {
       // How many other customers' reviews they marked helpful (which ones isn't shown to anyone).
       helpfulVotes: votes,
       questions: questions.map((q) => ({ product: title(q.productId), ...toQuestion(q) })),
+      answersGiven: answered.flatMap((q) =>
+        q.customerAnswers
+          .filter((a) => a.userId?.equals(userId))
+          .map((a) => ({ question: q.text, answer: a.text, at: a.at, hidden: a.hidden })),
+      ),
       wishlist: wishlist.map((w) => ({ product: title(w.productId), addedAt: w.addedAt })),
       // Whether it's shared by a link (stage 106); the link itself is on the wishlist page.
       wishlistShared: Boolean(u.wishlistShare),
@@ -177,7 +197,13 @@ export function accountDataRouter(ctx) {
       await db.collection('reviewVotes').deleteMany({ userId }, { session });
       await db.collection('reviewVotes').deleteMany({ reviewId: { $in: reviewIds } }, { session });
       await db.collection('reviews').deleteMany({ userId }, { session });
-      await db.collection('questions').deleteMany({ userId, answer: null }, { session });
+      // Unanswered ones go, unless other customers answered them (stage 133); the account's own answers go too.
+      await db
+        .collection('questions')
+        .deleteMany({ userId, answer: null, 'customerAnswers.0': { $exists: false } }, { session });
+      await db
+        .collection('questions')
+        .updateMany({ 'customerAnswers.userId': userId }, { $pull: { customerAnswers: { userId } } }, { session });
       await db
         .collection('questions')
         .updateMany({ userId }, { $set: { author: 'A customer', userId: null } }, { session });

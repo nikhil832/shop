@@ -59,7 +59,8 @@ function Waiting({ questions, onChange }) {
     <div className="panel my-review">
       <h3>Your {questions.length === 1 ? 'question' : 'questions'}, waiting for an answer</h3>
       <p className="muted small">
-        Other customers see a question once the store has answered it. We&apos;ll email you.
+        Other customers see a question once it has an answer, from us or from someone who bought it. We&apos;ll email
+        you.
       </p>
       <ul className="review-list">
         {questions.map((q) => (
@@ -76,6 +77,50 @@ function Waiting({ questions, onChange }) {
       </ul>
       {error && <p className="error">{error}</p>}
     </div>
+  );
+}
+
+// One open question a buyer can answer (stage 133), with its own small form.
+function AnswerForm({ question, onAnswered }) {
+  const [state, setState] = useState({ busy: false, error: null });
+  async function submit(e) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    setState({ busy: true, error: null });
+    try {
+      await request(`/questions/${question.id}/answers`, {
+        method: 'POST',
+        body: { text: new FormData(form).get('text') },
+      });
+      setState({ busy: false, error: null });
+      onAnswered();
+    } catch (err) {
+      setState({ busy: false, error: err.message });
+    }
+  }
+  return (
+    <li className="review question">
+      <p className="review-body">
+        <strong>Q:</strong> {question.text}
+      </p>
+      <form className="review-form answer-form" onSubmit={submit} aria-label={`Answer: ${question.text}`}>
+        <label>
+          Your answer
+          <textarea name="text" rows={2} minLength={2} maxLength={500} required />
+        </label>
+        {state.error && (
+          <p className="error" role="alert">
+            {state.error}
+          </p>
+        )}
+        <div className="form-actions">
+          <span className="muted small">Asked by {question.author}</span>
+          <button type="submit" className="btn" disabled={state.busy}>
+            Post answer
+          </button>
+        </div>
+      </form>
+    </li>
   );
 }
 
@@ -124,15 +169,47 @@ export default function Questions({ product, canScroll }) {
               <p className="review-body">
                 <strong>Q:</strong> {q.text}
               </p>
-              <p className="review-body">
-                <strong>A:</strong> {q.answer.text}
-              </p>
-              <span className="muted small">
-                Asked by {q.author} · answered by Bazaar on {formatDate(q.answer.at)}
-              </span>
+              {!q.answer && <span className="muted small block">Asked by {q.author}</span>}
+              {/* The store's answer first, then customers' (stage 133). */}
+              {q.answer && (
+                <>
+                  <p className="review-body">
+                    <strong>A:</strong> {q.answer.text}
+                  </p>
+                  <span className="muted small">
+                    Asked by {q.author} · answered by Bazaar on {formatDate(q.answer.at)}
+                  </span>
+                </>
+              )}
+              {q.customerAnswers.length > 0 && (
+                <ul className="customer-answers">
+                  {q.customerAnswers.map((a) => (
+                    <li key={a.id}>
+                      <p className="review-body">
+                        <strong>A:</strong> {a.text}
+                      </p>
+                      <span className="muted small">
+                        {a.author} <span className="bought-badge">Bought this</span> · {formatDate(a.at)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           ))}
         </ul>
+      )}
+      {/* Buyers can answer what others asked (stage 133). */}
+      {data?.canAnswer && data.open.length > 0 && (
+        <section className="panel can-help" aria-labelledby="can-help-heading">
+          <h3 id="can-help-heading">Can you help?</h3>
+          <p className="muted small">You bought this, so you can answer other customers&apos; questions about it.</p>
+          <ul className="review-list">
+            {data.open.map((q) => (
+              <AnswerForm key={q.id} question={q} onAnswered={changed} />
+            ))}
+          </ul>
+        </section>
       )}
       {data && <Pager page={page} total={data.total} pageSize={data.pageSize} onPage={setPage} />}
     </section>

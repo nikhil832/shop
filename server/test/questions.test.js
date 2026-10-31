@@ -32,7 +32,14 @@ test('a customer asks; only they see it until it is answered', async () => {
   assert.equal(res.status, 201);
   assert.deepEqual(
     { ...res.body, id: undefined, createdAt: undefined },
-    { id: undefined, text: 'Do these run large?', author: 'Asha R.', createdAt: undefined, answer: null },
+    {
+      id: undefined,
+      text: 'Do these run large?',
+      author: 'Asha R.',
+      createdAt: undefined,
+      answer: null,
+      customerAnswers: [],
+    },
   );
 
   assert.deepEqual((await page()).body.items, []);

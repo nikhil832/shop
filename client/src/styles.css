@@ -5084,3 +5084,29 @@ textarea {
 .faq-form .form-actions {
   align-self: flex-start;
 }
+
+/* ---- Customer answers (stage 133) ---- */
+.customer-answers {
+  margin: 8px 0 0;
+  padding: 0 0 0 14px;
+  border-left: 3px solid var(--border);
+  list-style: none;
+}
+.customer-answers li + li {
+  margin-top: 8px;
+}
+.bought-badge {
+  display: inline-block;
+  padding: 0 6px;
+  border: 1px solid var(--success);
+  border-radius: 4px;
+  color: var(--success);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.can-help {
+  margin-top: 16px;
+}
+.answer-form {
+  margin-top: 6px;
+}

@@ -83,6 +83,30 @@ function QuestionCard({ question, onChange, ai }) {
         <strong>Q:</strong> {q.text}
       </p>
       <ScreeningFlag kind="question" post={q} onChange={onChange} />
+      {/* Answers from customers who bought it (stage 133), each can be hidden. */}
+      {q.customerAnswers.length > 0 && (
+        <ul className="customer-answers admin-customer-answers">
+          {q.customerAnswers.map((a) => (
+            <li key={a.id} className={a.hidden ? 'muted' : undefined}>
+              <p className="review-body">
+                <strong>{a.author}</strong> <span className="bought-badge">Bought this</span>
+                {a.hidden && ' · hidden'}: {a.text}
+              </p>
+              <button
+                type="button"
+                className="link"
+                disabled={state.busy}
+                aria-label={`${a.hidden ? 'Show' : 'Hide'} ${a.author}'s answer`}
+                onClick={() =>
+                  send(`/admin/questions/${q.id}/customer-answers/${a.id}/visibility`, { hidden: !a.hidden })
+                }
+              >
+                {a.hidden ? 'Show' : 'Hide'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       <form className="review-form" onSubmit={answer}>
         <label>
           {q.answer ? 'Answer' : 'Your answer'}
