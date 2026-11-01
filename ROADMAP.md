@@ -7,7 +7,22 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-All five of the seventh list (2026-11-01) are built. Ask for new ideas ("new ideas") to fill this list again.
+Suggested on 2026-11-01 (eighth list), roughly in the order they'd help most. All free (no new services).
+
+- **Size fit from reviews**: reviewers of products with sizes say whether it runs small, true to size or large, and
+  the product page shows "Most say: true to size (12 reviews)" beside the size picker. Fewer size-related returns and
+  exchanges. To start: "start size fit".
+- **Filter by specification**: on a category's search page, filters built from the products' specifications (e.g.
+  RAM, Storage, Screen) with counts, like the brand and size filters. Specifications are stored but can't be searched
+  or filtered yet. To start: "start specification filters".
+- **Ship-today countdown**: the admin sets a daily dispatch cut-off (e.g. 2 pm, working days only, respecting holiday
+  mode), and the product page says "Order within 2 h 15 min to ship today", or "ships tomorrow". A gentle nudge to
+  buy now. To start: "start ship-today countdown".
+- **Store news emails**: the admin writes a short email (new arrivals, a sale) and sends it to customers who opted
+  in, with a one-click unsubscribe link and a switch on the account page. Brevo's free plan sends 300 emails a day,
+  so larger lists go out over several days. To start: "start store news emails".
+- **Birthday treat**: customers may add a birthday (day and month only) on the account page and get a one-use coupon
+  by email that week, set up by the admin (amount, minimum order, on or off). To start: "start birthday treat".
 
 ## Set aside
 
