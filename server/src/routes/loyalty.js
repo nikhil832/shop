@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { requireAdmin, requireUser } from '../auth.js';
 import { logActivity, rupees } from '../activity.js';
 import { parse } from '../http.js';
-import { LEVELS, loyaltyFor, loyaltySettings, saveLoyaltySettings } from '../loyalty.js';
+import { LEVELS, loyaltyFor, loyaltySettings, MAX_EXTRA_CASHBACK, saveLoyaltySettings } from '../loyalty.js';
 import { FREE_DELIVERY_MIN } from './orders.js';
 
 // Loyalty levels (stage 134, loyalty.js): the customer's own level for the account page, and the admin's settings
@@ -21,6 +21,13 @@ const level = z.object({
     (v) => v <= FREE_DELIVERY_MIN,
     `The free-delivery minimum can't be above the usual ${rupees(FREE_DELIVERY_MIN)}`,
   ),
+  // Stage 136; left out (a page loaded before it): none.
+  extraCashback: z
+    .number()
+    .int('Use a whole percent for extra cashback')
+    .min(0, "Extra cashback can't be negative")
+    .max(MAX_EXTRA_CASHBACK, `Extra cashback is at most ${MAX_EXTRA_CASHBACK}%`)
+    .default(0),
 });
 const settingsBody = z
   .object({ enabled: z.boolean(), silver: level, gold: level })
@@ -30,7 +37,8 @@ const settingsBody = z
   });
 
 const levelText = (l) =>
-  `from ${rupees(l.spend)}, free delivery ${l.freeDeliveryMin ? `from ${rupees(l.freeDeliveryMin)}` : 'always'}`;
+  `from ${rupees(l.spend)}, free delivery ${l.freeDeliveryMin ? `from ${rupees(l.freeDeliveryMin)}` : 'always'}, ` +
+  `${l.extraCashback}% extra cashback`;
 
 export function loyaltyRouter({ db }) {
   const router = express.Router();

@@ -1,6 +1,7 @@
 import { variantTitle } from './variants.js';
 import { SET_PASSWORD_DAYS, setPasswordLink } from './passwordLinks.js';
 import { LOW_STOCK } from './lowStock.js';
+import { LEVELS } from './loyalty.js';
 
 // Customer emails: order confirmed (placed), shipped, delivered and cancelled, sent after the change is saved (a failure
 // is logged and never undoes or fails the change itself), the password reset link and back-in-stock alerts. And one for
@@ -1435,6 +1436,10 @@ export function cashbackEmail(user, order, amount, balance, publicUrl = DEFAULT_
   const url = `${publicUrl}/account#credit`;
   const lines = [
     `Thanks for shopping with us! ${rupees(amount)} cashback for order #${orderNumber(order)} is now in your account as store credit.`,
+    // A loyalty level's extra (stage 136), named so the perk is noticed.
+    ...(order.loyaltyCashback
+      ? [`It includes the extra ${order.loyaltyCashback.percent}% for ${LEVELS[order.loyaltyCashback.level]} members.`]
+      : []),
     `You have ${rupees(balance)} to use at checkout. It doesn't expire.`,
   ];
   const text = [`Hi ${firstName},`, ...lines, `See it in your account: ${url}`, 'Bazaar · a demo store'].join('\n\n');

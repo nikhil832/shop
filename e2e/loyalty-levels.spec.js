@@ -25,7 +25,9 @@ test('an admin sets loyalty levels; a customer who reaches one sees it and gets 
     await form.getByLabel('Silver from (₹ a year)').fill('100');
     await form.getByLabel('Silver: free delivery from (₹)').fill('299');
     await form.getByLabel('Gold from (₹ a year)').fill('100000');
+    await form.getByLabel('Silver: extra cashback (%)').fill('1');
     await form.getByLabel('Gold: free delivery from (₹)').fill('0');
+    await form.getByLabel('Gold: extra cashback (%)').fill('2');
     await form.getByRole('button', { name: 'Save loyalty levels' }).click();
     await expect(form.getByRole('status')).toHaveText('Saved.');
 
@@ -47,7 +49,7 @@ test('an admin sets loyalty levels; a customer who reaches one sees it and gets 
 
     await page.goto('/account');
     const level = page.getByRole('region', { name: 'Your level' });
-    await expect(level).toContainText("You're Silver: free delivery from ₹299.");
+    await expect(level).toContainText("You're Silver: free delivery from ₹299 and 1% extra cashback.");
     await expect(level).toContainText(/Spend ₹[\d,]+ more to reach Gold/);
 
     // The book (₹349) now has free delivery.
@@ -55,7 +57,9 @@ test('an admin sets loyalty levels; a customer who reaches one sees it and gets 
     await page.getByRole('button', { name: 'Add to cart' }).click();
     await page.goto('/cart');
     const summary = page.getByRole('complementary', { name: 'Order summary' });
-    await expect(summary).toContainText('Silver member: free delivery from ₹299');
+    await expect(summary).toContainText('Silver member: free delivery from ₹299 and 1% extra cashback');
+    // Silver's 1% of ₹349, with the store's cashback off.
+    await expect(page.getByText("You'll get ₹3 back as store credit")).toBeVisible();
     await expect(summary.getByText('Free', { exact: true })).toBeVisible();
     await expect(summary.getByText(/more for free delivery/)).toHaveCount(0);
   } finally {

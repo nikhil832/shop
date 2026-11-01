@@ -160,20 +160,25 @@ function LoyaltyLevel() {
   const { data } = useFetch('/account/loyalty');
   const mine = data?.loyalty;
   if (!mine) return null;
-  const perk = (min) => (min ? `free delivery from ${formatPrice(min)}` : 'free delivery on every order');
+  // Free delivery from a lower amount, plus extra cashback when the level has some (stage 136).
+  const perk = (min, extra) =>
+    `${min ? `free delivery from ${formatPrice(min)}` : 'free delivery on every order'}${
+      extra ? ` and ${extra}% extra cashback` : ''
+    }`;
   return (
     <section className="panel account-section" id="level" aria-labelledby="level-heading">
       <h2 id="level-heading">Your level</h2>
       {mine.level ? (
         <p>
-          You&apos;re <strong>{mine.label}</strong>: {perk(mine.freeDeliveryMin)}.
+          You&apos;re <strong>{mine.label}</strong>: {perk(mine.freeDeliveryMin, mine.extraCashback)}.
         </p>
       ) : (
         <p>You haven&apos;t reached a level yet.</p>
       )}
       {mine.next && (
         <p className="muted small">
-          Spend {formatPrice(mine.next.needed)} more to reach {mine.next.label} ({perk(mine.next.freeDeliveryMin)}).
+          Spend {formatPrice(mine.next.needed)} more to reach {mine.next.label} (
+          {perk(mine.next.freeDeliveryMin, mine.next.extraCashback)}).
         </p>
       )}
       <p className="muted small">

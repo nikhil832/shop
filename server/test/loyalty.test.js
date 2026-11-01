@@ -1,5 +1,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { ObjectId } from 'mongodb';
+import { payCashback } from '../src/cashback.js';
 import { startTestServer } from './helpers.js';
 
 let t;
@@ -20,8 +22,8 @@ after(() => t.stop());
 const DAY = 86_400_000;
 const LEVELS = {
   enabled: true,
-  silver: { spend: 500000, freeDeliveryMin: 29900 },
-  gold: { spend: 2000000, freeDeliveryMin: 0 },
+  silver: { spend: 500000, freeDeliveryMin: 29900, extraCashback: 1 },
+  gold: { spend: 2000000, freeDeliveryMin: 0, extraCashback: 2 },
 };
 // A delivered order of `total` paise for Asha, `daysAgo` days ago.
 async function delivered(total, daysAgo = 10) {
@@ -78,7 +80,13 @@ test('admins set the levels; the settings are checked and logged', async () => {
 test('Silver lowers the free-delivery minimum, in the quote and the order', async () => {
   const none = (await asha('GET', '/account/loyalty')).body.loyalty;
   assert.equal(none.level, null);
-  assert.deepEqual(none.next, { level: 'silver', label: 'Silver', needed: 500000, freeDeliveryMin: 29900 });
+  assert.deepEqual(none.next, {
+    level: 'silver',
+    label: 'Silver',
+    needed: 500000,
+    freeDeliveryMin: 29900,
+    extraCashback: 1,
+  });
 
   await delivered(300000);
   await delivered(250000);
@@ -91,7 +99,9 @@ test('Silver lowers the free-delivery minimum, in the quote and the order', asyn
   const q = await quote();
   assert.equal(q.freeDeliveryMin, 29900);
   assert.equal(q.delivery, 0);
-  assert.deepEqual(q.loyalty, { level: 'silver', label: 'Silver', freeDeliveryMin: 29900 });
+  assert.deepEqual(q.loyalty, { level: 'silver', label: 'Silver', freeDeliveryMin: 29900, extraCashback: 1 });
+  // Silver's extra 1% cashback, with the store's cashback off: ₹349 → ₹3.
+  assert.deepEqual(q.cashback, { amount: 300, percent: 1 });
   const b = await book();
   const placed = await asha('POST', '/orders', {
     items: [{ productId: b._id.toString(), qty: 1 }],
@@ -107,6 +117,8 @@ test('Silver lowers the free-delivery minimum, in the quote and the order', asyn
   });
   assert.equal(placed.status, 201, JSON.stringify(placed.body));
   assert.equal(placed.body.delivery, 0);
+  const stored = await t.db.collection('orders').findOne({ _id: new ObjectId(placed.body.id) });
+  assert.deepEqual(stored.loyaltyCashback, { level: 'silver', percent: 1 });
   // Visitors and other customers still pay the usual delivery.
   assert.equal((await t.call('GET', `/cart?items=${b._id}:1`)).body.delivery, 4000);
 });
@@ -128,4 +140,70 @@ test('refunds count against the spend; Gold makes every delivery free', async ()
   // Switched off: back to the usual rule.
   await admin('PUT', '/admin/loyalty', { ...LEVELS, enabled: false });
   assert.equal((await quote()).delivery, 4000);
+});
+
+// Stage 136: extra cashback per level.
+test("a level's extra cashback is paid after the return window, alone or on top of the store's", async () => {
+  await admin('PUT', '/admin/loyalty', LEVELS); // Asha is Gold: +2%
+  const orders = t.db.collection('orders');
+  const b = await book();
+  const order = async () => {
+    const q = await quote();
+    const res = await asha('POST', '/orders', {
+      items: [{ productId: b._id.toString(), qty: 1 }],
+      address: {
+        name: 'Asha Rao',
+        phone: '9876543210',
+        line1: '12 MG Road',
+        city: 'Bengaluru',
+        state: 'Karnataka',
+        pincode: '560001',
+      },
+      expectedTotal: q.total,
+    });
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    return new ObjectId(res.body.id);
+  };
+  const deliver = (_id) =>
+    orders.updateOne({ _id }, { $set: { status: 'delivered', deliveredAt: new Date(Date.now() - 8 * DAY) } });
+  // Earlier tests' orders are left alone.
+  await orders.updateMany({}, { $set: { cashback: { amount: 0, percent: 0, at: new Date() } } });
+
+  // Store cashback off: Gold's 2% alone (₹349 → ₹6), still paid though loyalty is switched off since.
+  const first = await order();
+  await admin('PUT', '/admin/loyalty', { ...LEVELS, enabled: false });
+  await deliver(first);
+  assert.equal(await payCashback(t.ctx), 1);
+  assert.deepEqual((await orders.findOne({ _id: first })).cashback.amount, 600);
+  assert.equal((await orders.findOne({ _id: first })).cashback.loyaltyExtra, 2);
+  const mail = t.mail.sent.at(-1);
+  assert.equal(mail.to.email, 'asha@example.com');
+  assert.match(mail.text, /It includes the extra 2% for Gold members\./);
+
+  // Store cashback on (3%): 3 + 2 = 5% → ₹17, under its per-order cap.
+  await admin('PUT', '/admin/loyalty', LEVELS);
+  assert.equal((await admin('PUT', '/admin/cashback', { enabled: true, percent: 3, cap: 1500 })).status, 200);
+  assert.deepEqual((await quote()).cashback, { amount: 1500, percent: 5 }); // capped at ₹15
+  const second = await order();
+  await deliver(second);
+  assert.equal(await payCashback(t.ctx), 1);
+  assert.equal((await orders.findOne({ _id: second })).cashback.amount, 1500);
+  await admin('PUT', '/admin/cashback', { enabled: false, percent: 3, cap: 20000 });
+  await admin('PUT', '/admin/loyalty', { ...LEVELS, enabled: false });
+});
+
+test('levels saved before stage 136 have no extra cashback; the percent is checked', async () => {
+  await t.db
+    .collection('settings')
+    .updateOne(
+      { _id: 'loyalty' },
+      { $set: { silver: { spend: 500000, freeDeliveryMin: 29900 }, gold: { spend: 2000000, freeDeliveryMin: 0 } } },
+    );
+  const got = (await admin('GET', '/admin/loyalty')).body;
+  assert.equal(got.silver.extraCashback, 0);
+  assert.equal(got.gold.extraCashback, 0);
+  for (const bad of [-1, 11, 1.5]) {
+    const res = await admin('PUT', '/admin/loyalty', { ...LEVELS, gold: { ...LEVELS.gold, extraCashback: bad } });
+    assert.equal(res.status, 400, String(bad));
+  }
 });

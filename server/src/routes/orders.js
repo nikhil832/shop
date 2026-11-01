@@ -461,8 +461,10 @@ export function ordersRouter(ctx) {
       ? 0
       : await friendDiscount(db, { user: req.user, ref: query.ref, subtotal: totals.subtotal });
     const discount = coupon?.discount ?? referral;
-    // Cashback this order would earn (stage 85), when it's on: on the items after bundle and coupon savings.
+    // Cashback this order would earn (stage 85), when it's on: on the items after bundle and coupon savings, plus the
+    // customer's loyalty level's extra (stage 136), which earns even while the store's cashback is off.
     const cashback = await cashbackSettings(db);
+    const cashbackPercent = (cashback.enabled ? cashback.percent : 0) + (loyalty?.extraCashback ?? 0);
     const itemsPaid = totals.subtotal - (coupon?.type === 'free_delivery' ? 0 : discount);
     // Gift wrapping (stage 104): offered or not, and its fee added to the total when chosen.
     const gifts = await giftSettings(db);
@@ -476,7 +478,9 @@ export function ordersRouter(ctx) {
           l.product && byId.get(l.productId)?.quantityDiscount ? byId.get(l.productId).quantityDiscount : null,
         quantityPrice: quantityPrice.get(l) ?? null,
       })),
-      cashback: cashback.enabled ? { amount: cashbackOn(itemsPaid, cashback), percent: cashback.percent } : null,
+      cashback: cashbackPercent
+        ? { amount: cashbackOn(itemsPaid, { percent: cashbackPercent, cap: cashback.cap }), percent: cashbackPercent }
+        : null,
       // `subtotal` (below) is after bundle and quantity savings; `itemsTotal` before them.
       itemsTotal,
       bundles: bundled.applied,
@@ -491,9 +495,14 @@ export function ordersRouter(ctx) {
       referral: referral ? { discount: referral } : null,
       couponError,
       freeDeliveryMin: freeMin,
-      // { level, label, freeDeliveryMin } when the customer has a loyalty level, for the cart's note.
+      // { level, label, freeDeliveryMin, extraCashback } when the customer has a loyalty level, for the cart's note.
       loyalty: loyalty?.level
-        ? { level: loyalty.level, label: loyalty.label, freeDeliveryMin: loyalty.freeDeliveryMin }
+        ? {
+            level: loyalty.level,
+            label: loyalty.label,
+            freeDeliveryMin: loyalty.freeDeliveryMin,
+            extraCashback: loyalty.extraCashback,
+          }
         : null,
       canCheckout: lines.every((l) => !l.problem),
     });
@@ -678,6 +687,10 @@ export function ordersRouter(ctx) {
           ...(giftWrap && { giftWrap }),
           // Its discount is a referred friend's welcome (stage 87); the referrer's reward is set later.
           ...(referral && { referral }),
+          // The level's extra cashback (stage 136), as it was when ordering: paid with the cashback after delivery.
+          ...(loyalty?.extraCashback > 0 && {
+            loyaltyCashback: { level: loyalty.level, percent: loyalty.extraCashback },
+          }),
           // When it should arrive (stage 86), from the delivery area's days, kept as promised at the time.
           deliveryEstimate: {
             from: istDate(now, dispatchDelay(holiday, now) + delivery.minDays),

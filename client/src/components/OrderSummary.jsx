@@ -25,7 +25,7 @@ export default function OrderSummary({
   giftWrap = 0,
   // The part of `delivery` that a far-off area adds (stage 111).
   deliveryExtra = 0,
-  // The customer's loyalty level (stage 134): { label, freeDeliveryMin }, for a note on their perk.
+  // The customer's loyalty level (stage 134): { label, freeDeliveryMin, extraCashback }, for a note on its perks.
   loyalty = null,
   children,
 }) {
@@ -89,6 +89,7 @@ export default function OrderSummary({
           {loyalty.freeDeliveryMin
             ? `free delivery from ${formatPrice(loyalty.freeDeliveryMin)}`
             : 'free delivery always'}
+          {loyalty.extraCashback > 0 && ` and ${loyalty.extraCashback}% extra cashback`}
         </p>
       )}
       {/* How close the cart is to free delivery, as words and a bar. */}

@@ -93,7 +93,7 @@ function Cashback() {
 }
 
 // Loyalty levels (stage 134): Silver and Gold by a year's spending on delivered orders, each with its own
-// free-delivery minimum. Off until switched on.
+// free-delivery minimum and, since stage 136, extra cashback. Off until switched on.
 function Loyalty() {
   const [version, setVersion] = useState(0);
   const { data } = useFetch('/admin/loyalty', version);
@@ -109,8 +109,16 @@ function Loyalty() {
         method: 'PUT',
         body: {
           enabled: f.enabled === 'on',
-          silver: { spend: paise(f.silverSpend), freeDeliveryMin: paise(f.silverFree) },
-          gold: { spend: paise(f.goldSpend), freeDeliveryMin: paise(f.goldFree) },
+          silver: {
+            spend: paise(f.silverSpend),
+            freeDeliveryMin: paise(f.silverFree),
+            extraCashback: Number(f.silverCashback),
+          },
+          gold: {
+            spend: paise(f.goldSpend),
+            freeDeliveryMin: paise(f.goldFree),
+            extraCashback: Number(f.goldCashback),
+          },
         },
       });
       setState({ busy: false, error: null, done: 'Saved.' });
@@ -125,7 +133,9 @@ function Loyalty() {
       <p className="muted small">
         Customers become Silver or Gold by what they spent on delivered orders in the last 12 months (less refunds), and
         get free delivery from a lower amount than the usual {formatPrice(data.usualFreeDeliveryMin)}; 0 means free
-        delivery on every order. They see their level on their account page.
+        delivery on every order. Each level can also earn extra cashback on its orders, paid as store credit after the
+        return window like the cashback above, even while that is off (it counts towards the same per-order limit). They
+        see their level on their account page.
       </p>
       <label className="check">
         <input name="enabled" type="checkbox" defaultChecked={data.enabled} />
@@ -148,6 +158,18 @@ function Loyalty() {
           />
         </label>
         <label>
+          Silver: extra cashback (%)
+          <input
+            name="silverCashback"
+            type="number"
+            min="0"
+            max="10"
+            step="1"
+            required
+            defaultValue={data.silver.extraCashback}
+          />
+        </label>
+        <label>
           Gold from (₹ a year)
           <input name="goldSpend" type="number" min="1" step="1" required defaultValue={data.gold.spend / 100} />
         </label>
@@ -160,6 +182,18 @@ function Loyalty() {
             step="1"
             required
             defaultValue={data.gold.freeDeliveryMin / 100}
+          />
+        </label>
+        <label>
+          Gold: extra cashback (%)
+          <input
+            name="goldCashback"
+            type="number"
+            min="0"
+            max="10"
+            step="1"
+            required
+            defaultValue={data.gold.extraCashback}
           />
         </label>
       </div>

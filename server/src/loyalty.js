@@ -4,12 +4,16 @@
 // freeDeliveryMin }, gold: { … } } in paise; off until an admin switches it on. Nothing is stored per customer: the
 // level is worked out when needed, so it follows their orders (and drops a year after them). Imports nothing of the
 // store's, as orders.js uses it (routes/loyalty.js has the admin and account routes).
+// Stage 136 adds a second perk, `extraCashback` (whole percent, 0–MAX_EXTRA_CASHBACK) per level: POST /orders keeps
+// the customer's level and percent on the order (`loyaltyCashback`), and payCashback (cashback.js) adds it to the
+// store's cashback, or pays it alone while that is off. Settings saved before stage 136 have none (0).
 export const LOYALTY_DAYS = 365;
 export const LEVELS = { silver: 'Silver', gold: 'Gold' };
+export const MAX_EXTRA_CASHBACK = 10;
 export const DEFAULTS = {
   enabled: false,
-  silver: { spend: 500000, freeDeliveryMin: 29900 },
-  gold: { spend: 2000000, freeDeliveryMin: 0 },
+  silver: { spend: 500000, freeDeliveryMin: 29900, extraCashback: 1 },
+  gold: { spend: 2000000, freeDeliveryMin: 0, extraCashback: 2 },
 };
 const SETTINGS = 'loyalty';
 // The same as REFUNDED_RETURNS in routes/dashboard.js (not imported: it leads back to orders.js).
@@ -18,7 +22,10 @@ const DAY = 86_400_000;
 
 export async function loyaltySettings(db) {
   const doc = await db.collection('settings').findOne({ _id: SETTINGS });
-  return { ...DEFAULTS, ...doc };
+  if (!doc) return DEFAULTS;
+  // Levels saved before stage 136 have no extra cashback: 0, so saving the form is what starts paying it.
+  const level = (l) => ({ ...DEFAULTS[l], extraCashback: 0, ...doc[l] });
+  return { ...DEFAULTS, ...doc, silver: level('silver'), gold: level('gold') };
 }
 export const saveLoyaltySettings = (db, s) =>
   db.collection('settings').updateOne({ _id: SETTINGS }, { $set: s }, { upsert: true });
@@ -43,7 +50,8 @@ export async function spentInYear(db, userId, now = new Date()) {
   return Math.max(0, orders.reduce((sum, o) => sum + o.total, 0) - (refunds?.total ?? 0));
 }
 
-// A customer's level: { level, label, spent, freeDeliveryMin, next: { level, label, needed } | null }, with `level`
+// A customer's level: { level, label, spent, freeDeliveryMin, extraCashback, next: { level, label, needed,
+// freeDeliveryMin, extraCashback } | null }, with `level`
 // null below Silver; null altogether when loyalty is off or there's no customer.
 export async function loyaltyFor(db, userId, now = new Date()) {
   if (!userId) return null;
@@ -57,12 +65,14 @@ export async function loyaltyFor(db, userId, now = new Date()) {
     label: level ? LEVELS[level] : null,
     spent,
     freeDeliveryMin: level ? s[level].freeDeliveryMin : null,
+    extraCashback: level ? s[level].extraCashback : 0,
     next: nextLevel
       ? {
           level: nextLevel,
           label: LEVELS[nextLevel],
           needed: s[nextLevel].spend - spent,
           freeDeliveryMin: s[nextLevel].freeDeliveryMin,
+          extraCashback: s[nextLevel].extraCashback,
         }
       : null,
   };

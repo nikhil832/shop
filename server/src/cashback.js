@@ -11,6 +11,9 @@ import { cashbackEmail } from './emails.js';
 // until an admin switches it on, and only orders placed from then (`since`, set when switched on) earn it, so
 // switching on never pays for old orders. The minute sweep (payCashback) gives each due order `cashback` { amount, at }
 // and the credit in one transaction, so it's paid once. Nothing is paid while a return of the order awaits a decision.
+// Stage 136: an order placed by a loyalty level with extra cashback keeps `loyaltyCashback` { level, percent }; that
+// percent is added to the store's (or paid alone while cashback is off, or for orders before `since`), under the same
+// per-order cap. It was promised when ordering, so it's paid even if loyalty is switched off since.
 
 export const DEFAULTS = { enabled: false, percent: 2, cap: 20000 };
 // The same as RETURN_DAYS in routes/returns.js and the lists in routes/dashboard.js; not imported, as orders.js imports
@@ -36,14 +39,16 @@ const itemsPaid = (order) => order.subtotal - (order.coupon?.type === 'free_deli
 export async function payCashback(ctx, now = new Date()) {
   const { db, client } = ctx;
   const settings = await cashbackSettings(db);
-  if (!settings.enabled || !settings.since) return 0;
+  const storeOn = settings.enabled && settings.since;
+  // The store's percent for an order: only while on, and only for orders placed since it was switched on.
+  const storePercent = (order) => (storeOn && order.createdAt >= settings.since ? settings.percent : 0);
   const orders = db.collection('orders');
   const due = await orders
     .find({
       status: 'delivered',
       deliveredAt: { $lte: new Date(now.getTime() - RETURN_DAYS * DAY) },
-      createdAt: { $gte: settings.since },
       cashback: { $exists: false },
+      $or: [...(storeOn ? [{ createdAt: { $gte: settings.since } }] : []), { 'loyaltyCashback.percent': { $gt: 0 } }],
     })
     .limit(50)
     .toArray();
@@ -53,7 +58,9 @@ export async function payCashback(ctx, now = new Date()) {
     // A return still waiting for a decision could change what was kept: wait for it.
     if (returns.some((r) => r.status === 'requested')) continue;
     const refunded = returns.filter((r) => REFUNDED_RETURNS.includes(r.status)).reduce((s, r) => s + r.refund, 0);
-    const amount = cashbackOn(itemsPaid(order) - refunded, settings);
+    const extra = order.loyaltyCashback?.percent ?? 0;
+    const percent = storePercent(order) + extra;
+    const amount = cashbackOn(itemsPaid(order) - refunded, { percent, cap: settings.cap });
     const user = await db.collection('users').findOne({ _id: order.userId }, { projection: { name: 1, email: 1 } });
     const session = client.startSession();
     let balance = null;
@@ -62,7 +69,11 @@ export async function payCashback(ctx, now = new Date()) {
         // Claimed in the transaction: two sweeps at once can't both pay it.
         const claimed = await orders.updateOne(
           { _id: order._id, cashback: { $exists: false } },
-          { $set: { cashback: { amount: user ? amount : 0, percent: settings.percent, at: now } } },
+          {
+            $set: {
+              cashback: { amount: user ? amount : 0, percent, ...(extra && { loyaltyExtra: extra }), at: now },
+            },
+          },
           { session },
         );
         if (!claimed.modifiedCount || !user || !amount) return;
