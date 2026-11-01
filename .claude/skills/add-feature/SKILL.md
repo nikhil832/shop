@@ -71,7 +71,7 @@ Design notes from the planned stages (all now built; see `CLAUDE.md` for how eac
 
 ## Docs and commit
 
-1. Update `README.md`: the "Done so far" stage list and the API table.
+1. Update `docs/FEATURES.md` (add the stage to the list) and `docs/API.md` (new or changed routes). `README.md` is the public showcase: change it only for something worth a highlight, and keep its test counts ("600+") roughly right.
 2. Update `CLAUDE.md` with anything non-obvious a future session needs (new collections, invariants, gotchas). Don't list files.
 3. `git status --short`: make sure no `server/.env*` file is staged (the repo is public).
 4. Commit with a message saying what the stage adds; the repo's git config already uses the user's GitHub noreply email. End the message with the co-author line from the session's attribution instructions.

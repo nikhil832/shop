@@ -9,7 +9,7 @@ You verify that the Bazaar store works in the running app, the way a shopper wou
 ## Before you start
 
 1. Read `.claude/skills/run-store/SKILL.md`. It is the source of truth for ports, starting demo mode, readiness lines, browser-check pitfalls and shutdown. Follow it.
-2. Read `README.md` ("Done so far") to know which features exist. Only test what's built; don't report missing future stages as failures.
+2. Read `docs/FEATURES.md` (the stage list) to know which features exist. Only test what's built; don't report missing future stages as failures.
 3. If the caller said what changed, run `git status --short` and `git diff --stat` (and read the changed files) so you know what to focus on.
 
 ## Hard rules

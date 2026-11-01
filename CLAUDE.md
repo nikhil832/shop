@@ -38,7 +38,7 @@ If a hook blocks something you need, explain why to the user rather than working
 
 ## Architecture
 
-The store is being built in stages (see README): catalog, accounts/cart/checkout, the admin panel (opening on a sales dashboard), Razorpay payments (test mode), reviews/wishlist, product variants (sizes/colours), returns and exchanges, order emails (and new-order alerts for admins) and password reset are all done, and it is deployed on Render. Ideas not built yet, and ones set aside, are in `ROADMAP.md`: when one is built, move it to its Done table with the commit; when suggesting what's next, add new ideas there.
+The store is being built in stages (listed in `docs/FEATURES.md`; `README.md` is the project's public front page, with screenshots in `docs/screenshots/`, `docs/SETUP.md` covers running and deploying, `docs/API.md` every route): catalog, accounts/cart/checkout, the admin panel (opening on a sales dashboard), Razorpay payments (test mode), reviews/wishlist, product variants (sizes/colours), returns and exchanges, order emails (and new-order alerts for admins) and password reset are all done, and it is deployed on Render. Ideas not built yet, and ones set aside, are in `ROADMAP.md`: when one is built, move it to its Done table with the commit; when suggesting what's next, add new ideas there.
 
 **Server** (`server/src/`): `createApp(ctx)` in `app.js` mounts one router per area (`routes/*.js`), each a function of `ctx = { db, client, config, razorpay, mail }` (MongoDB `Db`, `MongoClient` for sessions/transactions, config, Razorpay client or null, mail client). `index.js` loads config (`config.js` reads the gitignored `server/.env`; real env vars win), connects (`db.js` also creates indexes), and serves `client/dist` in production.
 
