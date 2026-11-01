@@ -7,6 +7,7 @@ import { imageAltsOf } from '../imageAlts.js';
 import { recordSearch } from '../searchInsights.js';
 import { priceInsight } from '../priceHistory.js';
 import { sizeFit } from '../sizeFit.js';
+import { specChoices, specConditions, specFacet, specQuery } from '../specFilters.js';
 import { parseSizes, sizeFacet, sizeFilter } from '../sizes.js';
 
 // Prices are integers in paise (₹1 = 100) everywhere: storage, API and client state.
@@ -83,6 +84,8 @@ const listQuery = z.object({
   deals: z.enum(['1', 'true']).optional(),
   // Sizes (stage 109, sizes.js), comma-separated: only products with one of them in stock.
   size: z.string().max(300).optional(),
+  // Specifications (stage 138, specFilters.js): "Name:Value", repeated.
+  spec: specQuery,
   sort: z.enum(Object.keys(PRODUCT_SORTS)).default('relevance'),
   page: z.coerce.number().int().min(1).max(1000).default(1),
   pageSize: z.coerce.number().int().min(1).max(48).default(24),
@@ -298,7 +301,15 @@ export function catalogRouter({ db }) {
     if (query.category) {
       const category = await categories.findOne({ slug: query.category });
       if (!category) {
-        return res.json({ items: [], total: 0, page: query.page, pageSize: query.pageSize, brands: [], sizes: [] });
+        return res.json({
+          items: [],
+          total: 0,
+          page: query.page,
+          pageSize: query.pageSize,
+          brands: [],
+          sizes: [],
+          specs: [],
+        });
       }
       base.categoryId = category._id;
     }
@@ -322,9 +333,12 @@ export function catalogRouter({ db }) {
     const branded = brandList?.length ? { ...base, brand: { $in: brandList } } : base;
     // The size facet ignores the size filter itself, like brands.
     const sizes = parseSizes(query.size);
-    const match = sizes.length ? { ...branded, $and: [...(branded.$and ?? []), sizeFilter(sizes)] } : branded;
+    const sized = sizes.length ? { ...branded, $and: [...(branded.$and ?? []), sizeFilter(sizes)] } : branded;
+    // Specifications (stage 138): their facet ignores their own choices (per name, in specFacet).
+    const choices = specChoices(query.spec);
+    const match = choices.size ? { ...sized, $and: [...(sized.$and ?? []), ...specConditions(choices)] } : sized;
 
-    const [[result], brands, sizeList] = await Promise.all([
+    const [[result], brands, sizeList, specList] = await Promise.all([
       products
         .aggregate([
           { $match: match },
@@ -352,6 +366,7 @@ export function catalogRouter({ db }) {
         .aggregate([{ $match: base }, { $group: { _id: '$brand', count: { $sum: 1 } } }, { $sort: { _id: 1 } }])
         .toArray(),
       sizeFacet(products, branded),
+      specFacet(products, sized, choices),
     ]);
 
     const total = result.total[0]?.n ?? 0;
@@ -368,7 +383,8 @@ export function catalogRouter({ db }) {
       !query.inStock &&
       !query.comingSoon &&
       !query.deals &&
-      !sizes.length;
+      !sizes.length &&
+      !choices.size;
     if (query.q && plain) await recordSearch(db, query.q, total);
     // Nothing found: a corrected search ("samsng" → "samsung"), offered only if it finds something with the same filters.
     let suggestion = null;
@@ -390,6 +406,8 @@ export function catalogRouter({ db }) {
       brands: brands.map((b) => ({ name: b._id, count: b.count })),
       // Sizes in stock among the results whatever the size filter, for products that have sizes; [] when none do.
       sizes: sizeList,
+      // [{ name, values: [{ value, count, chosen }] }]: specifications shared by the results (stage 138).
+      specs: specList,
     });
   });
 

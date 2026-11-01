@@ -102,6 +102,8 @@ export default function Search() {
   const category = get('category');
   const brands = get('brand') ? get('brand').split(',') : [];
   const sizes = get('size') ? get('size').split(',') : [];
+  // Specifications (stage 138): "Name:Value" choices, one `spec` each.
+  const specs = params.getAll('spec');
   const sort = SORTS.some((s) => s.id === get('sort')) ? get('sort') : 'relevance';
   const page = Math.max(1, Number(get('page')) || 1);
 
@@ -120,7 +122,7 @@ export default function Search() {
       sort,
       page,
       pageSize: PAGE_SIZE,
-    })}`,
+    })}${specs.map((s) => `&spec=${encodeURIComponent(s)}`).join('')}`,
   );
 
   // Changing any filter returns to page 1.
@@ -142,13 +144,26 @@ export default function Search() {
     if (next.length) rememberSizes(next);
     update({ size: next.join(',') });
   };
+  // A specification value is chosen when the URL has it (names and values ignore case, like the server).
+  const specKey = (name, value) => `${name}:${value}`.toLowerCase();
+  const specChosen = (name, value) => specs.some((s) => s.toLowerCase() === specKey(name, value));
+  function toggleSpec(name, value) {
+    const next = new URLSearchParams(params);
+    const rest = specs.filter((s) => s.toLowerCase() !== specKey(name, value));
+    next.delete('spec');
+    for (const s of rest.length < specs.length ? rest : [...specs, `${name}:${value}`]) next.append('spec', s);
+    next.delete('page');
+    setParams(next);
+  }
   const mySizes = !sizes.length ? rememberedSizes().filter((s) => data?.sizes?.some((x) => x.name === s)) : [];
 
   const categoryName = categories?.find((c) => c.slug === category)?.name;
   // Deals (stage 101) on their own are a page of their own: "Deals" rather than "All products".
   const heading = q ? `Results for “${q}”` : (categoryName ?? (get('deals') ? 'Deals' : 'All products'));
   const pages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
-  const hasFilters = ['brand', 'size', 'minPrice', 'maxPrice', 'rating', 'inStock', 'deals'].some((k) => params.has(k));
+  const hasFilters = ['brand', 'size', 'spec', 'minPrice', 'maxPrice', 'rating', 'inStock', 'deals'].some((k) =>
+    params.has(k),
+  );
 
   return (
     <div className="search-page">
@@ -167,7 +182,7 @@ export default function Search() {
               <button
                 type="button"
                 className="link"
-                onClick={() => update({ brand: '', minPrice: '', maxPrice: '', rating: '', inStock: '' })}
+                onClick={() => update({ brand: '', spec: '', minPrice: '', maxPrice: '', rating: '', inStock: '' })}
               >
                 Clear filters
               </button>
@@ -225,6 +240,23 @@ export default function Search() {
                 ))}
               </fieldset>
             )}
+
+            {/* Specifications the results share (stage 138), one group per name. */}
+            {data?.specs?.map((group) => (
+              <fieldset key={group.name}>
+                <legend>{group.name}</legend>
+                {group.values.map((v) => (
+                  <label key={v.value} className="check">
+                    <input
+                      type="checkbox"
+                      checked={specChosen(group.name, v.value)}
+                      onChange={() => toggleSpec(group.name, v.value)}
+                    />
+                    {v.value} <span className="muted">({v.count})</span>
+                  </label>
+                ))}
+              </fieldset>
+            ))}
 
             <fieldset>
               <legend>Price</legend>

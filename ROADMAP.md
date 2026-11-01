@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-11-01 (eighth list), roughly in the order they'd help most. All free (no new services).
 
-- **Filter by specification**: on a category's search page, filters built from the products' specifications (e.g.
-  RAM, Storage, Screen) with counts, like the brand and size filters. Specifications are stored but can't be searched
-  or filtered yet. To start: "start specification filters".
 - **Ship-today countdown**: the admin sets a daily dispatch cut-off (e.g. 2 pm, working days only, respecting holiday
   mode), and the product page says "Order within 2 h 15 min to ship today", or "ships tomorrow". A gentle nudge to
   buy now. To start: "start ship-today countdown".
@@ -174,3 +171,4 @@ Suggested on 2026-11-01 (eighth list), roughly in the order they'd help most. Al
 | Low-stock levels per option: a size or colour can have its own "Low at" number                                                                                                          | Stage 135 (`git log --grep "Stage 135"`) |
 | Extra cashback for loyalty levels: Silver and Gold earn an extra % back as store credit                                                                                                 | Stage 136 (`git log --grep "Stage 136"`) |
 | Size fit from reviews: "runs small / true to size / runs large", summarised on the product page                                                                                         | Stage 137 (`git log --grep "Stage 137"`) |
+| Filter by specification: RAM, Storage and the like as search filters with counts                                                                                                        | Stage 138 (`git log --grep "Stage 138"`) |
