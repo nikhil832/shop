@@ -5154,3 +5154,28 @@ textarea {
   font-size: 0.9rem;
   color: var(--success);
 }
+
+/* ---- Price alerts on the wishlist (stage 142) ---- */
+.price-alert {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.price-alert-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+  margin-top: 6px;
+}
+.price-alert-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+}
+.price-alert-form input {
+  width: 8rem;
+}
+.price-alert-form .error {
+  flex-basis: 100%;
+  margin: 0;
+}

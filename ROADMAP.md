@@ -7,7 +7,20 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-All five of the eighth list (2026-11-01) are built. Ask for new ideas ("new ideas") to fill this list again.
+Suggested on 2026-11-01 (ninth list), roughly in the order they'd help most. All free (no new services).
+
+- **Store news for a group**: send a store news email to only some subscribers: a loyalty level, a customer tag (VIP,
+  wholesale), or people who bought from a category, with the count shown before sending. More relevant emails, fewer
+  unsubscribes. To start: "start news groups".
+- **Saved searches**: a "Tell me about new arrivals" button on a search page (words and filters); the customer gets one
+  email when a new product matches, with a list of their saved searches on the account page. To start: "start saved
+  searches".
+- **Review rewards**: a small store credit (set by the admin, e.g. ₹20) for a written review with a photo, paid once
+  the review has been screened and stays shown for a few days. More photo reviews, which help others buy. To start:
+  "start review rewards".
+- **Click and collect**: if you have a shop or warehouse customers can visit, a "Pick up from …" choice at checkout
+  with no delivery charge, a pickup code in the email and a "Ready for pickup" step for admins. Only useful with a
+  place to collect from. To start: "start click and collect".
 
 ## Set aside
 
@@ -166,3 +179,4 @@ All five of the eighth list (2026-11-01) are built. Ask for new ideas ("new idea
 | Ship-today countdown: "Order within 2 h 15 min to ship today" from a dispatch cut-off                                                                                                   | Stage 139 (`git log --grep "Stage 139"`) |
 | Store news emails: opt-in news from the admin, with unsubscribe links and a daily limit                                                                                                 | Stage 140 (`git log --grep "Stage 140"`) |
 | Birthday treat: a one-use coupon of their own on customers' birthdays                                                                                                                   | Stage 141 (`git log --grep "Stage 141"`) |
+| Price alerts: "email me at ₹X or less" on wishlist items                                                                                                                                | Stage 142 (`git log --grep "Stage 142"`) |

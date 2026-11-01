@@ -9,7 +9,7 @@ import { mailClient } from './mail.js';
 import { aiClient } from './ai.js';
 import { expireUnpaidOrders } from './routes/orders.js';
 import { clearComingSoon, sendBackInStockAlerts } from './routes/stockAlerts.js';
-import { sendPriceDropEmails } from './routes/wishlist.js';
+import { sendPriceDropEmails, sendPriceTargetEmails } from './routes/wishlist.js';
 import { sendCartReminders } from './routes/savedCart.js';
 import { sendReviewReminders } from './reviewReminders.js';
 import { sendRestockReminders } from './restockReminders.js';
@@ -62,6 +62,8 @@ const sweeper = setInterval(async () => {
   await sendBackInStockAlerts(ctx).catch((err) => console.error(err));
   await clearComingSoon(ctx.db).catch((err) => console.error(err));
   await sendPriceDropEmails(ctx).catch((err) => console.error(err));
+  // Wishlist items that reached the customer's own price (stage 142).
+  await sendPriceTargetEmails(ctx).catch((err) => console.error(err));
   // Wishlist products down to their last few (nearlyGone.js).
   await sendNearlyGoneEmails(ctx).catch((err) => console.error(err));
   await sendCartReminders(ctx).catch((err) => console.error(err));

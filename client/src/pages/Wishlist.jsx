@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { smallImage } from '../format.js';
+import { formatDate, formatPrice, smallImage } from '../format.js';
 import { Link, Navigate } from 'react-router';
 import { request } from '../api.js';
 import { useAuth } from '../auth.jsx';
@@ -7,6 +7,78 @@ import { addToCart, useCart } from '../cart.js';
 import AccountNav from '../components/AccountNav.jsx';
 import PriceTag from '../components/PriceTag.jsx';
 import { useFetch } from '../useFetch.js';
+
+// A price alert (stage 142): "Email me when it's ₹X or less", below today's price. Shown as set, reached or not set,
+// with a small form to set or change it.
+function PriceAlert({ product }) {
+  const [target, setTarget] = useState(product.target);
+  const [editing, setEditing] = useState(false);
+  const [state, setState] = useState({ busy: false, error: null });
+  async function save(targetPrice) {
+    setState({ busy: true, error: null });
+    try {
+      setTarget((await request(`/wishlist/${product.id}/target`, { method: 'PUT', body: { targetPrice } })).target);
+      setEditing(false);
+      setState({ busy: false, error: null });
+    } catch (err) {
+      setState({ busy: false, error: err.message.replace(/^targetPrice: /, '') });
+    }
+  }
+  function submit(e) {
+    e.preventDefault();
+    save(Math.round(Number(new FormData(e.currentTarget).get('target')) * 100));
+  }
+  if (editing) {
+    return (
+      <form className="price-alert-form" onSubmit={submit} aria-label={`Price alert for ${product.title}`}>
+        <label>
+          Email me at (₹) or less
+          <input
+            name="target"
+            type="number"
+            min="1"
+            step="1"
+            max={Math.max(1, Math.ceil(product.price / 100) - 1)}
+            required
+            defaultValue={target ? target.price / 100 : ''}
+          />
+        </label>
+        <button type="submit" className="btn small" disabled={state.busy}>
+          Save alert
+        </button>
+        <button type="button" className="link small" onClick={() => setEditing(false)}>
+          Cancel
+        </button>
+        {state.error && (
+          <p className="error small" role="alert">
+            {state.error}
+          </p>
+        )}
+      </form>
+    );
+  }
+  return (
+    <p className="price-alert small">
+      {target
+        ? target.reachedAt
+          ? `Reached your price of ${formatPrice(target.price)} on ${formatDate(target.reachedAt)}. `
+          : `We'll email you at ${formatPrice(target.price)} or less. `
+        : null}
+      <button type="button" className="link small" onClick={() => setEditing(true)} disabled={state.busy}>
+        {target ? 'Change' : 'Set a price alert'}
+        <span className="sr-only"> for {product.title}</span>
+      </button>
+      {target && (
+        <>
+          {' · '}
+          <button type="button" className="link small" onClick={() => save(null)} disabled={state.busy}>
+            Remove alert<span className="sr-only"> for {product.title}</span>
+          </button>
+        </>
+      )}
+    </p>
+  );
+}
 
 function WishRow({ product, onRemoved }) {
   const items = useCart();
@@ -37,6 +109,7 @@ function WishRow({ product, onRemoved }) {
         </Link>
         <PriceTag price={product.price} mrp={product.mrp} from={product.priceFrom} />
         {soldOut && <span className="stock out">Out of stock</span>}
+        <PriceAlert product={product} />
         {state.error && <p className="error small">{state.error}</p>}
       </div>
       <div className="wish-actions">

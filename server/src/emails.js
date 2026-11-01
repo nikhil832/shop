@@ -1528,3 +1528,41 @@ ${button('Start shopping', url)}`,
   );
   return { subject, text, html };
 }
+
+// Wishlist items at or below the price the customer asked to hear about (stage 142, sendPriceTargetEmails).
+export function priceTargetEmail(user, items, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = user.name.split(/\s+/)[0];
+  const only = items.length === 1 ? items[0] : null;
+  const subject = only
+    ? `${only.product.title} is now ${rupees(only.product.price)}, your price`
+    : `${items.length} items on your wishlist reached your price`;
+  const from = (p) => (p.variants?.some((v) => v.price !== p.price) ? 'from ' : '');
+  const lines = items.map((i) => ({
+    title: i.product.title,
+    url: `${publicUrl}/p/${i.product.slug}`,
+    text: `now ${from(i.product)}${rupees(i.product.price)} (you asked for ${rupees(i.target)} or less)`,
+  }));
+  const wishlistUrl = `${publicUrl}/wishlist`;
+  const intro = only
+    ? 'Something on your wishlist reached your price:'
+    : 'Some things on your wishlist reached your price:';
+  const text = [
+    `Hi ${firstName},`,
+    intro,
+    lines.map((l) => `${l.title}: ${l.text}\n${l.url}`).join('\n\n'),
+    `Prices can change again. Set a new price or remove it on your wishlist: ${wishlistUrl}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const cell = 'padding:8px 0;border-bottom:1px solid #e5e7eb';
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p>${escapeHtml(intro)}</p>
+<table style="width:100%;border-collapse:collapse;margin:8px 0 16px">
+${lines.map((l) => `<tr><td style="${cell}"><a href="${escapeHtml(l.url)}" style="color:#1d4ed8">${escapeHtml(l.title)}</a></td><td style="${cell};text-align:right">${escapeHtml(l.text)}</td></tr>`).join('\n')}
+</table>
+${button('See my wishlist', wishlistUrl)}`,
+    "You're getting this because you set a price alert on your wishlist.",
+  );
+  return { subject, text, html };
+}

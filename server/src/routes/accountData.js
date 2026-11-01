@@ -143,7 +143,12 @@ export function accountDataRouter(ctx) {
           .filter((a) => a.userId?.equals(userId))
           .map((a) => ({ question: q.text, answer: a.text, at: a.at, hidden: a.hidden })),
       ),
-      wishlist: wishlist.map((w) => ({ product: title(w.productId), addedAt: w.addedAt })),
+      // With the price alert the customer set (stage 142), if any.
+      wishlist: wishlist.map((w) => ({
+        product: title(w.productId),
+        addedAt: w.addedAt,
+        ...(w.targetPrice && { priceAlert: w.targetPrice }),
+      })),
       // Whether it's shared by a link (stage 106); the link itself is on the wishlist page.
       wishlistShared: Boolean(u.wishlistShare),
       backInStockAlerts: alerts.map((a) => ({ product: title(a.productId), createdAt: a.createdAt })),
