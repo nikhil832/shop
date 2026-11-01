@@ -6,6 +6,7 @@ import { HttpError, escapeRegex, parse } from '../http.js';
 import { imageAltsOf } from '../imageAlts.js';
 import { recordSearch } from '../searchInsights.js';
 import { priceInsight } from '../priceHistory.js';
+import { sizeFit } from '../sizeFit.js';
 import { parseSizes, sizeFacet, sizeFilter } from '../sizes.js';
 
 // Prices are integers in paise (₹1 = 100) everywhere: storage, API and client state.
@@ -532,7 +533,7 @@ export function catalogRouter({ db }) {
     const doc = await products.findOne({ slug: req.params.slug, active: true });
     if (!doc) throw new HttpError(404, 'Product not found');
     const mine = { userId: req.user?._id, productId: doc._id };
-    const [category, saved, alerts, prices, addOns, bought] = await Promise.all([
+    const [category, saved, alerts, prices, addOns, bought, fit] = await Promise.all([
       categories.findOne({ _id: doc.categoryId }),
       req.user && db.collection('wishlist').findOne(mine),
       req.user &&
@@ -543,6 +544,7 @@ export function catalogRouter({ db }) {
       priceInsight(db, doc),
       buyableCards(db, doc.addOns ?? []),
       boughtRecently(doc._id),
+      sizeFit(db, doc),
     ]);
     res.json({
       ...toProductCard(doc),
@@ -569,6 +571,8 @@ export function catalogRouter({ db }) {
       video: doc.video ?? null,
       // { people, days }: how many customers bought it lately (stage 128), or null when fewer than 5.
       boughtRecently: bought,
+      // How it fits by its reviews (stage 137): { small, true, large, total, verdict } or null.
+      sizeFit: fit,
     });
   });
 

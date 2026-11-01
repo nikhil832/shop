@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-11-01 (eighth list), roughly in the order they'd help most. All free (no new services).
 
-- **Size fit from reviews**: reviewers of products with sizes say whether it runs small, true to size or large, and
-  the product page shows "Most say: true to size (12 reviews)" beside the size picker. Fewer size-related returns and
-  exchanges. To start: "start size fit".
 - **Filter by specification**: on a category's search page, filters built from the products' specifications (e.g.
   RAM, Storage, Screen) with counts, like the brand and size filters. Specifications are stored but can't be searched
   or filtered yet. To start: "start specification filters".
@@ -176,3 +173,4 @@ Suggested on 2026-11-01 (eighth list), roughly in the order they'd help most. Al
 | Loyalty levels: Silver and Gold by a year's spending, each with a lower free-delivery minimum                                                                                           | Stage 134 (`git log --grep "Stage 134"`) |
 | Low-stock levels per option: a size or colour can have its own "Low at" number                                                                                                          | Stage 135 (`git log --grep "Stage 135"`) |
 | Extra cashback for loyalty levels: Silver and Gold earn an extra % back as store credit                                                                                                 | Stage 136 (`git log --grep "Stage 136"`) |
+| Size fit from reviews: "runs small / true to size / runs large", summarised on the product page                                                                                         | Stage 137 (`git log --grep "Stage 137"`) |

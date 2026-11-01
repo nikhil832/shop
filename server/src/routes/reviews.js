@@ -6,6 +6,7 @@ import { HttpError, parse, parseObjectId } from '../http.js';
 import { takeHourlySlot } from '../rateLimit.js';
 import { publicSummary } from '../reviewSummaries.js';
 import { UPLOAD_URL } from './images.js';
+import { fitField, hasSizes } from '../sizeFit.js';
 
 const REVIEW_PAGE = 10;
 
@@ -20,6 +21,8 @@ const reviewBody = z.object({
     .max(MAX_REVIEW_PHOTOS, `At most ${MAX_REVIEW_PHOTOS} photos`)
     .default([])
     .refine((urls) => new Set(urls).size === urls.length, 'The same photo twice'),
+  // How it fits (stage 137, sizeFit.js), only for products with sizes; left out when editing: kept.
+  fit: fitField.optional(),
 });
 // Helpful votes one customer may give in an hour (counted when a vote is added).
 const VOTES_PER_HOUR = 100;
@@ -49,6 +52,8 @@ export const toReview = (doc) => ({
   body: doc.body,
   author: doc.author,
   photos: doc.photos ?? [],
+  // 'small' | 'true' | 'large' | null (stage 137).
+  fit: doc.fit ?? null,
   // How many other customers found it helpful (reviewVotes).
   helpful: doc.helpful ?? 0,
   hidden: doc.hidden,
@@ -126,7 +131,10 @@ export function reviewsRouter({ db, client }) {
   const router = express.Router();
 
   async function findProduct(slug) {
-    const product = await products.findOne({ slug, active: true }, { projection: { _id: 1 } });
+    const product = await products.findOne(
+      { slug, active: true },
+      { projection: { _id: 1, variants: 1, options: 1, variantName: 1 } },
+    );
     if (!product) throw new HttpError(404, 'Product not found');
     return product;
   }
@@ -191,7 +199,9 @@ export function reviewsRouter({ db, client }) {
   // Creates or replaces the visitor's review of this product.
   router.put('/products/:slug/review', requireUser, async (req, res) => {
     const input = parse(reviewBody, req.body);
-    const { _id: productId } = await findProduct(req.params.slug);
+    const product = await findProduct(req.params.slug);
+    const productId = product._id;
+    if (input.fit && !hasSizes(product)) throw new HttpError(400, 'fit: This product has no sizes');
     const userId = req.user._id;
     // Only the reviewer's own review uploads (not another customer's, nor an admin's product photos).
     if (input.photos.length) {
@@ -215,7 +225,7 @@ export function reviewsRouter({ db, client }) {
           if (!old.hidden) await changeRating(db, productId, { sum: input.rating - old.rating, count: 0 }, session);
           return { ...old, ...fields };
         }
-        const review = { productId, userId, ...fields, hidden: false, helpful: 0, createdAt: now };
+        const review = { productId, userId, fit: null, ...fields, hidden: false, helpful: 0, createdAt: now };
         const { insertedId } = await reviews.insertOne(review, { session });
         await changeRating(db, productId, { sum: input.rating, count: 1 }, session);
         return { _id: insertedId, ...review };

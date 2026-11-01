@@ -169,6 +169,7 @@ Built in stages. Done so far:
 134. **Loyalty levels**: on Admin → Coupons, Silver and Gold levels by what a customer spent on delivered orders in the last 12 months (less refunds), each with its own free-delivery minimum (0 means free delivery on every order). Off until switched on. Customers see their level and how far the next one is on their account page, and the cart and checkout say "Silver member: free delivery from ₹299". Changes are in the activity log.
 135. **Low-stock levels per option**: in a product's options table, a "Low at" number per size or colour (empty: the product's level), so a fast-selling size can warn earlier than the rest on the dashboard, in the morning email and in the low-stock filter. Changes are in the activity log.
 136. **Extra cashback for loyalty levels**: Silver and Gold can each earn an extra percentage back as store credit on their orders (set on Admin → Coupons), paid with the usual cashback after the return window, or on its own while cashback is off. Customers see it on their account page, in the cart and at checkout, and the cashback email mentions it.
+137. **Size fit from reviews**: reviewers of products with sizes can say whether it runs small, true to size or runs large. From three answers, the product page shows "Most say: true to size (8 of 12 reviews)" under the size picker (or that reviewers are split), and each review shows its answer. Hidden reviews don't count.
 
 What's next: see [ROADMAP.md](ROADMAP.md).
 

@@ -12,6 +12,7 @@ import ShareButton from '../components/ShareButton.jsx';
 import DeliveryCheck from '../components/DeliveryCheck.jsx';
 import BundleOffers from '../components/BundleOffers.jsx';
 import SizeGuide from '../components/SizeGuide.jsx';
+import { fitText } from '../sizeFit.js';
 import Gallery from '../components/Gallery.jsx';
 import ProductRow from '../components/ProductRow.jsx';
 import RecentlyViewed from '../components/RecentlyViewed.jsx';
@@ -269,6 +270,12 @@ export default function Product() {
             <>
               <VariantPicker product={product} chosen={chosen} onChoose={choose} />
               <SizeGuide key={product.slug} slug={product.slug} />
+              {/* What reviewers say about the fit (stage 137), from three answers up. */}
+              {product.sizeFit && (
+                <p className="size-fit">
+                  <a href="#reviews">{fitText(product.sizeFit)}</a>
+                </p>
+              )}
             </>
           )}
           {product.comingSoon ? (

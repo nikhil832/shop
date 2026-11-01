@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router';
 import { request } from '../api.js';
 import { formatDate } from '../format.js';
 import { uploadReviewPhoto } from '../photos.js';
+import { FIT_LABELS, hasSizes } from '../sizeFit.js';
 import { useFetch } from '../useFetch.js';
 import Pager from './Pager.jsx';
 import Rating from './Rating.jsx';
@@ -62,8 +63,10 @@ function PhotoPicker({ photos, onChange }) {
   );
 }
 
-function ReviewForm({ slug, review, onSaved, onCancel }) {
+// `sized`: the product has sizes, so the form asks how it fits (stage 137).
+function ReviewForm({ slug, sized, review, onSaved, onCancel }) {
   const [stars, setStars] = useState(review?.rating ?? 0);
+  const [fit, setFit] = useState(review?.fit ?? '');
   const [photos, setPhotos] = useState(review?.photos ?? []);
   const [state, setState] = useState({ busy: false, error: null });
 
@@ -75,7 +78,13 @@ function ReviewForm({ slug, review, onSaved, onCancel }) {
     try {
       await request(`/products/${slug}/review`, {
         method: 'PUT',
-        body: { rating: stars, title: form.get('title'), body: form.get('body'), photos },
+        body: {
+          rating: stars,
+          title: form.get('title'),
+          body: form.get('body'),
+          photos,
+          ...(sized && { fit: fit || null }),
+        },
       });
       onSaved();
     } catch (err) {
@@ -104,6 +113,19 @@ function ReviewForm({ slug, review, onSaved, onCancel }) {
           </label>
         ))}
       </fieldset>
+      {sized && (
+        <fieldset className="fit-picker">
+          <legend>
+            How does it fit? <span className="muted">(optional)</span>
+          </legend>
+          {[...Object.entries(FIT_LABELS), ['', 'Not sure']].map(([value, label]) => (
+            <label key={value} className="check">
+              <input type="radio" name="fit" value={value} checked={fit === value} onChange={() => setFit(value)} />
+              {label}
+            </label>
+          ))}
+        </fieldset>
+      )}
       <label>
         <span>
           Title <span className="muted">(optional)</span>
@@ -165,6 +187,7 @@ function ReviewText({ review }) {
         <Stars rating={review.rating} />
         {review.title && <strong>{review.title}</strong>}
       </div>
+      {review.fit && <p className="review-fit small">Fit: {FIT_LABELS[review.fit].toLowerCase()}</p>}
       {review.body && <p className="review-body">{review.body}</p>}
       <ReviewPhotos review={review} />
     </>
@@ -172,7 +195,7 @@ function ReviewText({ review }) {
 }
 
 // What a logged-in visitor can do: write a review, or see, edit and delete their own.
-function MyReview({ slug, viewer, onChange }) {
+function MyReview({ slug, sized, viewer, onChange }) {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState(null);
   const { review, canReview } = viewer;
@@ -195,8 +218,10 @@ function MyReview({ slug, viewer, onChange }) {
   if (!review && !canReview) {
     return <p className="muted">You can review this product once an order with it has been delivered to you.</p>;
   }
-  if (!review) return <ReviewForm slug={slug} onSaved={onChange} />;
-  if (editing) return <ReviewForm slug={slug} review={review} onSaved={saved} onCancel={() => setEditing(false)} />;
+  if (!review) return <ReviewForm slug={slug} sized={sized} onSaved={onChange} />;
+  if (editing) {
+    return <ReviewForm slug={slug} sized={sized} review={review} onSaved={saved} onCancel={() => setEditing(false)} />;
+  }
   return (
     <div className="panel my-review">
       <h3>Your review</h3>
@@ -366,7 +391,13 @@ export default function Reviews({ product, canScroll, onChange }) {
       {error && <p className="error">{error.message}</p>}
       {data &&
         (data.viewer ? (
-          <MyReview key={data.viewer.review?.id ?? 'new'} slug={product.slug} viewer={data.viewer} onChange={changed} />
+          <MyReview
+            key={data.viewer.review?.id ?? 'new'}
+            slug={product.slug}
+            sized={hasSizes(product)}
+            viewer={data.viewer}
+            onChange={changed}
+          />
         ) : (
           <p className="muted">
             Bought this? <Link to={`/login?next=${encodeURIComponent(`/p/${product.slug}${hash}`)}`}>Log in</Link> to

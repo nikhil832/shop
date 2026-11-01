@@ -5117,3 +5117,33 @@ textarea {
   color: var(--success);
   font-weight: 600;
 }
+
+/* ---- Size fit from reviews (stage 137) ---- */
+.size-fit {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+}
+.fit-picker {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+.fit-picker legend {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+  padding: 0;
+}
+.review-form .fit-picker label {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400;
+}
+.review-fit {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
