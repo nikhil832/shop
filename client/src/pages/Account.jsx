@@ -503,7 +503,7 @@ export default function Account() {
         </p>
       </form>
 
-      <section className="panel account-section" aria-labelledby="updates-heading">
+      <section className="panel account-section" id="updates" aria-labelledby="updates-heading">
         <h2 id="updates-heading">Email updates</h2>
         <label className="check">
           <input
@@ -549,6 +549,16 @@ export default function Account() {
             onChange={changeEmails('nearlyGoneEmails', 'Nearly-gone emails are')}
           />
           Tell me when something on my wishlist is down to its last few
+        </label>
+        {/* Store news (stage 140): off unless ticked. */}
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={user.newsEmails}
+            disabled={updates.busy}
+            onChange={changeEmails('newsEmails', 'Store news emails are')}
+          />
+          Send me store news: new arrivals and sales, now and then
         </label>
         <Feedback state={updates} />
         <p className="muted small">Emails about your orders always come.</p>

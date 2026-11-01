@@ -57,7 +57,16 @@ const SHOP = [
   '/p/the-quiet-engineer-paperback',
   '/p/urbane-men-slim-fit-jeans',
 ];
-const SIGNED_OUT = ['/login', '/register', '/forgot-password', '/no-such-page', '/help', '/track', '/faq'];
+const SIGNED_OUT = [
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/no-such-page',
+  '/help',
+  '/track',
+  '/faq',
+  '/unsubscribe#token=test',
+];
 const CUSTOMER = (o) => [
   '/cart',
   '/checkout',
@@ -100,6 +109,7 @@ const ADMIN_PAGES = (o, p) => [
   '/admin/staff',
   '/admin/sales',
   '/admin/announcements',
+  '/admin/news',
   '/admin/customers',
   '/admin/searches',
   '/admin/gift-cards',

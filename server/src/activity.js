@@ -31,6 +31,8 @@ export const ACTIVITY_AREAS = [
   'giftCards',
   'bundles',
   'collections',
+  // Store news emails (stage 140).
+  'news',
 ];
 export const ACTIVITY_DAYS = 365;
 const MAX_CHANGES = 100;

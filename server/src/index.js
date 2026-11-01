@@ -14,6 +14,7 @@ import { sendCartReminders } from './routes/savedCart.js';
 import { sendReviewReminders } from './reviewReminders.js';
 import { sendRestockReminders } from './restockReminders.js';
 import { sendNearlyGoneEmails } from './nearlyGone.js';
+import { sendNewsletters } from './newsletters.js';
 import { sendPaymentReminders } from './paymentReminders.js';
 import { deleteUnusedImages } from './routes/images.js';
 import { sendLowStockEmail } from './lowStockEmail.js';
@@ -78,6 +79,8 @@ const sweeper = setInterval(async () => {
   await payCashback(ctx).catch((err) => console.error(err));
   // Rewards for referring a friend whose first order was kept (referrals.js).
   await payReferrals(ctx).catch((err) => console.error(err));
+  // Store news, a batch at a time within the day's limit (newsletters.js).
+  await sendNewsletters(ctx).catch((err) => console.error(err));
 }, 60_000);
 
 // At startup (the free plan sleeps, so hourly runs may not come) and then every hour: delete uploaded photos that no

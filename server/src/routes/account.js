@@ -18,6 +18,7 @@ import { MAX_ADDRESSES, hasAddress, newAddress } from '../addressBook.js';
 import { email, newPassword, SAME_PASSWORD } from './auth.js';
 import { newRecoveryCodes, newSecret, otpauthUri, verifyCode } from '../totp.js';
 import { checkSecondStep, hasTwoStep, recoveryHashes } from '../twoStep.js';
+import { newToken } from '../newsletters.js';
 import { takeHourlySlot } from '../rateLimit.js';
 import { address } from './orders.js';
 
@@ -31,6 +32,8 @@ const emailPreferencesBody = z
     reviewReminderEmails: z.boolean().optional(),
     restockReminderEmails: z.boolean().optional(),
     nearlyGoneEmails: z.boolean().optional(),
+    // Store news (stage 140): off unless the customer asks for it.
+    newsEmails: z.boolean().optional(),
   })
   .refine((b) => Object.keys(b).length > 0, 'Say which emails to switch');
 const passwordBody = z.object({
@@ -74,6 +77,16 @@ export function accountRouter(ctx) {
   // for reviews after delivery (order emails always go). Each is sent on its own.
   router.put('/account/email-preferences', async (req, res) => {
     const choices = parse(emailPreferencesBody, req.body);
+    // Opting in to store news gives the account its unsubscribe token, once.
+    if (choices.newsEmails) {
+      await users.updateOne({ _id: req.user._id, newsToken: { $exists: false } }, { $set: { newsToken: newToken() } });
+    }
+    // Opting out also drops queued news emails.
+    if (choices.newsEmails === false) {
+      await db
+        .collection('newsletterSends')
+        .updateMany({ userId: req.user._id, status: 'pending' }, { $set: { status: 'skipped' } });
+    }
     res.json({ user: await update(req, { $set: choices }) });
   });
 

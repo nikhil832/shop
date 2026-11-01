@@ -16,6 +16,7 @@ import AdminLayout, { ADMIN_TABS } from './AdminLayout.jsx';
 import AdminStaff from './AdminStaff.jsx';
 import AdminSales from './AdminSales.jsx';
 import AdminAnnouncements from './AdminAnnouncements.jsx';
+import AdminNews from './AdminNews.jsx';
 import AdminCustomers from './AdminCustomers.jsx';
 import AdminCustomer from './AdminCustomer.jsx';
 import AdminSearches from './AdminSearches.jsx';
@@ -85,6 +86,7 @@ export default function AdminRoutes() {
         <Route path="staff" element={<AdminStaff />} />
         <Route path="sales" element={<AdminSales />} />
         <Route path="announcements" element={<AdminAnnouncements />} />
+        <Route path="news" element={<AdminNews />} />
         <Route path="customers" element={<AdminCustomers />} />
         <Route path="customers/:id" element={<AdminCustomer />} />
         <Route path="searches" element={<AdminSearches />} />

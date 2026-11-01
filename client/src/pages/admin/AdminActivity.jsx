@@ -19,6 +19,7 @@ const AREAS = {
   help: 'Help requests',
   sales: 'Sales',
   announcements: 'Announcements',
+  news: 'Store news',
   giftCards: 'Gift cards',
   bundles: 'Bundles',
   collections: 'Collections',

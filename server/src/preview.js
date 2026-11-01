@@ -126,6 +126,8 @@ export const PRIVATE_PATHS = [
   '/forgot-password',
   '/reset-password',
   '/confirm-email',
+  // Store news unsubscribe links (stage 140): one person's.
+  '/unsubscribe',
   // Any mix of products (stage 73): endless addresses with nothing new on them.
   '/compare',
   '/api/',

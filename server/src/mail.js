@@ -10,7 +10,8 @@ export function mailClient(config) {
   const { apiKey, from, fromName, apiUrl } = config;
   return {
     enabled: true,
-    async send({ to, subject, html, text }) {
+    // `headers` (stage 140): extra headers, e.g. List-Unsubscribe on store news.
+    async send({ to, subject, html, text, headers }) {
       const res = await fetch(`${apiUrl}/v3/smtp/email`, {
         method: 'POST',
         headers: { 'api-key': apiKey, 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -20,6 +21,7 @@ export function mailClient(config) {
           subject,
           htmlContent: html,
           textContent: text,
+          ...(headers && { headers }),
         }),
         signal: AbortSignal.timeout(10_000),
       });

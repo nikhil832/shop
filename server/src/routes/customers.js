@@ -162,6 +162,7 @@ export function customersRouter(ctx) {
           reviewReminders: user.reviewReminderEmails !== false,
           restockReminders: user.restockReminderEmails !== false,
           nearlyGone: user.nearlyGoneEmails !== false,
+          storeNews: user.newsEmails === true,
         },
       },
       totals: {

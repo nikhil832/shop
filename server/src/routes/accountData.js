@@ -44,6 +44,8 @@ const OWN = [
   'helpRequests',
   'sessions',
   'restockReminders',
+  // Store news's queue (stage 140).
+  'newsletterSends',
   // Store credit's history; the balance goes with the account (closing gives up any credit left).
   'creditLedger',
 ];
@@ -120,6 +122,7 @@ export function accountDataRouter(ctx) {
           reviewReminders: u.reviewReminderEmails !== false,
           restockReminders: u.restockReminderEmails !== false,
           nearlyGone: u.nearlyGoneEmails !== false,
+          storeNews: u.newsEmails === true,
         },
         addresses: (u.addresses ?? []).map(toAddress),
         // What the store's staff noted about this account (stage 82).

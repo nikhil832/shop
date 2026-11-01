@@ -1472,3 +1472,31 @@ ${button('Invite more friends', url)}`,
   );
   return { subject, text, html };
 }
+
+// Store news (stage 140, newsletters.js): the admin's text (a blank line starts a paragraph), an optional button to a
+// store page, and the unsubscribe link, which also goes in the List-Unsubscribe header.
+export function newsEmail(user, letter, unsubscribeUrl, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = user.name.split(/\s+/)[0];
+  const paragraphs = letter.body
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const linkUrl = letter.link ? `${publicUrl}${letter.link}` : null;
+  const linkText = letter.linkText || 'Shop now';
+  const text = [
+    `Hi ${firstName},`,
+    ...paragraphs,
+    ...(linkUrl ? [`${linkText}: ${linkUrl}`] : []),
+    `You're getting this because you asked for store news. Unsubscribe: ${unsubscribeUrl}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const html = layout(
+    letter.subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+${paragraphs.map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join('\n')}
+${linkUrl ? button(linkText, linkUrl) : ''}
+<p style="font-size:12px;color:#6b7280">Don't want these? <a href="${escapeHtml(unsubscribeUrl)}" style="color:#6b7280">Unsubscribe from store news</a>.</p>`,
+    "You're getting this because you asked for store news on your account.",
+  );
+  return { subject: letter.subject, text, html };
+}

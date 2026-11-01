@@ -133,7 +133,12 @@ const INDEXES = {
     [{ referredBy: 1 }],
     // Shared wishlist links (stage 106).
     [{ 'wishlistShare.token': 1 }, { unique: true, partialFilterExpression: { wishlistShare: { $exists: true } } }],
+    // Store news (stage 140): unsubscribe links, and counting subscribers.
+    [{ newsToken: 1 }, { unique: true, partialFilterExpression: { newsToken: { $exists: true } } }],
+    [{ newsEmails: 1 }],
   ],
+  // Store news's queue (stage 140, newsletters.js): one per subscriber per email, worked through oldest first.
+  newsletterSends: [[{ newsletterId: 1, userId: 1 }, { unique: true }], [{ status: 1, _id: 1 }], [{ userId: 1 }]],
   // MongoDB deletes sessions once expiresAt has passed.
   sessions: [
     [{ tokenHash: 1 }, { unique: true }],
