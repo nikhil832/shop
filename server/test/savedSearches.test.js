@@ -21,7 +21,8 @@ const HOUR = 3_600_000;
 const products = () => t.db.collection('products');
 // A new product like an existing one (a copy with its own id, slug and title), added `at`.
 async function addLike(slug, changes = {}, at = new Date()) {
-  const { _id, ...source } = await products().findOne({ slug });
+  const source = await products().findOne({ slug });
+  // Its own id replaces the copied one.
   const doc = { ...source, _id: new ObjectId(), createdAt: at, ...changes };
   await products().insertOne(doc);
   return doc;
