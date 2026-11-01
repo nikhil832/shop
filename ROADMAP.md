@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-11-01 (ninth list), roughly in the order they'd help most. All free (no new services).
 
-- **Review rewards**: a small store credit (set by the admin, e.g. ₹20) for a written review with a photo, paid once
-  the review has been screened and stays shown for a few days. More photo reviews, which help others buy. To start:
-  "start review rewards".
 - **Click and collect**: if you have a shop or warehouse customers can visit, a "Pick up from …" choice at checkout
   with no delivery charge, a pickup code in the email and a "Ready for pickup" step for admins. Only useful with a
   place to collect from. To start: "start click and collect".
@@ -176,3 +173,4 @@ Suggested on 2026-11-01 (ninth list), roughly in the order they'd help most. All
 | Price alerts: "email me at ₹X or less" on wishlist items                                                                                                                                | Stage 142 (`git log --grep "Stage 142"`) |
 | Store news for a group: a loyalty level, a customer tag or buyers from a category                                                                                                       | Stage 143 (`git log --grep "Stage 143"`) |
 | Saved searches: email about new arrivals that match a saved search                                                                                                                      | Stage 144 (`git log --grep "Stage 144"`) |
+| Review rewards: store credit for a review with a photo and some words                                                                                                                   | Stage 145 (`git log --grep "Stage 145"`) |

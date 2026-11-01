@@ -25,6 +25,8 @@ export const REASONS = {
   gift_card: 'Gift card redeemed',
   cashback: 'Cashback',
   referral: 'Referred a friend',
+  // Stage 145 (reviewRewards.js).
+  review: 'Reward for a review',
 };
 export const MAX_GRANT = 1_000_000; // ₹10,000 per goodwill change
 const PAGE = 50;

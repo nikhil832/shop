@@ -5208,3 +5208,24 @@ textarea {
 .saved-searches li:last-child {
   border-bottom: 0;
 }
+
+/* ---- Review rewards (stage 145) ---- */
+.reward-note {
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px dashed var(--success);
+  border-radius: 8px;
+  color: var(--success);
+}
+.review-rewards {
+  margin-bottom: 16px;
+}
+.review-rewards summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.review-rewards form {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}

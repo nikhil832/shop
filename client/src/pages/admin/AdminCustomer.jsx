@@ -26,6 +26,7 @@ const CREDIT_REASONS = {
   gift_card: 'Gift card redeemed',
   cashback: 'Cashback',
   referral: 'Referred a friend',
+  review: 'Reward for a review',
 };
 
 // Tags (stage 82): ticked boxes, saved as soon as one changes.

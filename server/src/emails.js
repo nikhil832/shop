@@ -1607,3 +1607,23 @@ ${g.products.map((p) => `<tr><td style="${cell}"><a href="${escapeHtml(`${public
   );
   return { subject, text, html };
 }
+
+// Store credit for a review with a photo (stage 145, reviewRewards.js).
+export function reviewRewardEmail(user, productTitle, amount, balance, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = user.name.split(/\s+/)[0];
+  const subject = `${rupees(amount)} store credit for your review`;
+  const url = `${publicUrl}/account#credit`;
+  const lines = [
+    `Thank you for reviewing ${productTitle} with a photo: it helps other shoppers decide. ${rupees(amount)} is now in your account as store credit.`,
+    `You have ${rupees(balance)} to use at checkout. It doesn't expire.`,
+  ];
+  const text = [`Hi ${firstName},`, ...lines, `See it in your account: ${url}`, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+${button('See my store credit', url)}`,
+    "You're getting this because you reviewed a product on Bazaar.",
+  );
+  return { subject, text, html };
+}

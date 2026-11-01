@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { request } from '../api.js';
-import { formatDate } from '../format.js';
+import { formatDate, formatPrice } from '../format.js';
 import { uploadReviewPhoto } from '../photos.js';
 import { FIT_LABELS, hasSizes } from '../sizeFit.js';
 import { useFetch } from '../useFetch.js';
@@ -64,6 +64,18 @@ function PhotoPicker({ photos, onChange }) {
 }
 
 // `sized`: the product has sizes, so the form asks how it fits (stage 137).
+// "Add a photo and a few words…" while review rewards are on (stage 145).
+function RewardNote() {
+  const { data } = useFetch('/review-rewards');
+  if (!data) return null;
+  return (
+    <p className="reward-note small">
+      Add a photo{data.minChars > 0 && ` and at least ${data.minChars} characters`} to get {formatPrice(data.amount)} of
+      store credit, a few days after your review goes up.
+    </p>
+  );
+}
+
 function ReviewForm({ slug, sized, review, onSaved, onCancel }) {
   const [stars, setStars] = useState(review?.rating ?? 0);
   const [fit, setFit] = useState(review?.fit ?? '');
@@ -139,6 +151,8 @@ function ReviewForm({ slug, sized, review, onSaved, onCancel }) {
         <textarea name="body" rows={4} maxLength={2000} defaultValue={review?.body} />
       </label>
       <PhotoPicker photos={photos} onChange={setPhotos} />
+      {/* Review rewards (stage 145), while the store gives them; never for an edit of an already-posted review. */}
+      {!review && <RewardNote />}
       {state.error && (
         <p className="error" role="alert">
           {state.error}

@@ -55,6 +55,7 @@ import { dispatchRouter } from './dispatch.js';
 import { newsletterRouter } from './newsletters.js';
 import { birthdayRouter } from './birthdays.js';
 import { savedSearchRouter } from './savedSearches.js';
+import { reviewRewardRouter } from './reviewRewards.js';
 import { faqRouter } from './faq.js';
 import { loyaltyRouter } from './routes/loyalty.js';
 import { purchaseOrdersRouter } from './purchaseOrders.js';
@@ -99,6 +100,7 @@ export function createApp(ctx) {
   api.use(newsletterRouter(ctx));
   api.use(birthdayRouter(ctx));
   api.use(savedSearchRouter(ctx));
+  api.use(reviewRewardRouter(ctx));
   api.use(paymentsRouter(ctx));
   api.use(imagesRouter(ctx));
   api.use(reviewsRouter(ctx));

@@ -5,7 +5,7 @@ import Pager from '../../components/Pager.jsx';
 import Stars from '../../components/Stars.jsx';
 import { ReviewPhotos } from '../../components/Reviews.jsx';
 import ScreeningFlag from '../../components/ScreeningFlag.jsx';
-import { formatDate } from '../../format.js';
+import { formatDate, formatPrice } from '../../format.js';
 import { useFetch } from '../../useFetch.js';
 
 const FILTERS = [
@@ -45,6 +45,78 @@ function ReviewSummariesSwitch() {
       </p>
       {state.error && <p className="error small">{state.error}</p>}
     </>
+  );
+}
+
+// Review rewards (stage 145): store credit for a review with a photo and some words, once it has been shown a few
+// days. Off until switched on; only reviews written from then count.
+function ReviewRewards() {
+  const [version, setVersion] = useState(0);
+  const { data } = useFetch('/admin/review-rewards', version);
+  const [state, setState] = useState({ busy: false, error: null, done: null });
+  if (!data) return null;
+  async function save(e) {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.currentTarget));
+    setState({ busy: true, error: null, done: null });
+    try {
+      await request('/admin/review-rewards', {
+        method: 'PUT',
+        body: {
+          enabled: f.enabled === 'on',
+          amount: Math.round(Number(f.amount) * 100),
+          minChars: Number(f.minChars),
+          monthlyCap: Number(f.monthlyCap),
+        },
+      });
+      setState({ busy: false, error: null, done: 'Saved.' });
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setState({ busy: false, error: err.message, done: null });
+    }
+  }
+  return (
+    <details className="panel review-rewards">
+      <summary>Review rewards: {data.enabled ? `on, ${formatPrice(data.amount)} a review` : 'off'}</summary>
+      <form key={JSON.stringify(data)} onSubmit={save} aria-labelledby="review-rewards-heading">
+        <h2 id="review-rewards-heading" className="sr-only">
+          Review rewards
+        </h2>
+        <p className="muted small">
+          Store credit for a review with at least one photo and some words, paid once it has been shown for 3 days (and,
+          when screening is on, wasn&apos;t flagged). Once per customer and product; only reviews written after you
+          switch it on count. Paid so far: {formatPrice(data.paid.total)} for {data.paid.count}{' '}
+          {data.paid.count === 1 ? 'review' : 'reviews'}.
+        </p>
+        <label className="check">
+          <input name="enabled" type="checkbox" defaultChecked={data.enabled} />
+          Give review rewards
+        </label>
+        <div className="address-grid">
+          <label>
+            Credit per review (₹)
+            <input name="amount" type="number" min="1" max="500" step="1" required defaultValue={data.amount / 100} />
+          </label>
+          <label>
+            At least this many characters
+            <input name="minChars" type="number" min="0" max="1000" step="1" required defaultValue={data.minChars} />
+          </label>
+          <label>
+            Most rewards per customer a month
+            <input name="monthlyCap" type="number" min="1" max="50" step="1" required defaultValue={data.monthlyCap} />
+          </label>
+        </div>
+        {state.error && (
+          <p className="error" role="alert">
+            {state.error}
+          </p>
+        )}
+        {state.done && <p role="status">{state.done}</p>}
+        <button type="submit" className="btn primary" disabled={state.busy}>
+          Save review rewards
+        </button>
+      </form>
+    </details>
   );
 }
 
@@ -88,6 +160,7 @@ export default function AdminReviews() {
         (never hidden for you).
       </p>
       <ReviewSummariesSwitch />
+      <ReviewRewards />
 
       <div className="status-tabs" role="group" aria-label="Filter by status">
         {FILTERS.map(([value, label]) => (

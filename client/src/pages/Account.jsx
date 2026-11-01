@@ -406,6 +406,7 @@ const CREDIT_REASONS = {
   gift_card: 'Gift card redeemed',
   cashback: 'Cashback',
   referral: 'Referred a friend',
+  review: 'Reward for a review',
 };
 
 // Store credit (stage 72, #credit): the balance and every change, newest first. Shown once there is any history.

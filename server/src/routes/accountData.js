@@ -48,6 +48,8 @@ const OWN = [
   'newsletterSends',
   // Saved searches (stage 144).
   'savedSearches',
+  // Review rewards (stage 145).
+  'reviewRewards',
   // Store credit's history; the balance goes with the account (closing gives up any credit left).
   'creditLedger',
 ];

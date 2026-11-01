@@ -17,6 +17,7 @@ import { sendNearlyGoneEmails } from './nearlyGone.js';
 import { sendNewsletters } from './newsletters.js';
 import { sendBirthdayTreats } from './birthdays.js';
 import { sendSavedSearchAlerts } from './savedSearches.js';
+import { payReviewRewards } from './reviewRewards.js';
 import { sendPaymentReminders } from './paymentReminders.js';
 import { deleteUnusedImages } from './routes/images.js';
 import { sendLowStockEmail } from './lowStockEmail.js';
@@ -89,6 +90,8 @@ const sweeper = setInterval(async () => {
   await sendBirthdayTreats(ctx).catch((err) => console.error(err));
   // New arrivals for customers' saved searches, each checked at most hourly (savedSearches.js).
   await sendSavedSearchAlerts(ctx).catch((err) => console.error(err));
+  // Store credit for reviews with a photo, once they've been shown a few days (reviewRewards.js).
+  await payReviewRewards(ctx).catch((err) => console.error(err));
 }, 60_000);
 
 // At startup (the free plan sleeps, so hourly runs may not come) and then every hour: delete uploaded photos that no
