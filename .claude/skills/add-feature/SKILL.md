@@ -64,8 +64,10 @@ Design notes from the planned stages (all now built; see `CLAUDE.md` for how eac
   - `<input type="number">` has role `spinbutton`; use `getByLabel`.
 - Run everything:
   ```bash
-  npm run lint && npx prettier --check . && npm test && npm run test:e2e
+  npm run lint && npx prettier --check . && npm run test:all
   ```
+  `test:all` runs the API and browser suites side by side (each in its own block of output); they use separate
+  databases and ports. Check lint's exit status, not just its last line: a lint error once reached CI that way.
   Then use the **run-store** skill to look at the change in demo mode, at desktop and phone width.
 - Never run tests or experiments against Atlas. The demo and test servers set `MONGODB_URI` themselves, and environment variables take precedence over `server/.env`.
 

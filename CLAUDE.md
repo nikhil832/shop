@@ -11,6 +11,7 @@ npm run demo           # API on :4000 against an in-memory MongoDB with sample d
 npm run dev            # same, but against MONGODB_URI from server/.env (Atlas)
 npm test               # server API tests (node:test, test/**/*.test.js)
 npm run test:e2e       # Playwright browser tests (e2e/)
+npm run test:all       # both at once (concurrently --group): about 7½ min instead of 10½ one after the other
 npm run lint           # ESLint
 npm run format:check   # Prettier check; CI fails on unformatted files
 npm run seed           # load the sample catalog into MONGODB_URI (skips if products exist; -- --force replaces)

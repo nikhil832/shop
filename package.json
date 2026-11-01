@@ -17,6 +17,7 @@
     "start": "npm start -w server",
     "test": "npm test -w server",
     "test:e2e": "playwright test",
+    "test:all": "concurrently --group -n api,e2e -c blue,magenta \"npm test\" \"npm run test:e2e\"",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
