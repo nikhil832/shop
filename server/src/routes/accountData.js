@@ -124,6 +124,8 @@ export function accountDataRouter(ctx) {
           nearlyGone: u.nearlyGoneEmails !== false,
           storeNews: u.newsEmails === true,
         },
+        // Stage 141: day and month only.
+        birthday: u.birthday ?? null,
         addresses: (u.addresses ?? []).map(toAddress),
         // What the store's staff noted about this account (stage 82).
         storeTags: u.tags ?? [],

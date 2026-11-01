@@ -136,6 +136,8 @@ const INDEXES = {
     // Store news (stage 140): unsubscribe links, and counting subscribers.
     [{ newsToken: 1 }, { unique: true, partialFilterExpression: { newsToken: { $exists: true } } }],
     [{ newsEmails: 1 }],
+    // Birthday treats (stage 141): today's birthdays.
+    [{ 'birthday.month': 1, 'birthday.day': 1 }],
   ],
   // Store news's queue (stage 140, newsletters.js): one per subscriber per email, worked through oldest first.
   newsletterSends: [[{ newsletterId: 1, userId: 1 }, { unique: true }], [{ status: 1, _id: 1 }], [{ userId: 1 }]],

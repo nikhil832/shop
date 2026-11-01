@@ -35,6 +35,99 @@ function Feedback({ state }) {
   return state.done && <p role="status">{state.done}</p>;
 }
 
+// Birthday (stage 141, #birthday): day and month only. When the store gives birthday treats, a coupon comes by email
+// on the day (from a month after it's saved).
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+function Birthday({ user, setUser }) {
+  const { data: treat } = useFetch('/birthday-treat');
+  const [state, setState] = useState({ busy: false, error: null, done: null });
+  async function save(birthday, done) {
+    setState({ busy: true, error: null, done: null });
+    try {
+      setUser((await request('/account/birthday', { method: 'PUT', body: { birthday } })).user);
+      setState({ busy: false, error: null, done });
+    } catch (err) {
+      setState({ busy: false, error: err.message, done: null });
+    }
+  }
+  function submit(e) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    save({ month: Number(f.get('month')), day: Number(f.get('day')) }, 'Birthday saved.');
+  }
+  const b = user.birthday;
+  return (
+    <form
+      key={b ? `${b.month}-${b.day}` : 'none'}
+      className="panel account-section"
+      id="birthday"
+      onSubmit={submit}
+      aria-labelledby="birthday-heading"
+    >
+      <h2 id="birthday-heading">Your birthday</h2>
+      <p className="muted small">
+        Optional, day and month only.
+        {treat &&
+          ` On your birthday we'll email you ${formatPrice(treat.amount)} off${
+            treat.minOrder ? ` an order of ${formatPrice(treat.minOrder)} or more` : ''
+          }. A newly saved or changed date counts from a month later.`}
+      </p>
+      <div className="form-row">
+        <label>
+          Day
+          <select name="day" required defaultValue={b?.day ?? ''}>
+            <option value="" disabled>
+              Day
+            </option>
+            {Array.from({ length: 31 }, (_, i) => (
+              <option key={i + 1} value={i + 1}>
+                {i + 1}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Month
+          <select name="month" required defaultValue={b?.month ?? ''}>
+            <option value="" disabled>
+              Month
+            </option>
+            {MONTHS.map((m, i) => (
+              <option key={m} value={i + 1}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <Feedback state={state} />
+      <div className="form-actions">
+        <button type="submit" className="btn primary" disabled={state.busy}>
+          Save birthday
+        </button>
+        {b && (
+          <button type="button" className="btn" disabled={state.busy} onClick={() => save(null, 'Birthday removed.')}>
+            Remove birthday
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}
+
 // The address book: each saved address with Edit, Make default and Remove, and a form to add one. One form is open
 // at a time (`editing`: an address id, 'new' or null); the inputs are uncontrolled, filled from the address.
 function AddressBook({ user, setUser }) {
@@ -601,6 +694,7 @@ export default function Account() {
 
       <StoreCredit user={user} />
       <LoyaltyLevel />
+      <Birthday user={user} setUser={setUser} />
       <ReferFriend />
       <TwoStepSection />
       <YourData

@@ -18,6 +18,7 @@ test('registers, stays logged in with the cookie, and logs out', async () => {
   assert.deepEqual(Object.keys(res.body.user).sort(), [
     'address',
     'addresses',
+    'birthday',
     'cartReminderEmails',
     'credit',
     'email',

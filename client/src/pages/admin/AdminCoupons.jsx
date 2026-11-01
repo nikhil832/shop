@@ -92,6 +92,72 @@ function Cashback() {
   );
 }
 
+// Birthday treat (stage 141): a one-use coupon of their own, emailed to customers on their birthday. Off until on.
+function BirthdayTreat() {
+  const [version, setVersion] = useState(0);
+  const { data } = useFetch('/admin/birthday', version);
+  const [state, setState] = useState({ busy: false, error: null, done: null });
+  if (!data) return null;
+  async function save(e) {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.currentTarget));
+    setState({ busy: true, error: null, done: null });
+    try {
+      await request('/admin/birthday', {
+        method: 'PUT',
+        body: {
+          enabled: f.enabled === 'on',
+          amount: Math.round(Number(f.amount) * 100),
+          minOrder: Math.round(Number(f.minOrder) * 100),
+          validDays: Number(f.validDays),
+        },
+      });
+      setState({ busy: false, error: null, done: 'Saved.' });
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setState({ busy: false, error: err.message, done: null });
+    }
+  }
+  return (
+    <form key={JSON.stringify(data)} className="panel" onSubmit={save} aria-labelledby="birthday-heading">
+      <h2 id="birthday-heading">Birthday treat</h2>
+      <p className="muted small">
+        Customers who saved their birthday on their account get an amount off by email on the day: a code of their own
+        that works once. A newly saved or changed birthday counts from a month later, and nobody gets more than one a
+        year. {data.withBirthday} {data.withBirthday === 1 ? 'customer has' : 'customers have'} saved a birthday; in the
+        last year {data.lastYear.sent} sent, {data.lastYear.used} used.
+      </p>
+      <label className="check">
+        <input name="enabled" type="checkbox" defaultChecked={data.enabled} />
+        Give birthday treats
+      </label>
+      <div className="address-grid">
+        <label>
+          Amount off (₹)
+          <input name="amount" type="number" min="1" step="1" required defaultValue={data.amount / 100} />
+        </label>
+        <label>
+          On orders from (₹)
+          <input name="minOrder" type="number" min="0" step="1" required defaultValue={data.minOrder / 100} />
+        </label>
+        <label>
+          Valid for (days)
+          <input name="validDays" type="number" min="1" max="60" step="1" required defaultValue={data.validDays} />
+        </label>
+      </div>
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
+      {state.done && <p role="status">{state.done}</p>}
+      <button type="submit" className="btn primary" disabled={state.busy}>
+        Save birthday treat
+      </button>
+    </form>
+  );
+}
+
 // Loyalty levels (stage 134): Silver and Gold by a year's spending on delivered orders, each with its own
 // free-delivery minimum and, since stage 136, extra cashback. Off until switched on.
 function Loyalty() {
@@ -436,6 +502,7 @@ export default function AdminCoupons() {
       <Cashback />
       <Loyalty />
       <Referrals />
+      <BirthdayTreat />
     </div>
   );
 }

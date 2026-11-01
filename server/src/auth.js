@@ -195,6 +195,8 @@ export const toUser = (doc) => ({
   nearlyGoneEmails: doc.nearlyGoneEmails !== false,
   // Store news (stage 140): only when asked for.
   newsEmails: doc.newsEmails === true,
+  // Birthday (stage 141): { month, day } or null.
+  birthday: doc.birthday ?? null,
   // Store credit in paise (credit.js), spent at checkout.
   credit: doc.credit ?? 0,
   // False for an account made at checkout (stage 84) until a password is set from the emailed link.

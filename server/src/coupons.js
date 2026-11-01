@@ -24,7 +24,9 @@ export const couponCode = z
 // and returns { coupon, discount }, or throws a 409 saying why not. Pass `session` inside a transaction.
 export async function couponDiscount(db, code, { subtotal, delivery, userId, session }) {
   const coupon = await db.collection('coupons').findOne({ code: code.trim().toUpperCase() }, { session });
-  if (!coupon || !coupon.active) throw new HttpError(409, "This coupon code isn't valid");
+  // A coupon of one customer's own (a birthday treat, stage 141) reads as unknown to everyone else.
+  const notTheirs = coupon?.forUserId && !(userId && coupon.forUserId.equals(userId));
+  if (!coupon || !coupon.active || notTheirs) throw new HttpError(409, "This coupon code isn't valid");
   if (coupon.expiresAt && coupon.expiresAt <= new Date()) throw new HttpError(409, 'This coupon has expired');
   if (coupon.usageLimit != null && coupon.usedCount >= coupon.usageLimit) {
     throw new HttpError(409, 'This coupon has been fully used');
@@ -151,7 +153,12 @@ export function couponsRouter({ db }) {
   router.use('/admin/coupons', requireAdmin);
 
   router.get('/admin/coupons', async (req, res) => {
-    const docs = await coupons.find().sort({ createdAt: -1, _id: -1 }).limit(500).toArray();
+    // Customers' own birthday coupons (stage 141) aren't listed: the birthday treat's form counts them.
+    const docs = await coupons
+      .find({ kind: { $exists: false } })
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(500)
+      .toArray();
     res.json(docs.map(toCoupon));
   });
 

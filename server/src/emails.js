@@ -1500,3 +1500,31 @@ ${linkUrl ? button(linkText, linkUrl) : ''}
   );
   return { subject: letter.subject, text, html };
 }
+
+// A customer's birthday coupon (stage 141, birthdays.js): their own code, its amount, minimum order and last day.
+export function birthdayEmail(user, coupon, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = user.name.split(/\s+/)[0];
+  const subject = `Happy birthday, ${firstName}! ${rupees(coupon.value)} off from us`;
+  const lastDay = new Date(coupon.expiresAt.getTime() - 1).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'Asia/Kolkata',
+  });
+  const lines = [
+    `Happy birthday from all of us at Bazaar! Here's ${rupees(coupon.value)} off your next order${
+      coupon.minSubtotal ? ` of ${rupees(coupon.minSubtotal)} or more` : ''
+    }.`,
+    `Use the code ${coupon.code} at checkout by ${lastDay}. It's yours alone and works once.`,
+  ];
+  const url = `${publicUrl}/`;
+  const text = [`Hi ${firstName},`, ...lines, `Start shopping: ${url}`, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+${lines.map((l) => `<p>${escapeHtml(l)}</p>`).join('\n')}
+<p style="font-size:22px;font-weight:bold;letter-spacing:2px">${escapeHtml(coupon.code)}</p>
+${button('Start shopping', url)}`,
+    "You're getting this because you saved your birthday on your account. Remove it there to stop these.",
+  );
+  return { subject, text, html };
+}

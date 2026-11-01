@@ -7,10 +7,7 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Suggested on 2026-11-01 (eighth list), roughly in the order they'd help most. All free (no new services).
-
-- **Birthday treat**: customers may add a birthday (day and month only) on the account page and get a one-use coupon
-  by email that week, set up by the admin (amount, minimum order, on or off). To start: "start birthday treat".
+All five of the eighth list (2026-11-01) are built. Ask for new ideas ("new ideas") to fill this list again.
 
 ## Set aside
 
@@ -168,3 +165,4 @@ Suggested on 2026-11-01 (eighth list), roughly in the order they'd help most. Al
 | Filter by specification: RAM, Storage and the like as search filters with counts                                                                                                        | Stage 138 (`git log --grep "Stage 138"`) |
 | Ship-today countdown: "Order within 2 h 15 min to ship today" from a dispatch cut-off                                                                                                   | Stage 139 (`git log --grep "Stage 139"`) |
 | Store news emails: opt-in news from the admin, with unsubscribe links and a daily limit                                                                                                 | Stage 140 (`git log --grep "Stage 140"`) |
+| Birthday treat: a one-use coupon of their own on customers' birthdays                                                                                                                   | Stage 141 (`git log --grep "Stage 141"`) |
