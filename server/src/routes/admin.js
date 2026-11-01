@@ -107,6 +107,8 @@ const variantFields = z.object({
   // Left out: keeps the variant's SKU and barcode (stage 120).
   sku: skuField.optional(),
   barcode: barcodeField.optional(),
+  // Left out: keeps the option's own low-stock level (stage 135); null: the product's.
+  lowStockAt: lowStockAtField.optional(),
   // Some of the product's photos, shown when this variant is chosen; none means all of them.
   images: z.array(imageRef).max(5).default([]),
 });
@@ -212,6 +214,7 @@ function storedVariants(variants, current = []) {
     cost: v.cost !== undefined ? v.cost : (known.get(v.id)?.cost ?? null),
     sku: v.sku !== undefined ? v.sku : (known.get(v.id)?.sku ?? null),
     barcode: v.barcode !== undefined ? v.barcode : (known.get(v.id)?.barcode ?? null),
+    lowStockAt: v.lowStockAt !== undefined ? v.lowStockAt : (known.get(v.id)?.lowStockAt ?? null),
     images: v.images,
   }));
   return { variants: list, ...variantTotals(list) };
@@ -337,6 +340,7 @@ const toAdminProduct = (doc) => ({
     cost: v.cost ?? null,
     sku: v.sku ?? null,
     barcode: v.barcode ?? null,
+    lowStockAt: v.lowStockAt ?? null,
   })),
   updatedAt: doc.updatedAt,
 });

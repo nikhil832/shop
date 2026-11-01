@@ -147,6 +147,8 @@ const newRow = (v = {}) => ({
   // The store's code and the maker's barcode (stage 120); empty: none.
   sku: v.sku ?? '',
   barcode: v.barcode ?? '',
+  // Its own low-stock level (stage 135); empty: the product's.
+  lowStockAt: v.lowStockAt ?? '',
   images: v.images ?? [],
 });
 const MAX_VARIANTS = 40;
@@ -235,6 +237,7 @@ function Variants({ names, onNames, rows, photos, onChange }) {
               <th>Stock</th>
               <th>SKU</th>
               <th>Barcode</th>
+              <th>Low at</th>
               {photos.length > 0 && <th>Photos</th>}
               <th>
                 <span className="sr-only">Remove</span>
@@ -317,6 +320,18 @@ function Variants({ names, onNames, rows, photos, onChange }) {
                     value={r.barcode}
                     onChange={(e) => set(r.key, 'barcode', e.target.value)}
                     aria-label={`Barcode of variant ${i + 1}`}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="0"
+                    max="1000"
+                    step="1"
+                    value={r.lowStockAt}
+                    onChange={(e) => set(r.key, 'lowStockAt', e.target.value)}
+                    placeholder="—"
+                    aria-label={`Low-stock level of variant ${i + 1}`}
                   />
                 </td>
                 {photos.length > 0 && (
@@ -594,6 +609,7 @@ function ProductForm({ product, categories }) {
               stock: Number(v.stock),
               sku: v.sku.trim() || null,
               barcode: v.barcode.trim() || null,
+              lowStockAt: v.lowStockAt === '' ? null : Number(v.lowStockAt),
               // Only photos the product still has, in the product's order.
               images: images.filter((src) => v.images.includes(src)),
             })),
@@ -815,8 +831,8 @@ function ProductForm({ product, categories }) {
             aria-describedby="low-level-help"
           />
           <span id="low-level-help" className="muted small">
-            Shown as low on the dashboard and in the morning email at this many or fewer (for any size or colour too).
-            Empty: 5.
+            Shown as low on the dashboard and in the morning email at this many or fewer (for any size or colour too,
+            unless it has its own number under Low at). Empty: 5.
           </span>
         </label>
         {guides?.items.length > 0 && (

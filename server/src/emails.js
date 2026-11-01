@@ -696,7 +696,7 @@ export function lowStockEmail(products, total, publicUrl = DEFAULT_PUBLIC_URL, s
     title: p.title,
     detail: [
       ...(p.lowAt !== undefined && p.lowAt !== LOW_STOCK ? [`low at ${p.lowAt}`] : []),
-      ...p.variants.map((v) => `${v.label}: ${left(v.stock)}`),
+      ...p.variants.map((v) => `${v.label}: ${left(v.stock)}${v.lowAt !== undefined ? ` (low at ${v.lowAt})` : ''}`),
     ].join(' · '),
     left: left(p.stock),
   }));

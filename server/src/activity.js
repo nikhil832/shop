@@ -106,6 +106,8 @@ export function productChanges(before, after, categoryName) {
   // Low-stock level (stage 131).
   const level = (doc) => ((doc.lowStockAt ?? null) === null ? 'the default' : String(doc.lowStockAt));
   push(changes, 'Low-stock level', level(before), level(after));
+  // An option's own level (stage 135); none: the product's.
+  const optionLevel = (v) => ((v.lowStockAt ?? null) === null ? "the product's" : String(v.lowStockAt));
   // Video (stage 118), as its YouTube link.
   push(changes, 'Video', watchUrl(before.video) ?? 'none', watchUrl(after.video) ?? 'none');
   // "Goes well with" (stage 114): ids only, so the count.
@@ -146,6 +148,7 @@ export function productChanges(before, after, categoryName) {
     push(changes, `${v.label}: cost`, costText(old.cost), costText(v.cost));
     push(changes, `${v.label}: SKU`, old.sku ?? '(none)', v.sku ?? '(none)');
     push(changes, `${v.label}: barcode`, old.barcode ?? '(none)', v.barcode ?? '(none)');
+    push(changes, `${v.label}: low-stock level`, optionLevel(old), optionLevel(v));
   }
   for (const v of byId.values()) changes.push({ field: v.label, to: 'removed' });
   return changes;

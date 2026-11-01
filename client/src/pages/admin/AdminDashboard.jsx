@@ -796,7 +796,10 @@ export default function AdminDashboard() {
                             {p.variants.length > 0 && (
                               <span className="muted small block">
                                 {p.variants
-                                  .map((v) => `${v.label}: ${v.stock === 0 ? 'sold out' : `${v.stock} left`}`)
+                                  .map(
+                                    (v) =>
+                                      `${v.label}: ${v.stock === 0 ? 'sold out' : `${v.stock} left`}${v.lowAt !== undefined ? ` (low at ${v.lowAt})` : ''}`,
+                                  )
                                   .join(' · ')}
                               </span>
                             )}

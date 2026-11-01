@@ -11,7 +11,7 @@ import { storageUse } from '../storage.js';
 import { runningOut } from '../reorder.js';
 import { profitFor } from '../profit.js';
 import { repeatCustomers } from '../repeatCustomers.js';
-import { LOW, levelOf } from '../lowStock.js';
+import { LOW, levelOf, variantLevelOf } from '../lowStock.js';
 
 // The `settings` document of the morning low-stock email (lowStockEmail.js): { day, at, enabled }.
 export const LOW_STOCK_EMAIL = 'lowStockEmail';
@@ -58,7 +58,10 @@ export async function lowStockProducts(db, limit) {
     stock: p.stock,
     // Its low-stock level (stage 131): its own, or LOW_STOCK.
     lowAt: levelOf(p),
-    variants: (p.variants ?? []).filter((v) => v.stock <= levelOf(p)).map((v) => ({ label: v.label, stock: v.stock })),
+    // Low options, each at or below its own level (stage 135) or the product's; `lowAt` only when it has its own.
+    variants: (p.variants ?? [])
+      .filter((v) => v.stock <= variantLevelOf(p, v))
+      .map((v) => ({ label: v.label, stock: v.stock, ...(v.lowStockAt != null && { lowAt: v.lowStockAt }) })),
   }));
 }
 
