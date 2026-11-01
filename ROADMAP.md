@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-11-01 (eighth list), roughly in the order they'd help most. All free (no new services).
 
-- **Ship-today countdown**: the admin sets a daily dispatch cut-off (e.g. 2 pm, working days only, respecting holiday
-  mode), and the product page says "Order within 2 h 15 min to ship today", or "ships tomorrow". A gentle nudge to
-  buy now. To start: "start ship-today countdown".
 - **Store news emails**: the admin writes a short email (new arrivals, a sale) and sends it to customers who opted
   in, with a one-click unsubscribe link and a switch on the account page. Brevo's free plan sends 300 emails a day,
   so larger lists go out over several days. To start: "start store news emails".
@@ -172,3 +169,4 @@ Suggested on 2026-11-01 (eighth list), roughly in the order they'd help most. Al
 | Extra cashback for loyalty levels: Silver and Gold earn an extra % back as store credit                                                                                                 | Stage 136 (`git log --grep "Stage 136"`) |
 | Size fit from reviews: "runs small / true to size / runs large", summarised on the product page                                                                                         | Stage 137 (`git log --grep "Stage 137"`) |
 | Filter by specification: RAM, Storage and the like as search filters with counts                                                                                                        | Stage 138 (`git log --grep "Stage 138"`) |
+| Ship-today countdown: "Order within 2 h 15 min to ship today" from a dispatch cut-off                                                                                                   | Stage 139 (`git log --grep "Stage 139"`) |

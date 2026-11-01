@@ -5147,3 +5147,10 @@ textarea {
   margin: 4px 0 0;
   color: var(--muted);
 }
+
+/* ---- Ship-today countdown (stage 139) ---- */
+.ships-today {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--success);
+}

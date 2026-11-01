@@ -163,6 +163,73 @@ function HolidayMode() {
   );
 }
 
+// Ship-today countdown (stage 139): orders placed before the cut-off on a working day go out that day; the product page
+// counts down to it ("Order within 2 h 15 min to ship today"). Store holidays count as days off.
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+function DispatchCutoff() {
+  const [version, setVersion] = useState(0);
+  const { data } = useFetch('/admin/dispatch', version);
+  const [state, setState] = useState({ busy: false, error: null, done: null });
+  if (!data) return null;
+
+  async function save(e) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    setState({ busy: true, error: null, done: null });
+    try {
+      await request('/admin/dispatch', {
+        method: 'PUT',
+        body: {
+          enabled: form.get('enabled') === 'on',
+          cutoff: form.get('cutoff'),
+          days: form.getAll('days').map(Number),
+        },
+      });
+      setState({ busy: false, error: null, done: 'Saved.' });
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setState({ busy: false, error: err.message, done: null });
+    }
+  }
+
+  return (
+    <form key={JSON.stringify(data)} className="panel delivery-rule" onSubmit={save} aria-labelledby="dispatch-cutoff">
+      <h2 id="dispatch-cutoff">Ship-today countdown</h2>
+      <p className="muted small">
+        Orders placed before this time (India time) on a day you send parcels go out the same day. Product pages then
+        say &ldquo;Order within 2 h 15 min to ship today&rdquo;, or when the next one goes out. Holiday days count as
+        days off.
+      </p>
+      <label className="check">
+        <input name="enabled" type="checkbox" defaultChecked={data.enabled} />
+        Show the countdown on product pages
+      </label>
+      <label>
+        Cut-off time
+        <input name="cutoff" type="time" required defaultValue={data.cutoff} />
+      </label>
+      <fieldset className="radio-group">
+        <legend>Days parcels go out</legend>
+        {[1, 2, 3, 4, 5, 6, 0].map((d) => (
+          <label key={d} className="check">
+            <input name="days" type="checkbox" value={d} defaultChecked={data.days.includes(d)} />
+            {WEEKDAYS[d]}
+          </label>
+        ))}
+      </fieldset>
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
+      {state.done && <p role="status">{state.done}</p>}
+      <button type="submit" className="btn primary" disabled={state.busy}>
+        Save the countdown
+      </button>
+    </form>
+  );
+}
+
 function GiftWrap() {
   const [version, setVersion] = useState(0);
   const { data } = useFetch('/admin/gift-wrap', version);
@@ -419,6 +486,7 @@ export default function AdminDelivery() {
         </div>
       </form>
       <HolidayMode />
+      <DispatchCutoff />
       <CodRules />
       <GiftWrap />
     </div>

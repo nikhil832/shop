@@ -10,6 +10,7 @@ import WishlistButton from '../components/WishlistButton.jsx';
 import CompareToggle from '../components/CompareToggle.jsx';
 import ShareButton from '../components/ShareButton.jsx';
 import DeliveryCheck from '../components/DeliveryCheck.jsx';
+import ShipsToday from '../components/ShipsToday.jsx';
 import BundleOffers from '../components/BundleOffers.jsx';
 import SizeGuide from '../components/SizeGuide.jsx';
 import { fitText } from '../sizeFit.js';
@@ -283,7 +284,11 @@ export default function Product() {
               Coming soon{expectedText(product.comingSoon) && ` · ${expectedText(product.comingSoon)}`}
             </p>
           ) : (
-            <p className={`stock ${stockClass(shown.stock)}`}>{stockText(shown.stock)}</p>
+            <>
+              <p className={`stock ${stockClass(shown.stock)}`}>{stockText(shown.stock)}</p>
+              {/* When it would go out (stage 139), for something that can be bought now. */}
+              {shown.stock > 0 && <ShipsToday />}
+            </>
           )}
           {/* Sold out (the whole product, or the chosen variant): ask for an email instead. Remounted when the
               saved alerts change, so its state follows the reloaded product. */}
