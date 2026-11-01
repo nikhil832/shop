@@ -293,6 +293,12 @@ const returnedBody = z.object({
 const statusBody = z.object({
   status: z.enum(['shipped', 'delivered', 'cancelled']),
   shipment: shipmentFields.optional(),
+  // Click and collect (stage 146): marking a pickup order collected needs the customer's code.
+  pickupCode: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'pickupCode: Enter the 6-digit pickup code')
+    .optional(),
 });
 // Stored only when something was entered.
 export const toShipment = (s) => (s && (s.courier || s.trackingNumber || s.trackingUrl) ? s : null);
@@ -903,15 +909,18 @@ export function adminRouter(ctx) {
 
   // Moves an order on to `status` (shipped, delivered or cancelled): the step's checks, the customer's email and the
   // activity log, for one order or several (bulk shipping). Throws HttpError 404/409 when it can't.
-  async function advanceOrder(req, _id, status, shipment) {
+  async function advanceOrder(req, _id, status, shipment, pickupCode) {
     let doc;
     if (status === 'cancelled') {
       doc = await cancelOrder(ctx, { _id }, { from: NEXT_FROM.cancelled, by: 'admin', user: req.user });
     } else {
       const now = new Date();
       // The expected current status is part of the filter, so two admins clicking at once can't skip a step.
+      // A pickup order is collected only with the customer's code (stage 146), checked in the same filter.
+      const collected =
+        status === 'delivered' ? { $or: [{ pickup: { $exists: false } }, { 'pickup.code': pickupCode ?? '' }] } : {};
       doc = await orders.findOneAndUpdate(
-        { _id, status: { $in: NEXT_FROM[status] } },
+        { _id, status: { $in: NEXT_FROM[status] }, ...collected },
         {
           $set: {
             status,
@@ -925,6 +934,14 @@ export function adminRouter(ctx) {
       if (!doc) {
         const existing = await orders.findOne({ _id });
         if (!existing) throw new HttpError(404, 'Order not found');
+        if (status === 'delivered' && existing.pickup && existing.status === 'shipped') {
+          throw new HttpError(
+            400,
+            pickupCode
+              ? "That pickup code doesn't match this order"
+              : "Enter the customer's pickup code to mark it collected",
+          );
+        }
         throw new HttpError(409, `A ${existing.status} order can't be marked ${status}`);
       }
       await sendOrderEmail(ctx, doc, status);
@@ -932,7 +949,12 @@ export function adminRouter(ctx) {
     const s = doc.shipment;
     await logActivity(db, req.user, {
       area: 'orders',
-      action: status === 'cancelled' ? 'Cancelled' : `Marked ${status}`,
+      action:
+        status === 'cancelled'
+          ? 'Cancelled'
+          : doc.pickup
+            ? `Marked ${status === 'shipped' ? 'ready for pickup' : 'collected'}`
+            : `Marked ${status}`,
       target: orderTarget(doc),
       changes: [
         ...(status === 'shipped' && s
@@ -946,12 +968,12 @@ export function adminRouter(ctx) {
 
   router.post('/admin/orders/:id/status', async (req, res) => {
     const _id = parseObjectId(req.params.id, 'order id');
-    const { status, shipment } = parse(statusBody, req.body);
+    const { status, shipment, pickupCode } = parse(statusBody, req.body);
     // Cancelling can refund money: admins only.
     if (status === 'cancelled' && !can(req.user, 'orders.manage')) {
       throw new HttpError(403, 'Only an admin can cancel an order');
     }
-    res.json((await withCustomers([await advanceOrder(req, _id, status, shipment)]))[0]);
+    res.json((await withCustomers([await advanceOrder(req, _id, status, shipment, pickupCode)]))[0]);
   });
 
   // Returned to sender: the parcel came back undelivered. A cancellation of a shipped order (stock, coupon and store

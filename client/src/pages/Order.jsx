@@ -225,7 +225,7 @@ export default function Order() {
                         : ` · cancelled ${order.cancelledBy === 'admin' ? 'by the store ' : ''}on ${formatDate(order.cancelledAt)}`)}
                 </span>
               </div>
-              <StatusBadge status={order.status} />
+              <StatusBadge status={order.status} pickup={Boolean(order.pickup)} />
             </div>
             <OrderProgress order={order} />
             <ul className="cart-lines">
@@ -339,41 +339,70 @@ export default function Order() {
               </section>
             )}
 
-          <section className="panel" aria-labelledby="address-heading">
-            <h2 id="address-heading">Delivery address</h2>
-            <address>
-              <strong>{address.name}</strong>
-              <br />
-              {address.line1}
-              {address.line2 && (
-                <>
-                  <br />
-                  {address.line2}
-                </>
+          {/* Click and collect (stage 146): where to collect, when, and the code to show. */}
+          {order.pickup && (
+            <section className="panel" aria-labelledby="pickup-heading">
+              <h2 id="pickup-heading">Pickup</h2>
+              <address>
+                <strong>{order.pickup.name}</strong>
+                <br />
+                {[address.line1, address.line2].filter(Boolean).join(', ')}
+                <br />
+                {address.city}, {address.state} {address.pincode}
+              </address>
+              <p className="small">Open {order.pickup.hours}</p>
+              {order.status !== 'cancelled' && order.status !== 'delivered' && (
+                <p className="pickup-code">
+                  Your pickup code: <strong>{order.pickup.code}</strong>
+                  <span className="muted small block">
+                    {order.status === 'shipped'
+                      ? 'It’s ready: show this code when you collect it.'
+                      : 'We’ll email you when it’s ready to collect.'}
+                  </span>
+                </p>
               )}
-              <br />
-              {address.city}, {address.state} {address.pincode}
-              <br />
-              Phone {address.phone}
-            </address>
-            {order.addressChangedAt && <p className="muted small">Changed on {formatDate(order.addressChangedAt)}</p>}
-            {/* Until it ships (stage 113), like the address. */}
-            <DeliveryInstructions
-              order={order}
-              path={`/orders/${order.id}/instructions`}
-              editable={order.status === 'placed' || order.status === 'awaiting_payment'}
-              onSaved={setUpdated}
-            />
-            {/* Until it ships (stage 90). */}
-            {(order.status === 'placed' || order.status === 'awaiting_payment') && (
-              <ChangeAddress
-                address={address}
-                save={async (body) =>
-                  setUpdated(await request(`/orders/${order.id}/address`, { method: 'POST', body }))
-                }
+              <p className="muted small">
+                Collected by {address.name}, phone {address.phone}
+              </p>
+            </section>
+          )}
+          {!order.pickup && (
+            <section className="panel" aria-labelledby="address-heading">
+              <h2 id="address-heading">Delivery address</h2>
+              <address>
+                <strong>{address.name}</strong>
+                <br />
+                {address.line1}
+                {address.line2 && (
+                  <>
+                    <br />
+                    {address.line2}
+                  </>
+                )}
+                <br />
+                {address.city}, {address.state} {address.pincode}
+                <br />
+                Phone {address.phone}
+              </address>
+              {order.addressChangedAt && <p className="muted small">Changed on {formatDate(order.addressChangedAt)}</p>}
+              {/* Until it ships (stage 113), like the address. */}
+              <DeliveryInstructions
+                order={order}
+                path={`/orders/${order.id}/instructions`}
+                editable={order.status === 'placed' || order.status === 'awaiting_payment'}
+                onSaved={setUpdated}
               />
-            )}
-          </section>
+              {/* Until it ships (stage 90). */}
+              {(order.status === 'placed' || order.status === 'awaiting_payment') && (
+                <ChangeAddress
+                  address={address}
+                  save={async (body) =>
+                    setUpdated(await request(`/orders/${order.id}/address`, { method: 'POST', body }))
+                  }
+                />
+              )}
+            </section>
+          )}
         </div>
 
         <OrderSummary

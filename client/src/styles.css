@@ -5229,3 +5229,37 @@ textarea {
   gap: 12px;
   margin-top: 12px;
 }
+
+/* ---- Click and collect (stage 146) ---- */
+.pickup-contact {
+  margin-top: 8px;
+}
+.success-text {
+  color: var(--success);
+  font-weight: 600;
+}
+.pickup-code {
+  padding: 10px 12px;
+  border: 1px dashed var(--success);
+  border-radius: 8px;
+}
+.pickup-code strong {
+  font-size: 1.3rem;
+  letter-spacing: 3px;
+}
+.pickup-collect {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+  margin-top: 8px;
+}
+.pickup-collect label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+}
+.pickup-collect input {
+  width: 9rem;
+  letter-spacing: 2px;
+}

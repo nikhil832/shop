@@ -31,9 +31,11 @@ ${content}
 </div>
 </body></html>`;
 
+const PICKUP_SUBJECTS = { shipped: 'is ready for pickup', delivered: 'collected' };
 const SUBJECTS = {
   placed: 'confirmed',
   shipped: 'has shipped',
+  // Pickup orders (stage 146) use PICKUP_SUBJECTS for these two.
   delivered: 'delivered',
   cancelled: 'cancelled',
 };
@@ -70,10 +72,24 @@ function intro(order, event) {
       ? ['Thanks for your order! It is paid in full with your store credit.']
       : online
         ? [`Thanks for your order! We've received your payment of ${rupees(due(order))}.`]
-        : [`Thanks for your order! You'll pay ${rupees(due(order))} in cash when it arrives.`];
+        : order.pickup
+          ? [`Thanks for your order! You'll pay ${rupees(due(order))} when you collect it.`]
+          : [`Thanks for your order! You'll pay ${rupees(due(order))} in cash when it arrives.`];
     if (order.deliveryEstimate) lines.push(`It should arrive ${arrival(order.deliveryEstimate)}.`);
+    // Click and collect (stage 146): where, and that a second email says when.
+    if (order.pickup) lines.push(`You'll collect it from ${order.pickup.name}. We'll email you when it's ready.`);
     return lines;
   }
+  // A pickup order (stage 146): "shipped" means ready at the pickup point, "delivered" collected.
+  if (event === 'shipped' && order.pickup) {
+    const { line1, line2, city, pincode } = order.address;
+    return [
+      `Good news: your order is ready for pickup at ${order.pickup.name}, ${[line1, line2, city, pincode].filter(Boolean).join(', ')}.`,
+      `Opening hours: ${order.pickup.hours}.`,
+      `Your pickup code is ${order.pickup.code}. Show it when you collect, with this order's number.`,
+    ];
+  }
+  if (event === 'delivered' && order.pickup) return ['You collected your order. We hope you like it!'];
   if (event === 'shipped') {
     const { courier, trackingNumber } = order.shipment ?? {};
     return [
@@ -107,7 +123,7 @@ function intro(order, event) {
 // Builds { subject, text, html } for an order email. `user` is { name }; links point at `publicUrl`.
 // `setPasswordUrl` (stage 84): for an account made at checkout, the link to give it a password.
 export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL, { setPasswordUrl = null } = {}) {
-  const subject = `Order #${orderNumber(order)} ${SUBJECTS[event]}`;
+  const subject = `Order #${orderNumber(order)} ${(order.pickup && PICKUP_SUBJECTS[event]) || SUBJECTS[event]}`;
   const firstName = user.name.split(/\s+/)[0];
   const orderUrl = `${publicUrl}/orders/${order._id}`;
   // The courier's own tracking page, when the admin pasted one.

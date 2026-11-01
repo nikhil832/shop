@@ -27,6 +27,9 @@ async function changeAddress(db, filter, next, user, role) {
   const orders = db.collection('orders');
   const order = await orders.findOne(filter);
   if (!order) throw new HttpError(404, 'Order not found');
+  // A pickup order (stage 146) has the pickup point's address, not one to change.
+  if (order.pickup)
+    throw new HttpError(409, 'This order is collected from a pickup point, so it has no address to change');
   if (!CHANGEABLE.includes(order.status)) {
     throw new HttpError(409, `The address can only be changed before the order ships; this one is ${order.status}`);
   }

@@ -230,6 +230,131 @@ function DispatchCutoff() {
   );
 }
 
+// Click and collect (stage 146): places customers can collect orders from, free. Shown at checkout while active (at
+// most five at once). Each order's pickup code is shown to the customer only; type it in on the order to mark it
+// collected.
+const POINT_FIELDS = [
+  ['name', 'Name of the place', { maxLength: 80 }],
+  ['phone', 'Phone', { inputMode: 'numeric', pattern: '[6-9][0-9]{9}', maxLength: 10 }],
+  ['line1', 'Address', { maxLength: 120 }],
+  ['line2', 'Landmark (optional)', { maxLength: 120, required: false }],
+  ['pincode', 'PIN code', { inputMode: 'numeric', pattern: '[1-9][0-9]{5}', maxLength: 6 }],
+  ['city', 'City', { maxLength: 60 }],
+  ['state', 'State', { maxLength: 60 }],
+];
+function PickupPointForm({ point, onSaved, onCancel }) {
+  const [state, setState] = useState({ busy: false, error: null });
+  async function save(e) {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.currentTarget));
+    const place = Object.fromEntries(POINT_FIELDS.map(([name]) => [name, f[name] ?? '']));
+    setState({ busy: true, error: null });
+    try {
+      await request(point ? `/admin/pickup-points/${point.id}` : '/admin/pickup-points', {
+        method: point ? 'PUT' : 'POST',
+        body: { place, hours: f.hours, active: f.active === 'on' },
+      });
+      onSaved(point ? 'Pickup point saved.' : 'Pickup point added.');
+    } catch (err) {
+      setState({ busy: false, error: err.message.replace(/^place\./, '') });
+    }
+  }
+  return (
+    <form className="review-form" onSubmit={save} aria-label={point ? `Edit ${point.name}` : 'New pickup point'}>
+      <div className="address-grid">
+        {POINT_FIELDS.map(([name, label, { required = true, ...input }]) => (
+          <label key={name}>
+            {label}
+            <input name={name} required={required} defaultValue={point?.[name] ?? ''} {...input} />
+          </label>
+        ))}
+        <label>
+          Opening hours
+          <input
+            name="hours"
+            required
+            maxLength={100}
+            defaultValue={point?.hours ?? ''}
+            placeholder="Mon–Sat 10 am–7 pm"
+          />
+        </label>
+      </div>
+      <label className="check">
+        <input name="active" type="checkbox" defaultChecked={point?.active ?? true} />
+        Offer it at checkout
+      </label>
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
+      <div className="form-actions">
+        <button type="submit" className="btn primary" disabled={state.busy}>
+          {point ? 'Save pickup point' : 'Add pickup point'}
+        </button>
+        <button type="button" className="btn" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function PickupPoints() {
+  const [version, setVersion] = useState(0);
+  const { data } = useFetch('/admin/pickup-points', version);
+  const [editing, setEditing] = useState(null); // a point, 'new' or null
+  const [done, setDone] = useState(null);
+  if (!data) return null;
+  const saved = (message) => {
+    setEditing(null);
+    setDone(message);
+    setVersion((v) => v + 1);
+  };
+  return (
+    <section className="panel delivery-rule" aria-labelledby="pickup-points">
+      <h2 id="pickup-points">Click and collect</h2>
+      <p className="muted small">
+        Places customers can collect their orders from, free. While at least one is offered, checkout lets customers
+        choose it instead of delivery (paying online or when they collect). Mark an order &ldquo;ready for pickup&rdquo;
+        when it is there; the customer gets an email with a 6-digit pickup code, which you type in on the order to mark
+        it collected. Up to {data.maxActive} offered at once.
+      </p>
+      {data.items.length > 0 && (
+        <ul className="saved-searches">
+          {data.items.map((p) => (
+            <li key={p.id}>
+              <span>
+                <strong>{p.name}</strong>
+                {!p.active && <span className="muted"> (not offered)</span>}
+                <span className="muted small block">
+                  {[p.line1, p.city, p.pincode].join(', ')} · {p.hours}
+                </span>
+              </span>
+              <button type="button" className="link small" onClick={() => setEditing(p)}>
+                Edit<span className="sr-only"> {p.name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {done && <p role="status">{done}</p>}
+      {editing ? (
+        <PickupPointForm
+          key={editing === 'new' ? 'new' : editing.id}
+          point={editing === 'new' ? null : editing}
+          onSaved={saved}
+          onCancel={() => setEditing(null)}
+        />
+      ) : (
+        <button type="button" className="btn" onClick={() => setEditing('new')}>
+          Add a pickup point
+        </button>
+      )}
+    </section>
+  );
+}
+
 function GiftWrap() {
   const [version, setVersion] = useState(0);
   const { data } = useFetch('/admin/gift-wrap', version);
@@ -487,6 +612,7 @@ export default function AdminDelivery() {
       </form>
       <HolidayMode />
       <DispatchCutoff />
+      <PickupPoints />
       <CodRules />
       <GiftWrap />
     </div>

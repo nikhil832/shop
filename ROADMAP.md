@@ -7,11 +7,7 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Suggested on 2026-11-01 (ninth list), roughly in the order they'd help most. All free (no new services).
-
-- **Click and collect**: if you have a shop or warehouse customers can visit, a "Pick up from …" choice at checkout
-  with no delivery charge, a pickup code in the email and a "Ready for pickup" step for admins. Only useful with a
-  place to collect from. To start: "start click and collect".
+All five of the ninth list (2026-11-01/02) are built. Ask for new ideas ("new ideas") to fill this list again.
 
 ## Set aside
 
@@ -174,3 +170,4 @@ Suggested on 2026-11-01 (ninth list), roughly in the order they'd help most. All
 | Store news for a group: a loyalty level, a customer tag or buyers from a category                                                                                                       | Stage 143 (`git log --grep "Stage 143"`) |
 | Saved searches: email about new arrivals that match a saved search                                                                                                                      | Stage 144 (`git log --grep "Stage 144"`) |
 | Review rewards: store credit for a review with a photo and some words                                                                                                                   | Stage 145 (`git log --grep "Stage 145"`) |
+| Click and collect: free pickup from the store's pickup points, collected with a code                                                                                                    | Stage 146 (`git log --grep "Stage 146"`) |

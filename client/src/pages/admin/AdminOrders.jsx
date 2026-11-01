@@ -181,7 +181,7 @@ export default function AdminOrders() {
                   <td className="num">{o.items.reduce((n, i) => n + i.qty, 0)}</td>
                   <td className="num">{formatPrice(o.total)}</td>
                   <td>
-                    <StatusBadge status={o.status} />
+                    <StatusBadge status={o.status} pickup={Boolean(o.pickup)} />
                   </td>
                 </tr>
               ))}

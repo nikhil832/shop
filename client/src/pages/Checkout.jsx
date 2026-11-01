@@ -171,6 +171,62 @@ function NewCustomerDetails() {
   );
 }
 
+// Click and collect (stage 146): delivery or one of the store's pickup points, shown only when there are some. The
+// radios are named "fulfilment" and the collector's fields "pickupName"/"pickupPhone", which submit() takes out before
+// the rest of the form is read as the address.
+function Fulfilment({ points, pickupId, onChoose, user }) {
+  const chosen = points.find((p) => p.id === pickupId);
+  return (
+    <fieldset className="panel payment-options">
+      <legend>How do you want it?</legend>
+      <label className="payment-option">
+        <input type="radio" name="fulfilment" value="" checked={!pickupId} onChange={() => onChoose('')} />
+        <span>
+          <strong>Deliver to an address</strong>
+        </span>
+      </label>
+      {points.map((p) => (
+        <label key={p.id} className="payment-option">
+          <input
+            type="radio"
+            name="fulfilment"
+            value={p.id}
+            checked={pickupId === p.id}
+            onChange={() => onChoose(p.id)}
+          />
+          <span>
+            <strong>Pick up from {p.name}</strong> <span className="small success-text">Free</span>
+            <span className="muted small block">
+              {[p.line1, p.line2, p.city, p.pincode].filter(Boolean).join(', ')} · {p.hours}
+            </span>
+          </span>
+        </label>
+      ))}
+      {chosen && (
+        <div className="address-grid pickup-contact">
+          <label>
+            Name of who collects it
+            <input name="pickupName" required maxLength={80} defaultValue={user?.name ?? ''} autoComplete="name" />
+          </label>
+          <label>
+            Mobile number
+            <input
+              name="pickupPhone"
+              required
+              inputMode="numeric"
+              pattern="[6-9][0-9]{9}"
+              maxLength={10}
+              defaultValue={user?.addresses?.[0]?.phone ?? ''}
+              autoComplete="tel-national"
+            />
+          </label>
+          <p className="muted small">We&apos;ll email you a pickup code when it&apos;s ready. Bring it with you.</p>
+        </div>
+      )}
+    </fieldset>
+  );
+}
+
 export default function Checkout() {
   const { user, setUser } = useAuth();
   const items = useCart();
@@ -188,6 +244,11 @@ export default function Checkout() {
   const [gift, setGift] = useState({ on: false, wrap: false, message: '' });
   // Which payment is chosen, for the gift panel's note about Cash on Delivery.
   const [method, setMethod] = useState(null);
+  // Click and collect (stage 146): the chosen pickup point's id, or '' for delivery.
+  const [pickupId, setPickupId] = useState('');
+  const { data: pickupData } = useFetch('/pickup-points');
+  const points = pickupData?.items ?? [];
+  const pickup = points.some((p) => p.id === pickupId) ? pickupId : '';
   const couponInput = useRef(null);
   const { data: options } = useFetch('/payments/options');
   // A store holiday with orders paused (stage 127) closes checkout until it ends.
@@ -199,7 +260,7 @@ export default function Checkout() {
     loading,
   } = useFetch(
     user !== undefined && items.length
-      ? `/cart?items=${cartQuery(items)}${coupon ? `&coupon=${encodeURIComponent(coupon)}` : ''}${!user && referralCode() ? `&ref=${referralCode()}` : ''}${gift.on && gift.wrap ? '&giftWrap=1' : ''}${/^[1-9]\d{5}$/.test(quotePin ?? '') ? `&pincode=${quotePin}` : ''}`
+      ? `/cart?items=${cartQuery(items)}${coupon ? `&coupon=${encodeURIComponent(coupon)}` : ''}${!user && referralCode() ? `&ref=${referralCode()}` : ''}${gift.on && gift.wrap ? '&giftWrap=1' : ''}${pickup ? '&pickup=1' : /^[1-9]\d{5}$/.test(quotePin ?? '') ? `&pincode=${quotePin}` : ''}`
       : null,
     state.version,
   );
@@ -231,6 +292,11 @@ export default function Checkout() {
       buyerName,
       buyerEmail,
       instructions = '',
+      // Click and collect (stage 146): not part of the address.
+      // eslint-disable-next-line no-unused-vars
+      fulfilment,
+      pickupName,
+      pickupPhone,
       ...typed
     } = Object.fromEntries(new FormData(e.currentTarget));
     const saved = user?.addresses.find((a) => a.id === addressChoice);
@@ -254,8 +320,9 @@ export default function Checkout() {
         method: 'POST',
         body: {
           items,
-          address,
-          saveAddress: !saved && saveAddress === 'on',
+          ...(pickup
+            ? { pickupPointId: pickup, contact: { name: pickupName, phone: pickupPhone }, saveAddress: false }
+            : { address, saveAddress: !saved && saveAddress === 'on' }),
           expectedTotal: quote.total,
           paymentMethod,
           couponCode: quote.coupon?.code,
@@ -312,19 +379,24 @@ export default function Checkout() {
         {!user && <NewCustomerDetails />}
         {/* Remounted per account with saved addresses, so another account's choice doesn't carry over; a new
             customer's typed address stays when their account is made. */}
-        <DeliveryAddress key={user?.addresses.length ? user.id : 'no-addresses'} user={user ?? NEW_CUSTOMER} />
+        {points.length > 0 && <Fulfilment points={points} pickupId={pickup} onChoose={setPickupId} user={user} />}
+        {!pickup && (
+          <DeliveryAddress key={user?.addresses.length ? user.id : 'no-addresses'} user={user ?? NEW_CUSTOMER} />
+        )}
 
-        <section className="panel">
-          <label className="instructions-field">
-            Delivery instructions (optional)
-            <textarea
-              name="instructions"
-              rows={2}
-              maxLength={200}
-              placeholder="e.g. Call before coming, or leave it with the security guard"
-            />
-          </label>
-        </section>
+        {!pickup && (
+          <section className="panel">
+            <label className="instructions-field">
+              Delivery instructions (optional)
+              <textarea
+                name="instructions"
+                rows={2}
+                maxLength={200}
+                placeholder="e.g. Call before coming, or leave it with the security guard"
+              />
+            </label>
+          </section>
+        )}
 
         <fieldset className="panel payment-options">
           <legend>
@@ -358,8 +430,10 @@ export default function Checkout() {
                 <input type="radio" name="paymentMethod" value="cod" disabled={Boolean(codBlocked)} />
               )}
               <span>
-                <strong>Cash on Delivery</strong>
-                <span className="muted small block">{codBlocked ?? 'Pay in cash when your order arrives.'}</span>
+                <strong>{pickup ? 'Pay at pickup' : 'Cash on Delivery'}</strong>
+                <span className="muted small block">
+                  {codBlocked ?? (pickup ? 'Pay when you collect it.' : 'Pay in cash when your order arrives.')}
+                </span>
               </span>
             </label>
           )}
@@ -462,7 +536,7 @@ export default function Checkout() {
           onApply={() => setCoupon(couponInput.current.value.trim())}
           onRemove={() => setCoupon('')}
         />
-        <Arrival pincode={pin ?? user?.addresses[0]?.pincode} />
+        {!pickup && <Arrival pincode={pin ?? user?.addresses[0]?.pincode} />}
         {state.error && (
           <p className="error" role="alert">
             {state.error}

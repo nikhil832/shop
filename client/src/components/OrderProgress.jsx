@@ -5,11 +5,12 @@ import { arrival, formatDate } from '../format.js';
 // orders say so in words above it instead.
 export default function OrderProgress({ order }) {
   if (!['placed', 'shipped', 'delivered'].includes(order.status)) return null;
+  // A pickup order (stage 146): ready, then collected.
   const steps = [
     { name: 'Ordered', at: order.createdAt },
-    { name: 'Shipped', at: order.shippedAt },
+    { name: order.pickup ? 'Ready for pickup' : 'Shipped', at: order.shippedAt },
     {
-      name: 'Delivered',
+      name: order.pickup ? 'Collected' : 'Delivered',
       at: order.deliveredAt,
       expected: order.deliveryEstimate && `Arriving ${arrival(order.deliveryEstimate)}`,
     },

@@ -284,7 +284,7 @@ export default function AdminOrder() {
           <section className="panel">
             <div className="order-head">
               <h1>Order #{orderNumber(order)}</h1>
-              <StatusBadge status={order.status} />
+              <StatusBadge status={order.status} pickup={Boolean(order.pickup)} />
             </div>
             <OrderHelpRequests orderId={order.id} />
             <ol className="timeline">
@@ -431,7 +431,9 @@ export default function AdminOrder() {
               )}
             </div>
             <div>
-              <h2>Deliver to</h2>
+              {/* Click and collect (stage 146): the point's address; the customer brings their code. */}
+              <h2>{order.pickup ? `Pickup from ${order.pickup.name}` : 'Deliver to'}</h2>
+              {order.pickup && <p className="muted small">Open {order.pickup.hours}. The customer shows their code.</p>}
               <address>
                 {address.name}, {address.phone}
                 <br />
@@ -512,10 +514,48 @@ export default function AdminOrder() {
               {action.error}
             </p>
           )}
-          {order.status === 'placed' && can(user, 'orders.ship') && (
+          {/* A pickup order (stage 146): no courier; ready, then collected with the customer's code. */}
+          {order.pickup && order.status === 'placed' && can(user, 'orders.ship') && (
+            <button type="button" className="btn primary" disabled={action.busy} onClick={() => shipOrder(undefined)}>
+              Mark ready for pickup
+            </button>
+          )}
+          {order.pickup && order.status === 'shipped' && can(user, 'orders.ship') && (
+            <form
+              className="pickup-collect"
+              aria-label="Mark collected"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const pickupCode = new FormData(e.currentTarget).get('pickupCode').trim();
+                run(() =>
+                  request(`/admin/orders/${order.id}/status`, {
+                    method: 'POST',
+                    body: { status: 'delivered', pickupCode },
+                  }),
+                );
+              }}
+            >
+              <label>
+                Customer&apos;s pickup code
+                <input
+                  name="pickupCode"
+                  required
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  autoComplete="off"
+                />
+              </label>
+              <button type="submit" className="btn primary" disabled={action.busy}>
+                Mark collected
+              </button>
+            </form>
+          )}
+          {!order.pickup && order.status === 'placed' && can(user, 'orders.ship') && (
             <ShipmentForm submitLabel="Mark as shipped" busy={action.busy} onSubmit={shipOrder} />
           )}
-          {(order.status === 'shipped' || order.status === 'delivered') &&
+          {!order.pickup &&
+            (order.status === 'shipped' || order.status === 'delivered') &&
             can(user, 'orders.ship') &&
             (editingShipment ? (
               <ShipmentForm
@@ -538,7 +578,9 @@ export default function AdminOrder() {
               </div>
             ))}
           {ACTIONS[order.status]
-            ?.filter((a) => can(user, a.status === 'cancelled' ? '*' : 'orders.ship'))
+            // A pickup order is collected with its code (the form above), not "Mark as delivered".
+            ?.filter((a) => !(order.pickup && a.status === 'delivered'))
+            .filter((a) => can(user, a.status === 'cancelled' ? '*' : 'orders.ship'))
             .map((a) => (
               <button
                 key={a.status}
@@ -550,7 +592,7 @@ export default function AdminOrder() {
                 {a.label}
               </button>
             ))}
-          {order.status === 'shipped' && can(user, '*') && (
+          {order.status === 'shipped' && !order.pickup && can(user, '*') && (
             <ReturnedForm
               busy={action.busy}
               onSubmit={(body) => run(() => request(`/admin/orders/${order.id}/returned`, { method: 'POST', body }))}

@@ -8,8 +8,12 @@ import { ORDER_STATUS, arrival, formatDate, formatPrice, orderNumber, smallImage
 import { useFetch } from '../useFetch.js';
 import { forgetCart } from '../cart.js';
 
-export function StatusBadge({ status }) {
-  return <span className={`status ${status}`}>{ORDER_STATUS[status] ?? status}</span>;
+// A pickup order (stage 146) reads "Ready for pickup" when shipped and "Collected" when delivered.
+const PICKUP_STATUS = { shipped: 'Ready for pickup', delivered: 'Collected' };
+export function StatusBadge({ status, pickup = false }) {
+  return (
+    <span className={`status ${status}`}>{(pickup && PICKUP_STATUS[status]) || ORDER_STATUS[status] || status}</span>
+  );
 }
 
 export default function Orders() {
@@ -80,7 +84,7 @@ export default function Orders() {
                 )}
               </div>
               <div className="order-card-side">
-                <StatusBadge status={o.status} />
+                <StatusBadge status={o.status} pickup={Boolean(o.pickup)} />
                 <strong>{formatPrice(o.total)}</strong>
               </div>
             </Link>

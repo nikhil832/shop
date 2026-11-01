@@ -1,5 +1,6 @@
 import express from 'express';
 import { ObjectId } from 'mongodb';
+import { randomInt } from 'node:crypto';
 import { z } from 'zod';
 import { requireUser } from '../auth.js';
 import { couponDiscount, redeemCoupon, releaseCoupon } from '../coupons.js';
@@ -75,6 +76,8 @@ const quoteQuery = z.object({
     .optional(),
   // A friend's referral code (stage 87), for a visitor who'll make their account at checkout.
   ref: z.string().trim().max(20).optional(),
+  // Click and collect (stage 146): no delivery charge.
+  pickup: z.enum(['1']).optional(),
   items: z
     .string()
     .max(1000)
@@ -144,22 +147,46 @@ export const address = z
     }
   });
 
-const orderBody = z.object({
-  items: cartItems,
-  address,
-  // The total the customer was shown; if prices changed since, the order is refused rather than charged differently.
-  expectedTotal: z.number().int().min(0),
-  paymentMethod: z.enum(['cod', 'razorpay']).default('cod'),
-  couponCode: z.string().trim().max(40).optional(),
-  // Store credit to spend, in paise, as the customer was shown (stage 72): refused if their balance is lower now.
-  creditToUse: z.number().int().min(0).default(0),
-  // A new address goes into the customer's address book unless they unticked "Save it" (a saved one is never changed).
-  saveAddress: z.boolean().default(true),
-  // A gift (stage 104): a message for the packing slip and, if offered, wrapping for a fee (giftOptions.js).
-  gift: giftBody,
-  // For the courier and packer (stage 113): "Call before coming". Empty for none.
-  instructions: deliveryInstructions,
+// Who collects a pickup order (stage 146): the same rules as an address's name and phone.
+const pickupContact = z.object({
+  name: z.string().trim().min(1, 'Enter your name').max(80),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^[6-9]\d{9}$/, 'Enter a 10-digit mobile number'),
 });
+
+const orderBody = z
+  .object({
+    items: cartItems,
+    // Delivery to an address, or (stage 146) pickup from a pickup point with the collector's name and phone.
+    address: address.optional(),
+    pickupPointId: z
+      .string()
+      .regex(/^[0-9a-f]{24}$/, 'Choose a pickup point')
+      .optional(),
+    contact: pickupContact.optional(),
+    // The total the customer was shown; if prices changed since, the order is refused rather than charged differently.
+    expectedTotal: z.number().int().min(0),
+    paymentMethod: z.enum(['cod', 'razorpay']).default('cod'),
+    couponCode: z.string().trim().max(40).optional(),
+    // Store credit to spend, in paise, as the customer was shown (stage 72): refused if their balance is lower now.
+    creditToUse: z.number().int().min(0).default(0),
+    // A new address goes into the customer's address book unless they unticked "Save it" (a saved one is never changed).
+    saveAddress: z.boolean().default(true),
+    // A gift (stage 104): a message for the packing slip and, if offered, wrapping for a fee (giftOptions.js).
+    gift: giftBody,
+    // For the courier and packer (stage 113): "Call before coming". Empty for none.
+    instructions: deliveryInstructions,
+  })
+  .superRefine((b, ctx) => {
+    if (b.pickupPointId ? !b.contact : !b.address) {
+      ctx.addIssue({
+        code: 'custom',
+        message: b.pickupPointId ? 'contact: Enter your name and phone' : 'address: Enter the address',
+      });
+    }
+  });
 
 const withoutRefundError = (payment, admin) => {
   if (admin || !payment.refundError) return payment;
@@ -197,6 +224,10 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   deliveryInstructions: doc.deliveryInstructions ?? '',
   // The part of `delivery` that is the area's extra charge (stage 111).
   deliveryExtra: doc.deliveryExtra ?? 0,
+  // Click and collect (stage 146): { name, hours, code? } or null; the code is the customer's, never an admin's.
+  pickup: doc.pickup
+    ? { name: doc.pickup.name, hours: doc.pickup.hours, ...(!admin && { code: doc.pickup.code }) }
+    : null,
   // A gift (stage 104): { message, wrap } or null, and the wrapping fee paid (in `total`, like delivery).
   gift: doc.gift ?? null,
   giftWrap: doc.giftWrap ?? 0,
@@ -436,10 +467,11 @@ export function ordersRouter(ctx) {
       quantity.parts.filter((part) => part.quantityDiscount).map((part) => [buyable[part.line], part.price]),
     );
     // A far-off area's extra delivery charge (stage 111), when checkout says where it's going.
-    const deliveryExtra = query.pincode ? (await deliveryFor(db, query.pincode)).extraCharge : 0;
+    const deliveryExtra = query.pincode && !query.pickup ? (await deliveryFor(db, query.pincode)).extraCharge : 0;
     // A logged-in customer's loyalty level may lower the free-delivery minimum (stage 134).
     const loyalty = await loyaltyFor(db, req.user?._id);
-    const freeMin = loyalty?.freeDeliveryMin ?? FREE_DELIVERY_MIN;
+    // Collected from a pickup point (stage 146): nothing to deliver, so nothing charged for it.
+    const freeMin = query.pickup ? 0 : (loyalty?.freeDeliveryMin ?? FREE_DELIVERY_MIN);
     const totals = withDeliveryExtra(
       orderTotals(itemsTotal - bundled.saving - quantity.saving, freeMin),
       deliveryExtra,
@@ -512,9 +544,27 @@ export function ordersRouter(ctx) {
     const body = parse(orderBody, req.body);
     const online = body.paymentMethod === 'razorpay';
     if (online && !razorpay) throw new HttpError(400, 'Online payment is not available. Choose Cash on Delivery.');
+    // Click and collect (stage 146): the point's address with the collector's name and phone, so invoices (GST place
+    // of supply), slips and exports need nothing else; free, and no PIN-code check.
+    const point = body.pickupPointId
+      ? await db.collection('pickupPoints').findOne({ _id: new ObjectId(body.pickupPointId), active: true })
+      : null;
+    if (body.pickupPointId && !point) {
+      throw new HttpError(409, 'That pickup point is no longer available. Choose another or delivery');
+    }
+    if (point) {
+      body.address = {
+        ...body.contact,
+        line1: point.line1,
+        line2: point.line2 ?? '',
+        city: point.city,
+        state: point.state,
+        pincode: point.pincode,
+      };
+    }
     // An address the store doesn't deliver to (Admin → Delivery) is refused before anything is reserved.
     const [delivery, holiday, loyalty] = await Promise.all([
-      deliveryFor(db, body.address.pincode),
+      point ? { deliverable: true, extraCharge: 0 } : deliveryFor(db, body.address.pincode),
       holidaySettings(db),
       // A loyalty level's lower free-delivery minimum (stage 134), as in the quote the customer saw.
       loyaltyFor(db, req.user._id),
@@ -619,7 +669,7 @@ export function ordersRouter(ctx) {
         const before = withDeliveryExtra(
           orderTotals(
             items.reduce((sum, i) => sum + i.price * i.qty, 0),
-            loyalty?.freeDeliveryMin ?? FREE_DELIVERY_MIN,
+            point ? 0 : (loyalty?.freeDeliveryMin ?? FREE_DELIVERY_MIN),
           ),
           delivery.extraCharge,
         );
@@ -691,11 +741,22 @@ export function ordersRouter(ctx) {
           ...(loyalty?.extraCashback > 0 && {
             loyaltyCashback: { level: loyalty.level, percent: loyalty.extraCashback },
           }),
-          // When it should arrive (stage 86), from the delivery area's days, kept as promised at the time.
-          deliveryEstimate: {
-            from: istDate(now, dispatchDelay(holiday, now) + delivery.minDays),
-            to: istDate(now, dispatchDelay(holiday, now) + delivery.maxDays),
-          },
+          // When it should arrive (stage 86), from the delivery area's days, kept as promised at the time; a pickup
+          // order has none (the customer is emailed when it's ready).
+          ...(!point && {
+            deliveryEstimate: {
+              from: istDate(now, dispatchDelay(holiday, now) + delivery.minDays),
+              to: istDate(now, dispatchDelay(holiday, now) + delivery.maxDays),
+            },
+          }),
+          ...(point && {
+            pickup: {
+              pointId: point._id,
+              name: point.name,
+              hours: point.hours,
+              code: String(randomInt(0, 1_000_000)).padStart(6, '0'),
+            },
+          }),
           payment: paidByCredit
             ? { method: 'credit' }
             : online
@@ -720,7 +781,7 @@ export function ordersRouter(ctx) {
           moved.map((m) => ({ ...m, orderId, orderNumber: order.number })),
           session,
         );
-        if (body.saveAddress) await rememberAddress(users, req.user._id, body.address, { session });
+        if (body.saveAddress && !point) await rememberAddress(users, req.user._id, body.address, { session });
       });
     } finally {
       await session.endSession();

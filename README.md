@@ -31,7 +31,8 @@ payments are in Razorpay's test mode, so no real money moves)
 - Cart quoted by the server (prices and stock re-read, never trusted from the browser); coupons, bundles, quantity
   discounts, gift cards, store credit, cashback and loyalty levels.
 - **Razorpay** online payments (verified on the server by signature and API, with a webhook as backup, refunds on
-  cancellation) next to Cash on Delivery; stock held for 30 minutes while paying.
+  cancellation) next to Cash on Delivery; stock held for 30 minutes while paying; click and collect from the
+  store's pickup points with a pickup code.
 - Orders placed in **MongoDB multi-document transactions**, so stock, coupons and credit change together or not at all.
 - GST tax invoices and credit notes (CGST/SGST or IGST by place of supply), delivery areas and dates by PIN code,
   tracking, returns, exchanges and cancelling part of an order.
