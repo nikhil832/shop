@@ -27,6 +27,12 @@ test('a customer opts in, and an admin writes, tests and sends store news', asyn
   await form.getByLabel('Subject').fill(subject);
   await form.getByLabel(/^Text/).fill('New things are in.\n\nCome and have a look.');
   await form.getByLabel(/^Button link/).fill('/search?deals=1');
+  // Stage 143: the group is counted as it's chosen; this one goes to everyone.
+  const who = form.getByLabel('Who gets it');
+  await who.selectOption({ label: 'Customers tagged VIP' });
+  await expect(form.getByText(/^\d+ subscribers? in this group now$/)).toBeVisible();
+  await who.selectOption('all');
+  await expect(form.getByText(/^[1-9]\d* subscribers? in this group now$/)).toBeVisible();
   await form.getByRole('button', { name: 'Save draft' }).click();
   await expect(admin.getByRole('status')).toHaveText('Draft saved. Send yourself a test before sending it out.');
 
@@ -34,8 +40,15 @@ test('a customer opts in, and an admin writes, tests and sends store news', asyn
   await row.getByRole('button', { name: /^Send me a test/ }).click();
   await expect(admin.getByRole('status')).toHaveText('A test went to admin@bazaar.demo.');
 
-  admin.once('dialog', (d) => d.accept());
+  await expect(row).toContainText('To: Everyone subscribed.');
+  const question = new Promise((resolve) =>
+    admin.once('dialog', (d) => {
+      resolve(d.message());
+      d.accept();
+    }),
+  );
   await row.getByRole('button', { name: /^Send to subscribers/ }).click();
+  expect(await question).toMatch(/^Send “Fresh arrivals \w+” to \d+ customers? \(Everyone subscribed\)\?/);
   await expect(admin.getByRole('status')).toHaveText('Sending. It goes out over the next minutes.');
   await expect(row).toContainText('Sending');
   await expect(row.getByRole('button', { name: /^Edit/ })).toHaveCount(0);

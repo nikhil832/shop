@@ -7,6 +7,8 @@ import { logActivity } from './activity.js';
 import { newsEmail } from './emails.js';
 import { HttpError, parse, parseObjectId } from './http.js';
 import { takeDailyCall, takeHourlySlot, usedToday } from './rateLimit.js';
+import { TAGS } from './customerTags.js';
+import { LEVELS, loyaltySettings, spentInYear } from './loyalty.js';
 
 // Store news emails (stage 140): admins write a short email (`newsletters`) and send it to customers who opted in
 // (`users.newsEmails: true`, off unless they tick it on the account page). Sending queues one `newsletterSends`
@@ -28,11 +30,49 @@ const storePath = z
   .trim()
   .max(200)
   .refine((p) => /^\/(?!\/)\S*$/.test(p), 'link: Use a page of the store, starting with /, like /search?deals=1');
+// Groups (stage 143): who among the subscribers gets an email. 'all'; 'loyalty:silver' (Silver and Gold) or
+// 'loyalty:gold', while loyalty levels are on; 'tag:<TAGS key>'; 'category:<id>' (customers with a sold order of a
+// product in it). Worked out when counting and again when sending; the label is kept with the email.
+const GROUP = new RegExp(`^(all|loyalty:(silver|gold)|tag:(${Object.keys(TAGS).join('|')})|category:[0-9a-f]{24})$`);
+const groupField = z.string().regex(GROUP, 'group: Choose who gets it').default('all');
+// The same as SOLD in routes/dashboard.js (not imported: it leads back here through the dashboard).
+const SOLD = ['placed', 'shipped', 'delivered'];
+
+// { ids, label }: the subscribers in `group` (400 for an unknown category, 409 for loyalty while it's off).
+export async function groupMembers(db, group) {
+  const subscribed = { newsEmails: true };
+  const users = db.collection('users');
+  const idsOf = async (filter) =>
+    (await users.find({ ...subscribed, ...filter }, { projection: { _id: 1 } }).toArray()).map((u) => u._id);
+  const [kind, value] = group.split(':');
+  if (kind === 'all') return { ids: await idsOf({}), label: 'Everyone subscribed' };
+  if (kind === 'tag') return { ids: await idsOf({ tags: value }), label: `Customers tagged ${TAGS[value]}` };
+  if (kind === 'category') {
+    const category = await db.collection('categories').findOne({ _id: new ObjectId(value) });
+    if (!category) throw new HttpError(400, 'group: That category no longer exists');
+    const productIds = await db.collection('products').distinct('_id', { categoryId: category._id });
+    const buyers = await db
+      .collection('orders')
+      .distinct('userId', { status: { $in: SOLD }, 'items.productId': { $in: productIds } });
+    return { ids: await idsOf({ _id: { $in: buyers } }), label: `Customers who bought from ${category.name}` };
+  }
+  const settings = await loyaltySettings(db);
+  if (!settings.enabled) throw new HttpError(409, 'Loyalty levels are switched off, so nobody has a level');
+  const spend = settings[value].spend;
+  const ids = [];
+  for (const id of await idsOf({})) if ((await spentInYear(db, id)) >= spend) ids.push(id);
+  return {
+    ids,
+    label: value === 'gold' ? `${LEVELS.gold} members` : `${LEVELS.silver} and ${LEVELS.gold} members`,
+  };
+}
+
 const letterBody = z.object({
   subject: z.string().trim().min(3, 'subject: Write a subject').max(120, 'subject: At most 120 characters'),
   body: z.string().trim().min(10, 'body: Write the email').max(5000, 'body: At most 5,000 characters'),
   link: z.union([storePath, z.literal('')]).default(''),
   linkText: z.string().trim().max(30, 'linkText: At most 30 characters').default(''),
+  group: groupField,
 });
 
 const toLetter = (doc) => ({
@@ -41,6 +81,9 @@ const toLetter = (doc) => ({
   body: doc.body,
   link: doc.link ?? '',
   linkText: doc.linkText ?? '',
+  // Who gets it (stage 143); emails from before groups went to everyone.
+  group: doc.group ?? 'all',
+  groupLabel: doc.groupLabel ?? 'Everyone subscribed',
   status: doc.status,
   by: doc.by?.name ?? null,
   createdAt: doc.createdAt,
@@ -150,11 +193,20 @@ export function newsletterRouter(ctx) {
     res.json({ items: items.map(toLetter), subscribers, dailyLimit: DAILY_LIMIT, sentToday: usedToday(daily) });
   });
 
+  // How many subscribers a group has now, for the form.
+  router.get('/admin/newsletters/group', async (req, res) => {
+    const { group } = parse(z.object({ group: groupField }), req.query);
+    const { ids, label } = await groupMembers(db, group);
+    res.json({ group, label, count: ids.length });
+  });
+
   router.post('/admin/newsletters', async (req, res) => {
     const body = parse(letterBody, req.body);
+    const { label } = await groupMembers(db, body.group);
     const now = new Date();
     const doc = {
       ...body,
+      groupLabel: label,
       status: 'draft',
       by: { id: req.user._id, name: req.user.name },
       createdAt: now,
@@ -174,9 +226,10 @@ export function newsletterRouter(ctx) {
   router.put('/admin/newsletters/:id', async (req, res) => {
     const body = parse(letterBody, req.body);
     const doc = await findDraft(req.params.id);
+    const { label } = await groupMembers(db, body.group);
     const after = await letters.findOneAndUpdate(
       { _id: doc._id, status: 'draft' },
-      { $set: { ...body, updatedAt: new Date() } },
+      { $set: { ...body, groupLabel: label, updatedAt: new Date() } },
       { returnDocument: 'after' },
     );
     if (!after) throw new HttpError(409, 'This email has already been sent');
@@ -210,15 +263,31 @@ export function newsletterRouter(ctx) {
     res.json({ sentTo: req.user.email });
   });
 
-  // Queues the draft for everyone subscribed now; the sweep sends it.
+  // Queues the draft for its group's subscribers now; the sweep sends it.
   router.post('/admin/newsletters/:id/send', async (req, res) => {
     const doc = await findDraft(req.params.id);
-    const subscribers = await users.find({ newsEmails: true }, { projection: { _id: 1 } }).toArray();
-    if (!subscribers.length) throw new HttpError(409, 'Nobody has asked for store news yet');
+    const group = doc.group ?? 'all';
+    const { ids, label } = await groupMembers(db, group);
+    const subscribers = ids.map((_id) => ({ _id }));
+    if (!subscribers.length) {
+      throw new HttpError(
+        409,
+        group === 'all' ? 'Nobody has asked for store news yet' : 'Nobody in this group has asked for store news',
+      );
+    }
     const now = new Date();
     const claimed = await letters.findOneAndUpdate(
       { _id: doc._id, status: 'draft' },
-      { $set: { status: 'sending', queuedAt: now, recipients: subscribers.length, sent: 0, failed: 0 } },
+      {
+        $set: {
+          status: 'sending',
+          queuedAt: now,
+          groupLabel: label,
+          recipients: subscribers.length,
+          sent: 0,
+          failed: 0,
+        },
+      },
       { returnDocument: 'after' },
     );
     if (!claimed) throw new HttpError(409, 'This email has already been sent');
@@ -230,7 +299,10 @@ export function newsletterRouter(ctx) {
       area: 'news',
       action: 'Sent store news',
       target: { label: doc.subject, path: '/admin/news' },
-      changes: [{ field: 'Subscribers', to: String(subscribers.length) }],
+      changes: [
+        { field: 'Sent to', to: label },
+        { field: 'Subscribers', to: String(subscribers.length) },
+      ],
     });
     res.json(toLetter(claimed));
   });

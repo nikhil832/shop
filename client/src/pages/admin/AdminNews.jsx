@@ -8,8 +8,53 @@ import { useFetch } from '../../useFetch.js';
 const when = (iso) => `${formatDate(iso)}, ${formatTime(iso)}`;
 const STATUS = { draft: 'Draft', sending: 'Sending', sent: 'Sent' };
 
+// Who gets it (stage 143): everyone subscribed, a loyalty level (while levels are on), a customer tag, or buyers from
+// a category; the subscribers in it are counted as it's chosen.
+const TAG_GROUPS = { vip: 'VIP', wholesale: 'Wholesale', watch: 'Watch' };
+function GroupPicker({ group, onChange }) {
+  const { data: categories } = useFetch('/categories');
+  const { data: loyalty } = useFetch('/admin/loyalty');
+  const { data: count, error } = useFetch(`/admin/newsletters/group?group=${encodeURIComponent(group)}`);
+  return (
+    <label>
+      Who gets it
+      <select name="group" value={group} onChange={(e) => onChange(e.target.value)} aria-describedby="group-count">
+        <option value="all">Everyone who asked for store news</option>
+        {loyalty?.enabled && (
+          <optgroup label="Loyalty level">
+            <option value="loyalty:silver">Silver and Gold members</option>
+            <option value="loyalty:gold">Gold members</option>
+          </optgroup>
+        )}
+        <optgroup label="Customer tag">
+          {Object.entries(TAG_GROUPS).map(([tag, label]) => (
+            <option key={tag} value={`tag:${tag}`}>
+              Customers tagged {label}
+            </option>
+          ))}
+        </optgroup>
+        {categories?.length > 0 && (
+          <optgroup label="Bought from">
+            {categories.map((c) => (
+              <option key={c.id} value={`category:${c.id}`}>
+                Customers who bought from {c.name}
+              </option>
+            ))}
+          </optgroup>
+        )}
+      </select>
+      <span id="group-count" className="muted small" aria-live="polite">
+        {error
+          ? error.message
+          : count && `${count.count} ${count.count === 1 ? 'subscriber' : 'subscribers'} in this group now`}
+      </span>
+    </label>
+  );
+}
+
 function LetterForm({ letter, onSaved, onCancel }) {
   const [state, setState] = useState({ busy: false, error: null });
+  const [group, setGroup] = useState(letter?.group ?? 'all');
   async function submit(e) {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.currentTarget));
@@ -17,7 +62,7 @@ function LetterForm({ letter, onSaved, onCancel }) {
     try {
       await request(letter ? `/admin/newsletters/${letter.id}` : '/admin/newsletters', {
         method: letter ? 'PUT' : 'POST',
-        body: { subject: f.subject, body: f.body, link: f.link.trim(), linkText: f.linkText },
+        body: { subject: f.subject, body: f.body, link: f.link.trim(), linkText: f.linkText, group },
       });
       onSaved(letter ? 'Saved.' : 'Draft saved. Send yourself a test before sending it out.');
     } catch (err) {
@@ -35,6 +80,7 @@ function LetterForm({ letter, onSaved, onCancel }) {
         Text <span className="muted small">(a blank line starts a new paragraph; &ldquo;Hi Name,&rdquo; is added)</span>
         <textarea name="body" required minLength={10} maxLength={5000} rows={8} defaultValue={letter?.body} />
       </label>
+      <GroupPicker group={group} onChange={setGroup} />
       <div className="address-grid">
         <label>
           Button link <span className="muted small">(optional: a page of the store, e.g. /search?deals=1)</span>
@@ -90,14 +136,22 @@ export default function AdminNews() {
       () => request(`/admin/newsletters/${l.id}/test`, { method: 'POST' }),
       (r) => `A test went to ${r.sentTo}.`,
     );
-  const send = (l) =>
-    window.confirm(
-      `Send “${l.subject}” to ${data.subscribers} ${data.subscribers === 1 ? 'customer' : 'customers'}? It can't be changed afterwards.`,
-    ) &&
+  // The group's subscribers are counted first, so the question names the real number.
+  async function send(l) {
+    let count;
+    try {
+      ({ count } = await request(`/admin/newsletters/group?group=${encodeURIComponent(l.group)}`));
+    } catch (err) {
+      return setState({ busy: false, error: err.message, done: null });
+    }
+    if (!count) return setState({ busy: false, error: 'Nobody in this group has asked for store news', done: null });
+    const who = `${count} ${count === 1 ? 'customer' : 'customers'} (${l.groupLabel})`;
+    if (!window.confirm(`Send “${l.subject}” to ${who}? It can't be changed afterwards.`)) return;
     run(
       () => request(`/admin/newsletters/${l.id}/send`, { method: 'POST' }),
       'Sending. It goes out over the next minutes.',
     );
+  }
   const remove = (l) =>
     window.confirm(`Delete the draft “${l.subject}”?`) &&
     run(() => request(`/admin/newsletters/${l.id}`, { method: 'DELETE' }), 'Draft deleted.');
@@ -153,6 +207,7 @@ export default function AdminNews() {
                   <td>
                     <strong>{l.subject}</strong>
                     <span className="muted small block">
+                      To: {l.groupLabel}.{' '}
                       {l.status === 'draft' ? `Written ${when(l.updatedAt)}` : `Sent from ${when(l.queuedAt)}`}
                       {l.by && ` by ${l.by}`}
                     </span>

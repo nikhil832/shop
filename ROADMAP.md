@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-11-01 (ninth list), roughly in the order they'd help most. All free (no new services).
 
-- **Store news for a group**: send a store news email to only some subscribers: a loyalty level, a customer tag (VIP,
-  wholesale), or people who bought from a category, with the count shown before sending. More relevant emails, fewer
-  unsubscribes. To start: "start news groups".
 - **Saved searches**: a "Tell me about new arrivals" button on a search page (words and filters); the customer gets one
   email when a new product matches, with a list of their saved searches on the account page. To start: "start saved
   searches".
@@ -180,3 +177,4 @@ Suggested on 2026-11-01 (ninth list), roughly in the order they'd help most. All
 | Store news emails: opt-in news from the admin, with unsubscribe links and a daily limit                                                                                                 | Stage 140 (`git log --grep "Stage 140"`) |
 | Birthday treat: a one-use coupon of their own on customers' birthdays                                                                                                                   | Stage 141 (`git log --grep "Stage 141"`) |
 | Price alerts: "email me at ₹X or less" on wishlist items                                                                                                                                | Stage 142 (`git log --grep "Stage 142"`) |
+| Store news for a group: a loyalty level, a customer tag or buyers from a category                                                                                                       | Stage 143 (`git log --grep "Stage 143"`) |
