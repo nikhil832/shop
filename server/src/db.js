@@ -139,6 +139,8 @@ const INDEXES = {
     // Birthday treats (stage 141): today's birthdays.
     [{ 'birthday.month': 1, 'birthday.day': 1 }],
   ],
+  // Saved searches (stage 144): one of each per customer; the hourly check takes the oldest checked first.
+  savedSearches: [[{ userId: 1, key: 1 }, { unique: true }], [{ checkedAt: 1 }]],
   // Store news's queue (stage 140, newsletters.js): one per subscriber per email, worked through oldest first.
   newsletterSends: [[{ newsletterId: 1, userId: 1 }, { unique: true }], [{ status: 1, _id: 1 }], [{ userId: 1 }]],
   // MongoDB deletes sessions once expiresAt has passed.

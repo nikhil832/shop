@@ -24,7 +24,7 @@ payments are in Razorpay's test mode, so no real money moves)
 - Product variants (sizes and colours with their own stock and photos), size guides, size fit from reviews, compare up
   to three products, recently viewed, "bought together" and similar-product rows.
 - Reviews with photos and helpful votes, customer questions and answers, wishlist with price-drop and price-target
-  alerts, back-in-stock emails.
+  alerts, back-in-stock emails, and saved searches that email new arrivals.
 
 **Checkout and orders**
 

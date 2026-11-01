@@ -5179,3 +5179,32 @@ textarea {
   flex-basis: 100%;
   margin: 0;
 }
+
+/* ---- Saved searches (stage 144) ---- */
+.save-search {
+  margin: -4px 0 12px;
+}
+.save-search p {
+  margin: 0;
+}
+.save-search .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.saved-searches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.saved-searches li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.saved-searches li:last-child {
+  border-bottom: 0;
+}

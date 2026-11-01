@@ -282,6 +282,50 @@ function LoyaltyLevel() {
 }
 
 // "Your data" (stage 65): download everything the store holds about you, or close the account (password, and a two-step
+// Saved searches (stage 144, #saved-searches): searches whose new arrivals are emailed, each with Remove.
+function SavedSearches() {
+  const [version, setVersion] = useState(0);
+  const { data } = useFetch('/saved-searches', version);
+  const [state, setState] = useState({ busy: false, error: null, done: null });
+  async function remove(s) {
+    setState({ busy: true, error: null, done: null });
+    try {
+      await request(`/saved-searches/${s.id}`, { method: 'DELETE' });
+      setState({ busy: false, error: null, done: 'Search removed.' });
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setState({ busy: false, error: err.message, done: null });
+    }
+  }
+  if (!data) return null;
+  return (
+    <section className="panel account-section" id="saved-searches" aria-labelledby="saved-searches-heading">
+      <h2 id="saved-searches-heading">Saved searches</h2>
+      {data.items.length === 0 ? (
+        <p className="muted small">
+          On a search page, choose &ldquo;Tell me about new arrivals&rdquo; and we&apos;ll email you when new products
+          match.
+        </p>
+      ) : (
+        <>
+          <p className="muted small">We email you when new products match one of these (checked every hour).</p>
+          <ul className="saved-searches">
+            {data.items.map((s) => (
+              <li key={s.id}>
+                <Link to={s.path}>{s.label}</Link>
+                <button type="button" className="link small" onClick={() => remove(s)} disabled={state.busy}>
+                  Remove<span className="sr-only"> {s.label}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <Feedback state={state} />
+    </section>
+  );
+}
+
 // Refer a friend (stage 87, #referral): the customer's link, what friends and they get, and how it's going. Nothing
 // when referrals are off.
 function ReferFriend() {
@@ -695,6 +739,7 @@ export default function Account() {
       <StoreCredit user={user} />
       <LoyaltyLevel />
       <Birthday user={user} setUser={setUser} />
+      <SavedSearches />
       <ReferFriend />
       <TwoStepSection />
       <YourData

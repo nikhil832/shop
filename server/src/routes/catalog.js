@@ -70,7 +70,7 @@ const addOnsQuery = z.object({
 });
 const suggestQuery = z.object({ q: z.string().trim().min(1, 'Type something to search for').max(100) });
 
-const listQuery = z.object({
+export const listQuery = z.object({
   q: z.string().trim().max(100).optional(),
   category: z.string().trim().max(60).optional(),
   brand: z.string().max(500).optional(), // comma-separated
@@ -284,6 +284,45 @@ async function buyableCards(db, ids) {
     .map(toProductCard);
 }
 
+// The MongoDB filters of a product list query (`listQuery`): `match` is everything; `base` leaves out brand, size and
+// specification choices, `branded` adds brand, `sized` size (each facet ignores its own choice). Null for an unknown
+// category. Shared by GET /products and saved searches (savedSearches.js, stage 144), so both find the same products.
+export async function listFilters(db, query) {
+  const categories = db.collection('categories');
+  const base = { active: true };
+
+  if (query.category) {
+    const category = await categories.findOne({ slug: query.category });
+    if (!category) return null;
+    base.categoryId = category._id;
+  }
+  const search = query.q ? await searchStages(categories, query.q) : null;
+  if (search) base.$and = search.filter;
+  if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+    base.price = {};
+    if (query.minPrice !== undefined) base.price.$gte = query.minPrice;
+    if (query.maxPrice !== undefined) base.price.$lte = query.maxPrice;
+  }
+  if (query.rating) base['rating.avg'] = { $gte: query.rating };
+  if (query.inStock) base.stock = { $gt: 0 };
+  if (query.comingSoon) Object.assign(base, { comingSoon: { $type: 'object' }, stock: 0 });
+  if (query.deals) base.$and = [...(base.$and ?? []), DEAL_FILTER];
+
+  // The brand facet ignores the brand filter itself, so other brands stay selectable.
+  const brandList = query.brand
+    ?.split(',')
+    .map((b) => b.trim())
+    .filter(Boolean);
+  const branded = brandList?.length ? { ...base, brand: { $in: brandList } } : base;
+  // The size facet ignores the size filter itself, like brands.
+  const sizes = parseSizes(query.size);
+  const sized = sizes.length ? { ...branded, $and: [...(branded.$and ?? []), sizeFilter(sizes)] } : branded;
+  // Specifications (stage 138): their facet ignores their own choices (per name, in specFacet).
+  const choices = specChoices(query.spec);
+  const match = choices.size ? { ...sized, $and: [...(sized.$and ?? []), ...specConditions(choices)] } : sized;
+  return { base, branded, sized, match, search, brandList, sizes, choices };
+}
+
 export function catalogRouter({ db }) {
   const categories = db.collection('categories');
   const products = db.collection('products');
@@ -296,47 +335,19 @@ export function catalogRouter({ db }) {
 
   router.get('/products', async (req, res) => {
     const query = parse(listQuery, req.query);
-    const base = { active: true };
-
-    if (query.category) {
-      const category = await categories.findOne({ slug: query.category });
-      if (!category) {
-        return res.json({
-          items: [],
-          total: 0,
-          page: query.page,
-          pageSize: query.pageSize,
-          brands: [],
-          sizes: [],
-          specs: [],
-        });
-      }
-      base.categoryId = category._id;
+    const filters = await listFilters(db, query);
+    if (!filters) {
+      return res.json({
+        items: [],
+        total: 0,
+        page: query.page,
+        pageSize: query.pageSize,
+        brands: [],
+        sizes: [],
+        specs: [],
+      });
     }
-    const search = query.q ? await searchStages(categories, query.q) : null;
-    if (search) base.$and = search.filter;
-    if (query.minPrice !== undefined || query.maxPrice !== undefined) {
-      base.price = {};
-      if (query.minPrice !== undefined) base.price.$gte = query.minPrice;
-      if (query.maxPrice !== undefined) base.price.$lte = query.maxPrice;
-    }
-    if (query.rating) base['rating.avg'] = { $gte: query.rating };
-    if (query.inStock) base.stock = { $gt: 0 };
-    if (query.comingSoon) Object.assign(base, { comingSoon: { $type: 'object' }, stock: 0 });
-    if (query.deals) base.$and = [...(base.$and ?? []), DEAL_FILTER];
-
-    // The brand facet ignores the brand filter itself, so other brands stay selectable.
-    const brandList = query.brand
-      ?.split(',')
-      .map((b) => b.trim())
-      .filter(Boolean);
-    const branded = brandList?.length ? { ...base, brand: { $in: brandList } } : base;
-    // The size facet ignores the size filter itself, like brands.
-    const sizes = parseSizes(query.size);
-    const sized = sizes.length ? { ...branded, $and: [...(branded.$and ?? []), sizeFilter(sizes)] } : branded;
-    // Specifications (stage 138): their facet ignores their own choices (per name, in specFacet).
-    const choices = specChoices(query.spec);
-    const match = choices.size ? { ...sized, $and: [...(sized.$and ?? []), ...specConditions(choices)] } : sized;
+    const { base, branded, sized, match, search, brandList, sizes, choices } = filters;
 
     const [[result], brands, sizeList, specList] = await Promise.all([
       products

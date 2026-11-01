@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { query } from '../api.js';
+import { query, request } from '../api.js';
+import { useAuth } from '../auth.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import CompareToggle from '../components/CompareToggle.jsx';
 import { formatPrice } from '../format.js';
@@ -94,6 +95,58 @@ function PriceFilter({ min, max, onApply }) {
   );
 }
 
+// Saved searches (stage 144): "Tell me about new arrivals" saves this page's words and filters; an email comes when new
+// products match. Guests are offered a login link. Remounted per search (key), so its message belongs to this one.
+function SaveSearch({ search }) {
+  const { user } = useAuth();
+  const [state, setState] = useState({ busy: false, error: null, saved: false });
+  if (user === undefined) return null;
+  if (!user) {
+    // Not "Log in" (the header has that link, and tests find it by name).
+    return (
+      <p className="save-search small">
+        <Link to={`/login?next=${encodeURIComponent(`/search${search}`)}`}>Email me new arrivals</Link> for this search
+        (after you sign in).
+      </p>
+    );
+  }
+  async function save() {
+    setState({ busy: true, error: null, saved: false });
+    try {
+      await request('/saved-searches', { method: 'POST', body: { search } });
+      setState({ busy: false, error: null, saved: true });
+    } catch (err) {
+      setState({ busy: false, error: err.message, saved: false });
+    }
+  }
+  return (
+    <div className="save-search small">
+      {state.saved ? (
+        <p role="status">
+          Saved. We&apos;ll email you when new products match.{' '}
+          <Link to="/account#saved-searches">Your saved searches</Link>
+        </p>
+      ) : (
+        <button type="button" className="btn small" onClick={save} disabled={state.busy}>
+          <BellIcon /> Tell me about new arrivals
+        </button>
+      )}
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+const BellIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+  </svg>
+);
+
 export default function Search() {
   const [params, setParams] = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(() => window.matchMedia('(min-width: 800px)').matches);
@@ -161,6 +214,13 @@ export default function Search() {
   // Deals (stage 101) on their own are a page of their own: "Deals" rather than "All products".
   const heading = q ? `Results for “${q}”` : (categoryName ?? (get('deals') ? 'Deals' : 'All products'));
   const pages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
+  // This page's search, without its page and order, as saved searches keep it.
+  const savable = (() => {
+    const kept = new URLSearchParams(params);
+    kept.delete('page');
+    kept.delete('sort');
+    return kept.size ? `?${kept}` : '';
+  })();
   const hasFilters = ['brand', 'size', 'spec', 'minPrice', 'maxPrice', 'rating', 'inStock', 'deals'].some((k) =>
     params.has(k),
   );
@@ -329,6 +389,8 @@ export default function Search() {
             ))}
           </select>
         </div>
+        {/* Saved searches (stage 144): only for a search or filter, not the bare list of everything. */}
+        {savable && <SaveSearch key={savable} search={savable} />}
 
         {error && <p className="error">{error.message}</p>}
         {data && data.total === 0 && (

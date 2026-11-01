@@ -16,6 +16,7 @@ import { sendRestockReminders } from './restockReminders.js';
 import { sendNearlyGoneEmails } from './nearlyGone.js';
 import { sendNewsletters } from './newsletters.js';
 import { sendBirthdayTreats } from './birthdays.js';
+import { sendSavedSearchAlerts } from './savedSearches.js';
 import { sendPaymentReminders } from './paymentReminders.js';
 import { deleteUnusedImages } from './routes/images.js';
 import { sendLowStockEmail } from './lowStockEmail.js';
@@ -86,6 +87,8 @@ const sweeper = setInterval(async () => {
   await sendNewsletters(ctx).catch((err) => console.error(err));
   // Birthday coupons for today's birthdays (birthdays.js).
   await sendBirthdayTreats(ctx).catch((err) => console.error(err));
+  // New arrivals for customers' saved searches, each checked at most hourly (savedSearches.js).
+  await sendSavedSearchAlerts(ctx).catch((err) => console.error(err));
 }, 60_000);
 
 // At startup (the free plan sleeps, so hourly runs may not come) and then every hour: delete uploaded photos that no

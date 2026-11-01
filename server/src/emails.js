@@ -1566,3 +1566,44 @@ ${button('See my wishlist', wishlistUrl)}`,
   );
   return { subject, text, html };
 }
+
+// New products for a customer's saved searches (stage 144, savedSearches.js): `groups` [{ label, path, products
+// (cards) }], one email for all of them.
+export function savedSearchEmail(user, groups, publicUrl = DEFAULT_PUBLIC_URL) {
+  const firstName = user.name.split(/\s+/)[0];
+  const count = groups.reduce((n, g) => n + g.products.length, 0);
+  const subject =
+    groups.length === 1 ? `New for your search: ${groups[0].label}` : `${count} new products for your saved searches`;
+  const accountUrl = `${publicUrl}/account#saved-searches`;
+  const text = [
+    `Hi ${firstName},`,
+    'New products match searches you saved:',
+    ...groups.map((g) =>
+      [
+        `${g.label} (${publicUrl}${g.path})`,
+        ...g.products.map((p) => `- ${p.title}: ${rupees(p.price)}\n  ${publicUrl}/p/${p.slug}`),
+      ].join('\n'),
+    ),
+    `Stop these by removing the search on your account page: ${accountUrl}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const cell = 'padding:8px 0;border-bottom:1px solid #e5e7eb';
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p>New products match searches you saved:</p>
+${groups
+  .map(
+    (
+      g,
+    ) => `<h2 style="font-size:16px;margin:20px 0 4px"><a href="${escapeHtml(publicUrl + g.path)}" style="color:#1d4ed8">${escapeHtml(g.label)}</a></h2>
+<table style="width:100%;border-collapse:collapse;margin:0 0 8px">
+${g.products.map((p) => `<tr><td style="${cell}"><a href="${escapeHtml(`${publicUrl}/p/${p.slug}`)}" style="color:#111827">${escapeHtml(p.title)}</a></td><td style="${cell};text-align:right;white-space:nowrap">${escapeHtml(rupees(p.price))}</td></tr>`).join('\n')}
+</table>`,
+  )
+  .join('\n')}
+<p style="font-size:12px;color:#6b7280"><a href="${escapeHtml(accountUrl)}" style="color:#6b7280">Manage your saved searches</a></p>`,
+    "You're getting this because you saved a search on Bazaar.",
+  );
+  return { subject, text, html };
+}

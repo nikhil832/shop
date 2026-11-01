@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-11-01 (ninth list), roughly in the order they'd help most. All free (no new services).
 
-- **Saved searches**: a "Tell me about new arrivals" button on a search page (words and filters); the customer gets one
-  email when a new product matches, with a list of their saved searches on the account page. To start: "start saved
-  searches".
 - **Review rewards**: a small store credit (set by the admin, e.g. ₹20) for a written review with a photo, paid once
   the review has been screened and stays shown for a few days. More photo reviews, which help others buy. To start:
   "start review rewards".
@@ -178,3 +175,4 @@ Suggested on 2026-11-01 (ninth list), roughly in the order they'd help most. All
 | Birthday treat: a one-use coupon of their own on customers' birthdays                                                                                                                   | Stage 141 (`git log --grep "Stage 141"`) |
 | Price alerts: "email me at ₹X or less" on wishlist items                                                                                                                                | Stage 142 (`git log --grep "Stage 142"`) |
 | Store news for a group: a loyalty level, a customer tag or buyers from a category                                                                                                       | Stage 143 (`git log --grep "Stage 143"`) |
+| Saved searches: email about new arrivals that match a saved search                                                                                                                      | Stage 144 (`git log --grep "Stage 144"`) |

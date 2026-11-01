@@ -46,6 +46,8 @@ const OWN = [
   'restockReminders',
   // Store news's queue (stage 140).
   'newsletterSends',
+  // Saved searches (stage 144).
+  'savedSearches',
   // Store credit's history; the balance goes with the account (closing gives up any credit left).
   'creditLedger',
 ];
@@ -80,6 +82,7 @@ export function accountDataRouter(ctx) {
       giftCards,
       votes,
       answered,
+      searches,
     ] = await Promise.all([
       db.collection('orders').find({ userId }).sort({ createdAt: -1 }).toArray(),
       db.collection('returns').find({ userId }).sort({ createdAt: -1 }).toArray(),
@@ -98,6 +101,7 @@ export function accountDataRouter(ctx) {
       db.collection('reviewVotes').countDocuments({ userId }),
       // Questions they answered for other customers (stage 133).
       db.collection('questions').find({ 'customerAnswers.userId': userId }).toArray(),
+      db.collection('savedSearches').find({ userId }).sort({ createdAt: -1 }).toArray(),
     ]);
     const productIds = [...reviews, ...questions, ...wishlist, ...alerts].map((d) => d.productId);
     const titles = new Map(
@@ -151,6 +155,8 @@ export function accountDataRouter(ctx) {
       })),
       // Whether it's shared by a link (stage 106); the link itself is on the wishlist page.
       wishlistShared: Boolean(u.wishlistShare),
+      // Saved searches (stage 144).
+      savedSearches: searches.map((s) => ({ search: s.label, savedAt: s.createdAt })),
       backInStockAlerts: alerts.map((a) => ({ product: title(a.productId), createdAt: a.createdAt })),
       savedCart: cart ? { items: cart.items, updatedAt: cart.updatedAt } : null,
       helpRequests: help.map(toRequest),
