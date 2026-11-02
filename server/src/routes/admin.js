@@ -1,4 +1,5 @@
 import { quantityDiscountField } from '../quantityDiscounts.js';
+import { UNCONFIRMED } from '../codConfirm.js';
 import { restockDaysField } from '../restockReminders.js';
 import { LOW, lowStockAtField } from '../lowStock.js';
 import express from 'express';
@@ -241,6 +242,8 @@ const orderIds = z
   .transform((ids) => [...new Set(ids)]);
 const orderQuery = z.object({
   status: z.enum(ORDER_STATUSES).optional(),
+  // Cash on Delivery orders waiting for a call (stage 147, codConfirm.js).
+  confirm: z.enum(['waiting']).optional(),
   q: z.string().trim().max(100).optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
   // Particular orders (comma-separated ids), in that order: the packing slips page.
@@ -859,6 +862,7 @@ export function adminRouter(ctx) {
     }
     const filter = {};
     if (query.status) filter.status = query.status;
+    if (query.confirm) Object.assign(filter, UNCONFIRMED());
     if (query.q) {
       // Matches the order number or the customer's name or email.
       const or = [];
@@ -876,7 +880,7 @@ export function adminRouter(ctx) {
       if (people.length) or.push({ userId: { $in: people.map((u) => u._id) } });
       filter.$or = or.length ? or : [{ _id: null }];
     }
-    const [docs, total, counts] = await Promise.all([
+    const [docs, total, counts, unconfirmed] = await Promise.all([
       orders
         .find(filter)
         .sort({ createdAt: -1, _id: -1 })
@@ -885,6 +889,7 @@ export function adminRouter(ctx) {
         .toArray(),
       orders.countDocuments(filter),
       orders.aggregate([{ $group: { _id: '$status', n: { $sum: 1 } } }]).toArray(),
+      orders.countDocuments(UNCONFIRMED()),
     ]);
     res.json({
       items: await withCustomers(docs),
@@ -892,6 +897,7 @@ export function adminRouter(ctx) {
       page: query.page,
       pageSize: ORDER_PAGE,
       counts: Object.fromEntries(ORDER_STATUSES.map((s) => [s, counts.find((c) => c._id === s)?.n ?? 0])),
+      unconfirmed,
     });
   });
 

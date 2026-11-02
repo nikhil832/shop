@@ -135,7 +135,7 @@ test('after 2 COD orders refused or unreachable, a customer must pay online, unt
 });
 
 test('admins set a COD order limit and how many refusals; "none" switches each off', async () => {
-  assert.deepEqual((await admin('GET', '/admin/cod')).body, { maxOrder: null, refusedLimit: 2 });
+  assert.deepEqual((await admin('GET', '/admin/cod')).body, { maxOrder: null, refusedLimit: 2, confirm: false });
   const saved = await admin('PUT', '/admin/cod', { maxOrder: 500000, refusedLimit: 3 });
   assert.equal(saved.status, 200, JSON.stringify(saved.body));
   const call = await register();

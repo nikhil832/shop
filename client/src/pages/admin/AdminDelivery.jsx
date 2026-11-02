@@ -21,6 +21,7 @@ function CodRules() {
         body: {
           maxOrder: f.maxOrder === '' ? null : Math.round(Number(f.maxOrder) * 100),
           refusedLimit: f.refusedLimit === '' ? null : Number(f.refusedLimit),
+          confirm: f.confirm === 'on',
         },
       });
       setState({ busy: false, error: null, done: 'Saved.' });
@@ -63,6 +64,15 @@ function CodRules() {
           />
         </label>
       </div>
+      {/* Stage 147: a "Yes, ship it" button in the confirmation email; unconfirmed orders are listed to call. */}
+      <label className="check">
+        <input name="confirm" type="checkbox" defaultChecked={data.confirm} />
+        Ask customers to confirm Cash on Delivery orders
+      </label>
+      <p className="muted small">
+        The order email gets a &ldquo;Yes, ship it&rdquo; button. Orders not confirmed within a day show under
+        &ldquo;Cash on Delivery not confirmed&rdquo; on the Orders page, to call before shipping.
+      </p>
       {state.error && (
         <p className="error" role="alert">
           {state.error}

@@ -14,8 +14,10 @@ export default function AdminOrders() {
   const [params, setParams] = useSearchParams();
   const status = params.get('status') ?? '';
   const q = params.get('q') ?? '';
+  // Cash on Delivery orders not confirmed a day after ordering, to call about (stage 147).
+  const confirm = params.get('confirm') === 'waiting' ? 'waiting' : '';
   const page = Math.max(1, Number(params.get('page')) || 1);
-  const path = `/admin/orders${query({ status, q, page: page > 1 ? page : '' })}`;
+  const path = `/admin/orders${query({ status, confirm, q, page: page > 1 ? page : '' })}`;
   const [version, setVersion] = useState(0);
   const { data, error, loading } = useFetch(path, version);
   // Orders ticked on this page of the list (a new page or filter starts with none), and the last bulk result.
@@ -44,7 +46,7 @@ export default function AdminOrders() {
 
   // Any change other than the page goes back to page 1.
   const update = (changes) => {
-    const next = { status, q, ...changes };
+    const next = { status, confirm, q, ...changes };
     setParams(query({ ...next, page: changes.page > 1 ? changes.page : '' }).slice(1));
   };
 
@@ -87,6 +89,22 @@ export default function AdminOrders() {
           </button>
         ))}
       </div>
+      {(confirm || data?.unconfirmed > 0) && (
+        <p className="confirm-filter">
+          <button
+            type="button"
+            className={`btn small${confirm ? ' primary' : ''}`}
+            aria-pressed={Boolean(confirm)}
+            onClick={() => update({ confirm: confirm ? '' : 'waiting' })}
+          >
+            Cash on Delivery not confirmed{data && <span className="count">{data.unconfirmed}</span>}
+          </button>
+          <span className="muted small">
+            {' '}
+            Placed over a day ago and not confirmed by the customer: call them first.
+          </span>
+        </p>
+      )}
 
       {bulk.result && (
         <div className="notice" role="status">
@@ -182,6 +200,7 @@ export default function AdminOrders() {
                   <td className="num">{formatPrice(o.total)}</td>
                   <td>
                     <StatusBadge status={o.status} pickup={Boolean(o.pickup)} />
+                    {o.codConfirm?.callNow && <span className="cod-unconfirmed">Not confirmed</span>}
                   </td>
                 </tr>
               ))}

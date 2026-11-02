@@ -14,7 +14,8 @@ import { findState, gstForOrders, gstInvoice } from '../gst.js';
 import { rememberAddress } from '../addressBook.js';
 import { byOf, CANCEL_REASONS, movedEntry, recordStock } from '../stockHistory.js';
 import { addCredit, amountDue } from '../credit.js';
-import { codAllowed } from '../cod.js';
+import { codAllowed, codSettings } from '../cod.js';
+import { newCodConfirm, toCodConfirm } from '../codConfirm.js';
 import { applyBundles, bundlesFor } from '../bundles.js';
 import { applyQuantityDiscounts } from '../quantityDiscounts.js';
 import { giftBody, giftSettings, giftWrapFee } from '../giftOptions.js';
@@ -233,6 +234,8 @@ export const toOrder = (doc, { admin = false } = {}) => ({
   giftWrap: doc.giftWrap ?? 0,
   // Paid with store credit (stage 72); `total` less this is what was paid, or is to pay, in money.
   creditUsed: doc.creditUsed ?? 0,
+  // Cash on Delivery confirmation (stage 147, codConfirm.js): { confirmedAt, by, callNow } or null.
+  codConfirm: toCodConfirm(doc, admin),
   address: doc.address,
   // When the address was last changed before shipping (stage 90, orderAddress.js); admins also get every earlier one.
   addressChangedAt: doc.addressChanges?.at(-1)?.at ?? null,
@@ -576,6 +579,8 @@ export function ordersRouter(ctx) {
     assertTakingOrders(holiday);
     const session = client.startSession();
     let order;
+    // The "Yes, ship it" link's token (stage 147), for the confirmation email only.
+    let confirmToken = null;
     try {
       await session.withTransaction(async () => {
         const now = new Date();
@@ -708,6 +713,10 @@ export function ordersRouter(ctx) {
           const cod = await codAllowed(db, req.user, totals.total - body.creditToUse);
           if (!cod.allowed) throw new HttpError(409, cod.reason);
         }
+        // Asking the customer to confirm (stage 147, codConfirm.js): orders paid on delivery to an address, not at a
+        // pickup point (refusals at the door are what it's for).
+        const confirm = !online && !paidByCredit && !point && (await codSettings(db)).confirm ? newCodConfirm() : null;
+        confirmToken = confirm?.token ?? null;
         // Taken inside the transaction: a failed order gives its number back, so numbers have no gaps or repeats.
         const counter = await db
           .collection('counters')
@@ -762,6 +771,7 @@ export function ordersRouter(ctx) {
             : online
               ? { method: 'razorpay', status: 'pending' }
               : { method: 'cod' },
+          ...(confirm && { codConfirm: confirm.codConfirm }),
           status: online && !paidByCredit ? 'awaiting_payment' : 'placed',
           ...(online && !paidByCredit && { expiresAt: new Date(now.getTime() + PAYMENT_WINDOW_MS) }),
           createdAt: now,
@@ -787,7 +797,7 @@ export function ordersRouter(ctx) {
       await session.endSession();
     }
     if (order.status === 'placed') {
-      await sendOrderEmail(ctx, order, 'placed');
+      await sendOrderEmail(ctx, order, 'placed', { confirmToken });
       await sendNewOrderAlert(ctx, order);
       return res.status(201).json({ ...toOrder(order), checkout: null });
     }

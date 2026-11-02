@@ -1,4 +1,5 @@
 import express from 'express';
+import { codConfirmRouter } from './codConfirm.js';
 import { sessionMiddleware } from './auth.js';
 import { couponsRouter } from './coupons.js';
 import { accountRouter } from './routes/account.js';
@@ -92,6 +93,7 @@ export function createApp(ctx) {
   api.use(accountRouter(ctx));
   api.use(ordersRouter(ctx));
   api.use(orderAddressRouter(ctx));
+  api.use(codConfirmRouter(ctx));
   api.use(itemCancellationRouter(ctx));
   api.use(orderTrackingRouter(ctx));
   api.use(deliveryFeedbackRouter(ctx));

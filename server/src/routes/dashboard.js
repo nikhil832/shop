@@ -1,4 +1,5 @@
 import express from 'express';
+import { UNCONFIRMED } from '../codConfirm.js';
 import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
 import { parse } from '../http.js';
@@ -114,6 +115,7 @@ export function dashboardRouter({ db, config }) {
       late,
       exchangesToReview,
       exchangesToShip,
+      codToCall,
     ] = await Promise.all([
       orders
         .aggregate([
@@ -261,6 +263,7 @@ export function dashboardRouter({ db, config }) {
       // Exchanges waiting for a decision, and approved ones whose new items aren't sent yet (stage 89).
       db.collection('exchanges').countDocuments({ status: 'requested' }),
       db.collection('exchanges').countDocuments({ status: 'approved' }),
+      orders.countDocuments(UNCONFIRMED(now)),
     ]);
     // Profit from cost prices (profit.js), this period and the one before.
     const [profit, profitBefore, customers] = await Promise.all([
@@ -389,6 +392,8 @@ export function dashboardRouter({ db, config }) {
       runningOut: soon,
       lateOrders: late,
       exchanges: { toReview: exchangesToReview, toShip: exchangesToShip },
+      // Cash on Delivery orders not confirmed a day after ordering, to call about (stage 147, codConfirm.js).
+      codToCall,
     });
   });
 

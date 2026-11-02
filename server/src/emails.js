@@ -121,8 +121,15 @@ function intro(order, event) {
 }
 
 // Builds { subject, text, html } for an order email. `user` is { name }; links point at `publicUrl`.
-// `setPasswordUrl` (stage 84): for an account made at checkout, the link to give it a password.
-export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL, { setPasswordUrl = null } = {}) {
+// `setPasswordUrl` (stage 84): for an account made at checkout, the link to give it a password. `confirmUrl` (stage
+// 147, codConfirm.js): the "Yes, ship it" link of a Cash on Delivery order the store asks customers to confirm.
+export function orderEmail(
+  order,
+  event,
+  user,
+  publicUrl = DEFAULT_PUBLIC_URL,
+  { setPasswordUrl = null, confirmUrl = null } = {},
+) {
   const subject = `Order #${orderNumber(order)} ${(order.pickup && PICKUP_SUBJECTS[event]) || SUBJECTS[event]}`;
   const firstName = user.name.split(/\s+/)[0];
   const orderUrl = `${publicUrl}/orders/${order._id}`;
@@ -175,9 +182,13 @@ export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL, {
   const accountNote = setPasswordUrl
     ? `We've made you a Bazaar account with this email, so you can follow your order. Set a password to log in next time (the link works for ${SET_PASSWORD_DAYS} days; after that, use "Forgot password").`
     : null;
+  const confirmNote = confirmUrl
+    ? `Please confirm you'll pay ${rupees(due(order))} in cash on delivery, so we can ship it. If we don't hear from you within a day, we'll call you on ${order.address.phone}.`
+    : null;
   const text = [
     `Hi ${firstName},`,
     ...paragraphs,
+    ...(confirmNote ? [`${confirmNote}\nYes, ship it: ${confirmUrl}`] : []),
     ...(accountNote ? [`${accountNote}\n${setPasswordUrl}`] : []),
     [
       ...items.map((i) => `- ${i.text}: ${i.amount}${event === 'delivered' ? ` (review: ${i.url})` : ''}`),
@@ -195,6 +206,7 @@ export function orderEmail(order, event, user, publicUrl = DEFAULT_PUBLIC_URL, {
     subject,
     `<p>Hi ${escapeHtml(firstName)},</p>
 ${paragraphs.map((p) => `<p>${escapeHtml(p)}</p>`).join('\n')}
+${confirmNote ? `<p>${escapeHtml(confirmNote)}</p>${button('Yes, ship it', confirmUrl)}` : ''}
 ${accountNote ? `<p>${escapeHtml(accountNote)}</p>${button('Set a password', setPasswordUrl)}` : ''}
 <table style="width:100%;border-collapse:collapse;margin:16px 0">
 ${items
@@ -1319,7 +1331,8 @@ export async function sendExchangeUpdate(ctx, ex, order) {
 }
 
 // Emails the order's customer about `event`. Never throws: the order change it reports is already saved.
-export async function sendOrderEmail(ctx, order, event) {
+// `confirmToken` (stage 147): a new COD order's "Yes, ship it" token, which only this email carries.
+export async function sendOrderEmail(ctx, order, event, { confirmToken = null } = {}) {
   try {
     const user = await ctx.db
       .collection('users')
@@ -1330,7 +1343,9 @@ export async function sendOrderEmail(ctx, order, event) {
       event === 'placed' && !user.passwordHash
         ? await setPasswordLink(ctx.db, user._id, ctx.config.mail?.publicUrl)
         : null;
-    const email = orderEmail(order, event, user, ctx.config.mail?.publicUrl, { setPasswordUrl });
+    const publicUrl = ctx.config.mail?.publicUrl ?? DEFAULT_PUBLIC_URL;
+    const confirmUrl = event === 'placed' && confirmToken ? `${publicUrl}/confirm-order#token=${confirmToken}` : null;
+    const email = orderEmail(order, event, user, ctx.config.mail?.publicUrl, { setPasswordUrl, confirmUrl });
     await ctx.mail.send({ to: { email: user.email, name: user.name }, ...email });
   } catch (err) {
     console.error(`Could not send the ${event} email for order ${order._id}:`, err.message);

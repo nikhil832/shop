@@ -128,6 +128,8 @@ export const PRIVATE_PATHS = [
   '/confirm-email',
   // Store news unsubscribe links (stage 140): one person's.
   '/unsubscribe',
+  // "Yes, ship it" links of Cash on Delivery orders (stage 147).
+  '/confirm-order',
   // Any mix of products (stage 73): endless addresses with nothing new on them.
   '/compare',
   '/api/',

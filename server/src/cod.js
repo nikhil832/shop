@@ -19,7 +19,8 @@ export const RTO_REASONS = {
 };
 const COUNTED = ['refused', 'unreachable'];
 // No order-value limit until an admin sets one (switching one on by default would change live checkouts).
-export const COD_DEFAULTS = { maxOrder: null, refusedLimit: 2 };
+// Asking customers to confirm COD orders (stage 147, codConfirm.js) is off until switched on.
+export const COD_DEFAULTS = { maxOrder: null, refusedLimit: 2, confirm: false };
 const SETTINGS = 'cod';
 
 export async function codSettings(db) {
@@ -27,6 +28,7 @@ export async function codSettings(db) {
   return {
     maxOrder: doc && 'maxOrder' in doc ? doc.maxOrder : COD_DEFAULTS.maxOrder,
     refusedLimit: doc && 'refusedLimit' in doc ? doc.refusedLimit : COD_DEFAULTS.refusedLimit,
+    confirm: doc?.confirm ?? COD_DEFAULTS.confirm,
   };
 }
 
@@ -66,6 +68,8 @@ const settingsBody = z.object({
   maxOrder: rule.refine((n) => n === null || (n >= 10000 && n % 100 === 0), 'From ₹100, in whole rupees'),
   // 1 to 10 refused orders; null: never.
   refusedLimit: rule.refine((n) => n === null || (n >= 1 && n <= 10), 'From 1 to 10'),
+  // Ask customers to confirm COD orders (stage 147); left out by forms from before it, which keep the current choice.
+  confirm: z.boolean().optional(),
 });
 
 export function codRouter({ db }) {
@@ -77,16 +81,19 @@ export function codRouter({ db }) {
   });
 
   router.put('/admin/cod', async (req, res) => {
-    const body = parse(settingsBody, req.body);
     const before = await codSettings(db);
+    const parsed = parse(settingsBody, req.body);
+    const body = { ...parsed, confirm: parsed.confirm ?? before.confirm };
     await db.collection('settings').updateOne({ _id: SETTINGS }, { $set: body }, { upsert: true });
     const say = {
       maxOrder: (n) => (n === null ? 'No limit' : rupees(n)),
       refusedLimit: (n) => (n === null ? 'Never' : `After ${n}`),
+      confirm: (b) => (b ? 'On' : 'Off'),
     };
     const changes = [
       ['Cash on Delivery up to', 'maxOrder'],
       ['Pay online only', 'refusedLimit'],
+      ['Ask customers to confirm', 'confirm'],
     ]
       .filter(([, key]) => before[key] !== body[key])
       .map(([field, key]) => ({ field, from: say[key](before[key]), to: say[key](body[key]) }));

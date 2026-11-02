@@ -719,6 +719,14 @@ export default function AdminDashboard() {
                   </Link>
                 )}
               </p>
+              {data.codToCall > 0 && (
+                <p>
+                  <Link to="/admin/orders?confirm=waiting">
+                    {data.codToCall} Cash on Delivery {data.codToCall === 1 ? 'order' : 'orders'} not confirmed: call
+                    before shipping
+                  </Link>
+                </p>
+              )}
               {data.lateOrders > 0 && (
                 <p>
                   <Link to="/admin/orders?status=shipped">

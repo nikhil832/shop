@@ -254,6 +254,12 @@ export default function AdminOrder() {
       ? [[`Should arrive ${arrival(order.deliveryEstimate)}`, null, true]]
       : []),
     [payment.paidAt && 'Paid', payment.paidAt],
+    // Cash on Delivery confirmed (stage 147), by the customer or by phone.
+    [
+      order.codConfirm?.confirmedAt &&
+        (order.codConfirm.by === 'staff' ? `Confirmed by phone (${order.codConfirm.byName})` : 'Confirmed by customer'),
+      order.codConfirm?.confirmedAt,
+    ],
     ['Shipped', order.shippedAt],
     ['Delivered', order.deliveredAt],
     [
@@ -287,6 +293,37 @@ export default function AdminOrder() {
               <StatusBadge status={order.status} pickup={Boolean(order.pickup)} />
             </div>
             <OrderHelpRequests orderId={order.id} />
+            {order.codConfirm && !order.codConfirm.confirmedAt && order.status === 'placed' && (
+              <div className="notice awaiting">
+                <p>
+                  <strong>Cash on Delivery not confirmed yet.</strong>{' '}
+                  {order.codConfirm.callNow
+                    ? `Ordered over a day ago: please call ${address.phone} before shipping.`
+                    : 'The customer was asked by email to confirm it.'}
+                </p>
+                {can(user, 'orders.notes') && (
+                  <div className="notice-actions">
+                    <button
+                      type="button"
+                      className="btn small"
+                      disabled={action.busy}
+                      onClick={() =>
+                        run(async () => {
+                          const done = await request(`/admin/orders/${order.id}/confirm-cod`, { method: 'POST' });
+                          const confirmedAt = done.confirmedAt ?? new Date().toISOString();
+                          return {
+                            ...order,
+                            codConfirm: { confirmedAt, by: 'staff', byName: user.name, callNow: false },
+                          };
+                        })
+                      }
+                    >
+                      Confirmed by phone
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             <ol className="timeline">
               {timeline.map(([label, at]) => (
                 <li key={label}>

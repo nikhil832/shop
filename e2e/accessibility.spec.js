@@ -66,6 +66,7 @@ const SIGNED_OUT = [
   '/track',
   '/faq',
   '/unsubscribe#token=test',
+  '/confirm-order#token=test',
 ];
 const CUSTOMER = (o) => [
   '/cart',

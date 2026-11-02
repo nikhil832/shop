@@ -173,6 +173,11 @@ const INDEXES = {
     [{ number: 1 }, { unique: true, partialFilterExpression: { number: { $exists: true } } }],
     // Orders with a product: frequently bought together (newest first) and whether a reviewer bought it.
     [{ 'items.productId': 1, createdAt: -1 }],
+    // "Yes, ship it" links of Cash on Delivery orders (stage 147).
+    [
+      { 'codConfirm.tokenHash': 1 },
+      { unique: true, partialFilterExpression: { 'codConfirm.tokenHash': { $exists: true } } },
+    ],
   ],
   // One review per customer per product; listed newest first per product and (for admins) overall.
   reviews: [

@@ -9,6 +9,7 @@ import OrderProgress from '../components/OrderProgress.jsx';
 import CancelOrder from '../components/CancelOrder.jsx';
 import DeliveryFeedback from '../components/DeliveryFeedback.jsx';
 import ChangeAddress from '../components/ChangeAddress.jsx';
+import ConfirmCod from '../components/ConfirmCod.jsx';
 import {
   formatDate,
   formatPrice,
@@ -203,6 +204,8 @@ export default function Order() {
           </div>
         </div>
       )}
+
+      <ConfirmCod key={order.id} order={order} />
 
       <div className="cart-page">
         <div className="checkout-main">

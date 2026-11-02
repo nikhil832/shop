@@ -1902,6 +1902,25 @@ address {
   color: var(--muted);
   font-size: 0.8rem;
 }
+/* Cash on Delivery orders to call about (stage 147). The count takes the button's own colour, for contrast. */
+.confirm-filter {
+  margin: 0 0 12px;
+}
+.confirm-filter .count {
+  margin-left: 6px;
+  font-weight: 700;
+}
+.cod-unconfirmed {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #b91c1c;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
 .table-wrap {
   overflow-x: auto;
   /* Contains the absolutely positioned .sr-only labels, which would otherwise widen the page on phones. */
@@ -2139,6 +2158,10 @@ textarea {
   gap: 10px;
 }
 .notice.awaiting p {
+  margin: 0;
+}
+.confirm-cod h2 {
+  font-size: 1rem;
   margin: 0;
 }
 .notice-actions {
