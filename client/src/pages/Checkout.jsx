@@ -517,6 +517,7 @@ export default function Checkout() {
         couponCode={quote.coupon?.code}
         discountLabel={quote.referral ? "Friend's welcome" : null}
         mrpSaving={mrpSavingOf(quote.items)}
+        freeGift={quote.freeGift}
         giftWrap={quote.giftWrap}
         deliveryExtra={quote.deliveryExtra}
         total={quote.total}

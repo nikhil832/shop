@@ -47,7 +47,8 @@ export function cancellationPlan(order, cancel) {
     if (c.qty > line.qty) throw new HttpError(409, `Only ${line.qty} of ${line.title} is in this order`);
     line.qty -= c.qty;
   }
-  if (items.every((line) => line.qty === 0)) {
+  // A free gift (stage 149) alone isn't an order.
+  if (items.every((line) => line.qty === 0 || line.freeGift)) {
     throw new HttpError(409, 'To cancel everything, cancel the whole order instead');
   }
   const value = cancel.reduce((sum, c) => sum + order.items[c.index].price * c.qty, 0);

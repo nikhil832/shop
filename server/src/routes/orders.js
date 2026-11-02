@@ -16,6 +16,7 @@ import { byOf, CANCEL_REASONS, movedEntry, recordStock } from '../stockHistory.j
 import { addCredit, amountDue } from '../credit.js';
 import { codAllowed, codSettings } from '../cod.js';
 import { newCodConfirm, toCodConfirm } from '../codConfirm.js';
+import { liveFreeGift, takeFreeGift } from '../freeGifts.js';
 import { applyBundles, bundlesFor } from '../bundles.js';
 import { applyQuantityDiscounts } from '../quantityDiscounts.js';
 import { giftBody, giftSettings, giftWrapFee } from '../giftOptions.js';
@@ -496,6 +497,16 @@ export function ordersRouter(ctx) {
       ? 0
       : await friendDiscount(db, { user: req.user, ref: query.ref, subtotal: totals.subtotal });
     const discount = coupon?.discount ?? referral;
+    // A free gift (stage 149, freeGifts.js): on offer while one's left, and how much more the items need to come to.
+    const offer = await liveFreeGift(db);
+    const freeGift =
+      offer && offer.product.stock > 0
+        ? {
+            product: toProductCard(offer.product),
+            minSubtotal: offer.minSubtotal,
+            short: Math.max(0, offer.minSubtotal - totals.subtotal),
+          }
+        : null;
     // Cashback this order would earn (stage 85), when it's on: on the items after bundle and coupon savings, plus the
     // customer's loyalty level's extra (stage 136), which earns even while the store's cashback is off.
     const cashback = await cashbackSettings(db);
@@ -526,6 +537,8 @@ export function ordersRouter(ctx) {
       total: priced.total + giftWrap,
       giftWrap,
       giftWrapOffer: gifts.enabled ? { fee: gifts.fee } : null,
+      // { product (card), minSubtotal, short (0 once it's included) } or null.
+      freeGift,
       coupon,
       referral: referral ? { discount: referral } : null,
       couponError,
@@ -670,6 +683,17 @@ export function ordersRouter(ctx) {
             items.length,
             ...quantity.parts.map((part, n) => ({ ...part, productId: items[n].productId })),
           );
+        }
+        // A free gift with orders over an amount (stage 149, freeGifts.js): its own item at price 0, when one's left.
+        const gift = await takeFreeGift(db, {
+          subtotal: items.reduce((sum, i) => sum + i.price * i.qty, 0),
+          gst,
+          now,
+          session,
+        });
+        if (gift) {
+          items.push(gift.item);
+          moved.push(gift.moved);
         }
         const before = withDeliveryExtra(
           orderTotals(

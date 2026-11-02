@@ -46,7 +46,8 @@ function notAddable(line) {
 async function buyAgain(order) {
   // One line per product (or option): an order's bundled and full-price units of one product go back together.
   const merged = new Map();
-  for (const i of order.items) {
+  // A free gift (stage 149) comes with an order; it isn't bought again.
+  for (const i of order.items.filter((item) => !item.freeGift)) {
     const key = lineKey(i);
     merged.set(key, { ...i, qty: (merged.get(key)?.qty ?? 0) + i.qty });
   }
@@ -244,6 +245,9 @@ export default function Order() {
                       {i.title}
                     </Link>
                     {i.bundle && <span className="muted small">In the &ldquo;{i.bundle.name}&rdquo; bundle</span>}
+                    {i.freeGift && (
+                      <span className="muted small">Free with your order (worth {formatPrice(i.regularPrice)})</span>
+                    )}
                     {i.quantityDiscount && (
                       <span className="muted small">
                         {i.quantityDiscount.percent}% off for {i.quantityDiscount.minQty} or more (was{' '}

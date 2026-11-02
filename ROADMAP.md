@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-11-02 (tenth list), roughly in the order they'd help most. All free (no new services).
 
-- **Free gift over ₹X**: the admin picks a product given free with orders above an amount (between two dates if
-  wanted). The cart says "Add ₹N more for a free …", and the gift is added to the order with its stock taken. To
-  start: "start free gifts".
 - **New and Bestseller badges**: "New" on products added in the last 30 days and "Bestseller" on each category's
   top sellers of the last 30 days, worked out from real orders, on cards and product pages. To start: "start badges".
 - **Sign in with Google**: a "Continue with Google" button on the login page that logs in or creates the account.
@@ -182,3 +179,4 @@ Suggested on 2026-11-02 (tenth list), roughly in the order they'd help most. All
 | Click and collect: free pickup from the store's pickup points, collected with a code                                                                                                    | Stage 146 (`git log --grep "Stage 146"`) |
 | Confirm COD orders: a "Yes, ship it" button in the email and on the order page; unconfirmed ones listed to call                                                                         | Stage 147 (`git log --grep "Stage 147"`) |
 | Replies to reviews: the store's public reply under a review, emailed to the reviewer; alerts and a list for 1–2 star reviews                                                            | Stage 148 (`git log --grep "Stage 148"`) |
+| Free gift over an amount: a chosen product free with orders over ₹X, shown in the cart and added to the order                                                                           | Stage 149 (`git log --grep "Stage 149"`) |

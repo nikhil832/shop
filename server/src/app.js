@@ -1,4 +1,5 @@
 import express from 'express';
+import { freeGiftRouter } from './freeGifts.js';
 import { reviewRepliesRouter } from './reviewReplies.js';
 import { codConfirmRouter } from './codConfirm.js';
 import { sessionMiddleware } from './auth.js';
@@ -140,6 +141,7 @@ export function createApp(ctx) {
   api.use(searchInsightsRouter(ctx));
   api.use(giftCardsRouter(ctx));
   api.use(codRouter(ctx));
+  api.use(freeGiftRouter(ctx));
   api.use(giftOptionsRouter(ctx));
   api.use(stockReceiptsRouter(ctx));
   api.use(stocktakesRouter(ctx));

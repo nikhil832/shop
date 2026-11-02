@@ -92,6 +92,89 @@ function Cashback() {
   );
 }
 
+// A free gift with orders over an amount (stage 149): a product without options, optionally between two days. Off
+// until switched on; each order gets one while any are left.
+function FreeGift() {
+  const [version, setVersion] = useState(0);
+  const { data } = useFetch('/admin/free-gift', version);
+  const [state, setState] = useState({ busy: false, error: null, done: null });
+  if (!data) return null;
+  async function save(e) {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.currentTarget));
+    setState({ busy: true, error: null, done: null });
+    try {
+      await request('/admin/free-gift', {
+        method: 'PUT',
+        body: {
+          enabled: f.enabled === 'on',
+          productId: f.productId || null,
+          minSubtotal: Math.round(Number(f.minSubtotal) * 100),
+          from: f.from || null,
+          to: f.to || null,
+        },
+      });
+      setState({ busy: false, error: null, done: 'Saved.' });
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setState({ busy: false, error: err.message, done: null });
+    }
+  }
+  return (
+    <form key={JSON.stringify(data)} className="panel" onSubmit={save} aria-labelledby="free-gift-heading">
+      <h2 id="free-gift-heading">Free gift</h2>
+      <p className="muted small">
+        Orders whose items come to the amount or more (after bundle and quantity savings, before coupons) get one of
+        this product free, while any are in stock. The cart tells customers how much more they need.{' '}
+        {data.live
+          ? `On now, ${data.stock} left.`
+          : data.enabled
+            ? 'Switched on, but not shown right now (outside its days, or the product is hidden).'
+            : 'Off.'}{' '}
+        Given so far: {data.given}.
+      </p>
+      <label className="check">
+        <input name="enabled" type="checkbox" defaultChecked={data.enabled} />
+        Give a free gift
+      </label>
+      <div className="address-grid">
+        <label>
+          Gift
+          <select name="productId" defaultValue={data.productId ?? ''}>
+            <option value="">Choose a product</option>
+            {data.choices.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title} ({p.stock} in stock)
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          For orders from (₹)
+          <input name="minSubtotal" type="number" min="1" step="1" required defaultValue={data.minSubtotal / 100} />
+        </label>
+        <label>
+          First day (optional)
+          <input name="from" type="date" defaultValue={data.from ?? ''} />
+        </label>
+        <label>
+          Last day (optional)
+          <input name="to" type="date" defaultValue={data.to ?? ''} />
+        </label>
+      </div>
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
+      {state.done && <p role="status">{state.done}</p>}
+      <button type="submit" className="btn primary" disabled={state.busy}>
+        Save free gift
+      </button>
+    </form>
+  );
+}
+
 // Birthday treat (stage 141): a one-use coupon of their own, emailed to customers on their birthday. Off until on.
 function BirthdayTreat() {
   const [version, setVersion] = useState(0);
@@ -503,6 +586,7 @@ export default function AdminCoupons() {
       <Loyalty />
       <Referrals />
       <BirthdayTreat />
+      <FreeGift />
     </div>
   );
 }

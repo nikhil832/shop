@@ -4395,6 +4395,13 @@ textarea {
   margin: 0;
 }
 /* UI round 3: savings, the free-delivery bar and reassurance notes in summaries, and the empty cart's icon. */
+/* A free gift with orders over an amount (stage 149). */
+.free-gift-note {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--success);
+}
 .saving-note {
   margin: 0;
   padding: 8px 10px;

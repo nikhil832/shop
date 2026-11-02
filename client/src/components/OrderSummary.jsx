@@ -27,6 +27,8 @@ export default function OrderSummary({
   deliveryExtra = 0,
   // The customer's loyalty level (stage 134): { label, freeDeliveryMin, extraCashback }, for a note on its perks.
   loyalty = null,
+  // A free gift with orders over an amount (stage 149): the quote's { product, minSubtotal, short } or null.
+  freeGift = null,
   children,
 }) {
   const short = freeDeliveryMin ? freeDeliveryMin - subtotal : 0;
@@ -100,6 +102,19 @@ export default function OrderSummary({
             <span style={{ width: `${Math.min(100, (subtotal / freeDeliveryMin) * 100)}%` }} />
           </span>
         </div>
+      )}
+      {freeGift && (
+        <p className="small free-gift-note">
+          {freeGift.short > 0 ? (
+            <>
+              Add {formatPrice(freeGift.short)} more for a free <strong>{freeGift.product.title}</strong>.
+            </>
+          ) : (
+            <>
+              Free gift: <strong>{freeGift.product.title}</strong> comes with this order.
+            </>
+          )}
+        </p>
       )}
       {children}
     </aside>
