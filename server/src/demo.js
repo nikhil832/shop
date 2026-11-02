@@ -12,6 +12,8 @@ process.env.MONGODB_DB = 'demo';
 process.env.BREVO_API_KEY = '';
 // Nor spend money on Claude's API: the writing assistant is on in the demo only when pointed at the tests' stand-in.
 if (!process.env.ANTHROPIC_API_URL) process.env.ANTHROPIC_API_KEY = '';
+// Google login only against the e2e stand-in (stage 151): the demo's address isn't one a real Google client lists.
+if (!process.env.GOOGLE_TOKEN_URL) process.env.GOOGLE_CLIENT_ID = '';
 process.once('exit', () => mongo.stop());
 
 const { client, db } = await connectDb(process.env.MONGODB_URI, process.env.MONGODB_DB);

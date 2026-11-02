@@ -12,7 +12,9 @@ import {
   deleteSession,
   hashPassword,
   hashToken,
+  readCookie,
   readSessionCookie,
+  requireUser,
   sessionCookieOptions,
   toUser,
   verifyPassword,
@@ -23,6 +25,17 @@ import { MAX_WRONG_CODES, checkSecondStep, createLoginTicket, hasTwoStep } from 
 import { HttpError, parse } from '../http.js';
 import { noteAdminLogin } from '../loginAlerts.js';
 import { referrerFor } from '../referrals.js';
+import {
+  GOOGLE_COOKIE,
+  googleIdentity,
+  readGoogleCookie,
+  safeNext,
+  startGoogleLogin,
+  userForGoogle,
+} from '../googleLogin.js';
+
+// Google logins finished per visitor network per hour (stage 151).
+const GOOGLE_LOGINS_PER_HOUR = 30;
 
 export const email = z.string().trim().toLowerCase().max(254).pipe(z.email('Enter a valid email'));
 
@@ -155,6 +168,64 @@ export function authRouter(ctx) {
     }
     await startSession(req, res, doc);
     res.status(201).json({ user: toUser(doc) });
+  });
+
+  // What the login page can offer (stage 151): Google only when its keys are set.
+  router.get('/auth/options', (req, res) => {
+    res.json({ google: Boolean(ctx.config.google) });
+  });
+
+  // "Continue with Google" (stage 151, googleLogin.js): off to Google, then back to the callback.
+  router.get('/auth/google', (req, res) => {
+    const google = ctx.config.google;
+    if (!google) throw new HttpError(404, 'Logging in with Google is not set up');
+    const { url, cookie, maxAge } = startGoogleLogin(google, { next: req.query.next, ref: req.query.ref });
+    res.cookie(GOOGLE_COOKIE, cookie, { ...sessionCookieOptions(req), path: '/api/auth/google', maxAge });
+    res.redirect(302, url);
+  });
+
+  router.get('/auth/google/callback', async (req, res) => {
+    const google = ctx.config.google;
+    if (!google) throw new HttpError(404, 'Logging in with Google is not set up');
+    const saved = readGoogleCookie(readCookie(req, GOOGLE_COOKIE));
+    res.clearCookie(GOOGLE_COOKIE, { ...sessionCookieOptions(req), path: '/api/auth/google' });
+    const next = saved?.next ?? '/';
+    const back = (hash) => res.redirect(302, `/login?next=${encodeURIComponent(next)}#${hash}`);
+    // Pressed Cancel on Google's page.
+    if (req.query.error) return back('google-error=cancelled');
+    // No cookie (too slow, another browser) or a state that isn't ours: start again.
+    if (!saved || typeof req.query.state !== 'string' || req.query.state !== saved.state) {
+      return back('google-error=expired');
+    }
+    if (typeof req.query.code !== 'string' || !req.query.code || req.query.code.length > 2000) {
+      return back('google-error=failed');
+    }
+    const network = networkOf(clientIp(req, ctx.config));
+    if (!(await takeHourlySlot(db, `googleLogin:${hashToken(network)}`, GOOGLE_LOGINS_PER_HOUR))) {
+      return back('google-error=busy');
+    }
+    let user;
+    try {
+      const identity = await googleIdentity(google, req.query.code);
+      user = await userForGoogle(db, identity, { referredBy: await referrerFor(db, saved.ref) });
+    } catch (err) {
+      if (!err.code || typeof err.code !== 'string') throw err;
+      console.error('Google login:', err.message);
+      return back(`google-error=${err.code}`);
+    }
+    // Two-step accounts still need their code: the login page asks for it with this ticket.
+    if (hasTwoStep(user)) return back(`google-ticket=${await createLoginTicket(db, user._id)}`);
+    await startSession(req, res, user);
+    res.redirect(302, safeNext(next));
+  });
+
+  // Unlinks Google from the account (stage 151); only with a password to log in with instead.
+  router.delete('/account/google', requireUser, async (req, res) => {
+    if (!req.user.passwordHash) {
+      throw new HttpError(409, 'Set a password first, or you won’t be able to log in without Google');
+    }
+    await users.updateOne({ _id: req.user._id }, { $unset: { googleId: '' } });
+    res.json({ user: toUser({ ...req.user, googleId: undefined }) });
   });
 
   router.post('/auth/login', async (req, res) => {

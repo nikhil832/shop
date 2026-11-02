@@ -22,6 +22,7 @@ export function loadConfig() {
     razorpay: razorpayConfig(),
     mail: mailConfig(),
     ai: aiConfig(),
+    google: googleConfig(),
     // Google Search Console's HTML-tag check: the content of its <meta name="google-site-verification">. Only letters,
     // digits, - and _ (what Google's codes use), so it can go into the page as is.
     googleSiteVerification: /^[\w-]{10,100}$/.test(process.env.GOOGLE_SITE_VERIFICATION?.trim() ?? '')
@@ -33,6 +34,24 @@ export function loadConfig() {
     process.exit(1);
   }
   return config;
+}
+
+// "Continue with Google" on the login page (stage 151, googleLogin.js) when GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET
+// are set (an OAuth client from Google Cloud's console, free). The callback address Google sends visitors back to is
+// PUBLIC_URL + /api/auth/google/callback unless GOOGLE_REDIRECT_URI says otherwise; it must be listed on the client.
+// GOOGLE_AUTH_URL and GOOGLE_TOKEN_URL are only for the tests' stand-in.
+function googleConfig() {
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+  if (!clientId || !clientSecret) return null;
+  const publicUrl = (process.env.PUBLIC_URL?.trim() || 'http://localhost:5173').replace(/\/+$/, '');
+  return {
+    clientId,
+    clientSecret,
+    redirectUri: process.env.GOOGLE_REDIRECT_URI?.trim() || `${publicUrl}/api/auth/google/callback`,
+    authUrl: process.env.GOOGLE_AUTH_URL?.trim() || null,
+    tokenUrl: process.env.GOOGLE_TOKEN_URL?.trim() || null,
+  };
 }
 
 // "Write for me" in the admin product form uses Claude's API when ANTHROPIC_API_KEY is set (each draft costs a little);

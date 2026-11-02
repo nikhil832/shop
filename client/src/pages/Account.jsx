@@ -382,8 +382,8 @@ function SetPassword({ email }) {
     <section className="panel account-section" aria-labelledby="password-heading">
       <h2 id="password-heading">Password</h2>
       <p>
-        Your account was made when you ordered, so it has no password yet. Set one to log in on other devices or after
-        logging out.
+        Your account has no password yet (it was made when you ordered, or with Google). Set one to log in with your
+        email and password too.
       </p>
       {state.sent ? (
         <p role="status">We&apos;ve emailed a link to {email}. It works for an hour.</p>
@@ -393,6 +393,40 @@ function SetPassword({ email }) {
         </button>
       )}
       {state.error && <p className="error">{state.error}</p>}
+    </section>
+  );
+}
+
+// Logging in with Google (stage 151): shown once the account is linked; unlinking needs a password to log in with.
+function GoogleSection({ user, setUser }) {
+  const [state, setState] = useState({ busy: false, error: null });
+  if (!user.google) return null;
+  async function unlink() {
+    if (!window.confirm('Stop logging in with Google? You can link it again by choosing Continue with Google.')) return;
+    setState({ busy: true, error: null });
+    try {
+      const res = await request('/account/google', { method: 'DELETE' });
+      setUser(res.user);
+    } catch (err) {
+      setState({ busy: false, error: err.message });
+    }
+  }
+  return (
+    <section className="panel account-section" aria-labelledby="google-heading">
+      <h2 id="google-heading">Google</h2>
+      <p>You can log in with &ldquo;Continue with Google&rdquo;.</p>
+      {user.hasPassword ? (
+        <button type="button" className="btn" disabled={state.busy} onClick={unlink}>
+          Unlink Google
+        </button>
+      ) : (
+        <p className="muted small">To unlink Google, set a password first, so you can still log in.</p>
+      )}
+      {state.error && (
+        <p className="error" role="alert">
+          {state.error}
+        </p>
+      )}
     </section>
   );
 }
@@ -736,6 +770,7 @@ export default function Account() {
       ) : (
         <SetPassword email={user.email} />
       )}
+      <GoogleSection user={user} setUser={setUser} />
 
       <StoreCredit user={user} />
       <LoyaltyLevel />

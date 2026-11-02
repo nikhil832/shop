@@ -131,6 +131,8 @@ const INDEXES = {
     [{ tags: 1 }],
     [{ referralCode: 1 }, { unique: true, partialFilterExpression: { referralCode: { $exists: true } } }],
     [{ referredBy: 1 }],
+    // Google logins (stage 151): one account per Google account.
+    [{ googleId: 1 }, { unique: true, partialFilterExpression: { googleId: { $exists: true } } }],
     // Shared wishlist links (stage 106).
     [{ 'wishlistShare.token': 1 }, { unique: true, partialFilterExpression: { wishlistShare: { $exists: true } } }],
     // Store news (stage 140): unsubscribe links, and counting subscribers.

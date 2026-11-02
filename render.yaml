@@ -43,3 +43,9 @@ services:
       # Optional: where new-order alerts go; without it, every admin account is emailed.
       - key: ADMIN_EMAIL
         sync: false
+      # Optional: "Continue with Google" on the login page (an OAuth client from Google Cloud's console; its redirect
+      # URI must be <PUBLIC_URL>/api/auth/google/callback).
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false

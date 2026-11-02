@@ -7,11 +7,7 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 ## Next
 
-Suggested on 2026-11-02 (tenth list), roughly in the order they'd help most. All free (no new services).
-
-- **Sign in with Google**: a "Continue with Google" button on the login page that logs in or creates the account.
-  It's free, but you'd make a Google Cloud OAuth client first (I'd guide you through it). To start: "start Google
-  login".
+All five of the tenth list (2026-11-02) are built. Ask for new ideas ("new ideas") to fill this list again.
 
 ## Set aside
 
@@ -179,3 +175,4 @@ Suggested on 2026-11-02 (tenth list), roughly in the order they'd help most. All
 | Replies to reviews: the store's public reply under a review, emailed to the reviewer; alerts and a list for 1–2 star reviews                                                            | Stage 148 (`git log --grep "Stage 148"`) |
 | Free gift over an amount: a chosen product free with orders over ₹X, shown in the cart and added to the order                                                                           | Stage 149 (`git log --grep "Stage 149"`) |
 | New and Bestseller badges: "New" for 30 days after first shown, "Bestseller" for each category's top sellers                                                                            | Stage 150 (`git log --grep "Stage 150"`) |
+| Sign in with Google: "Continue with Google" on the login page, linking accounts by verified email (needs a Google OAuth client)                                                         | Stage 151 (`git log --grep "Stage 151"`) |

@@ -104,7 +104,13 @@ export async function startTestServer({ razorpay = false, ai = null } = {}) {
       const raw = Buffer.isBuffer(body);
       if (body) headers['Content-Type'] = raw ? type : 'application/json';
       if (cookies.size) headers.Cookie = [...cookies].map(([name, value]) => `${name}=${value}`).join('; ');
-      const res = await fetch(base + path, { method, headers, body: raw ? body : body && JSON.stringify(body) });
+      // Redirects come back as they are (Google login's 302s, stage 151), with `headers.location`.
+      const res = await fetch(base + path, {
+        method,
+        headers,
+        body: raw ? body : body && JSON.stringify(body),
+        redirect: 'manual',
+      });
       const setCookie = res.headers.get('set-cookie');
       for (const line of res.headers.getSetCookie()) {
         const [pair] = line.split(';');

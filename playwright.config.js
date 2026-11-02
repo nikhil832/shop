@@ -3,6 +3,7 @@ import { defineConfig } from '@playwright/test';
 const PORT = 4100;
 const FAKE_RAZORPAY_PORT = 4101;
 const FAKE_ANTHROPIC_PORT = 4102;
+const FAKE_GOOGLE_PORT = 4103;
 
 export default defineConfig({
   testDir: 'e2e',
@@ -32,6 +33,13 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
+      // A stand-in for Google's sign-in (stage 151): its own "choose an account" page and token endpoint.
+      command: 'node server/test/fake-google.js',
+      env: { FAKE_GOOGLE_PORT: String(FAKE_GOOGLE_PORT) },
+      port: FAKE_GOOGLE_PORT,
+      reuseExistingServer: false,
+    },
+    {
       // Production build + demo mode (in-memory MongoDB with the sample catalog) on a dedicated port:
       // never touches real data or a running dev server. Env vars set here take precedence over server/.env,
       // so real Razorpay keys there are never used: these are the stand-in's fake test keys.
@@ -44,6 +52,11 @@ export default defineConfig({
         RAZORPAY_API_URL: `http://localhost:${FAKE_RAZORPAY_PORT}`,
         ANTHROPIC_API_KEY: 'sk-ant-fake-key-for-tests',
         ANTHROPIC_API_URL: `http://localhost:${FAKE_ANTHROPIC_PORT}`,
+        GOOGLE_CLIENT_ID: 'fake-client.apps.googleusercontent.com',
+        GOOGLE_CLIENT_SECRET: 'fake-secret',
+        GOOGLE_AUTH_URL: `http://localhost:${FAKE_GOOGLE_PORT}/auth`,
+        GOOGLE_TOKEN_URL: `http://localhost:${FAKE_GOOGLE_PORT}/token`,
+        GOOGLE_REDIRECT_URI: `http://localhost:${PORT}/api/auth/google/callback`,
       },
       url: `http://localhost:${PORT}/api/categories`,
       reuseExistingServer: false,

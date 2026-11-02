@@ -30,7 +30,7 @@ test('a new shopper checks out with a name and email; the account is made and as
   await expect(page.getByRole('button', { name: 'Meera' })).toBeVisible();
   await page.goto('/account');
   const password = page.getByRole('region', { name: 'Password' });
-  await expect(password).toContainText('it has no password yet');
+  await expect(password).toContainText('has no password yet');
   await password.getByRole('button', { name: 'Email me a link to set a password' }).click();
   await expect(password.getByRole('status')).toHaveText(`We've emailed a link to ${email}. It works for an hour.`);
 });

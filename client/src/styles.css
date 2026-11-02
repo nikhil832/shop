@@ -5342,3 +5342,33 @@ textarea {
   width: 9rem;
   letter-spacing: 2px;
 }
+
+/* "Continue with Google" (stage 151): Google's own button style (white, its "G"), in both themes. */
+.or-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.or-divider::before,
+.or-divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+.google-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #ffffff;
+  color: #1f1f1f;
+  border: 1px solid #747775;
+  font-weight: 600;
+  text-decoration: none;
+}
+.google-button:hover {
+  background: #f8fafd;
+}
