@@ -204,6 +204,15 @@ function ReviewText({ review }) {
       {review.fit && <p className="review-fit small">Fit: {FIT_LABELS[review.fit].toLowerCase()}</p>}
       {review.body && <p className="review-body">{review.body}</p>}
       <ReviewPhotos review={review} />
+      {/* The store's reply (stage 148), signed by the store, not the person who wrote it. */}
+      {review.reply && (
+        <div className="review-reply">
+          <p className="small">
+            <strong>Reply from Bazaar</strong> <span className="muted">{formatDate(review.reply.at)}</span>
+          </p>
+          <p className="review-body">{review.reply.text}</p>
+        </div>
+      )}
     </>
   );
 }

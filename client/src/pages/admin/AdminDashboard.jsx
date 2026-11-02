@@ -719,6 +719,13 @@ export default function AdminDashboard() {
                   </Link>
                 )}
               </p>
+              {data.reviewsToReply > 0 && (
+                <p>
+                  <Link to="/admin/reviews?status=reply">
+                    {data.reviewsToReply} low {data.reviewsToReply === 1 ? 'review needs' : 'reviews need'} a reply
+                  </Link>
+                </p>
+              )}
               {data.codToCall > 0 && (
                 <p>
                   <Link to="/admin/orders?confirm=waiting">

@@ -1,4 +1,5 @@
 import express from 'express';
+import { reviewRepliesRouter } from './reviewReplies.js';
 import { codConfirmRouter } from './codConfirm.js';
 import { sessionMiddleware } from './auth.js';
 import { couponsRouter } from './coupons.js';
@@ -108,6 +109,7 @@ export function createApp(ctx) {
   api.use(paymentsRouter(ctx));
   api.use(imagesRouter(ctx));
   api.use(reviewsRouter(ctx));
+  api.use(reviewRepliesRouter(ctx));
   api.use(questionsRouter(ctx));
   api.use(returnsRouter(ctx));
   api.use(exchangesRouter(ctx));

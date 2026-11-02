@@ -9,9 +9,6 @@ Live site: https://bazaar-jup1.onrender.com (Render free plan; every push to `ma
 
 Suggested on 2026-11-02 (tenth list), roughly in the order they'd help most. All free (no new services).
 
-- **Replies to reviews**: the store answers a review in public, under it on the product page, and the reviewer is
-  emailed. Admins are also emailed about new 1–2 star reviews so they can reply quickly. Shoppers see that problems
-  get dealt with. To start: "start review replies".
 - **Free gift over ₹X**: the admin picks a product given free with orders above an amount (between two dates if
   wanted). The cart says "Add ₹N more for a free …", and the gift is added to the order with its stock taken. To
   start: "start free gifts".
@@ -184,3 +181,4 @@ Suggested on 2026-11-02 (tenth list), roughly in the order they'd help most. All
 | Review rewards: store credit for a review with a photo and some words                                                                                                                   | Stage 145 (`git log --grep "Stage 145"`) |
 | Click and collect: free pickup from the store's pickup points, collected with a code                                                                                                    | Stage 146 (`git log --grep "Stage 146"`) |
 | Confirm COD orders: a "Yes, ship it" button in the email and on the order page; unconfirmed ones listed to call                                                                         | Stage 147 (`git log --grep "Stage 147"`) |
+| Replies to reviews: the store's public reply under a review, emailed to the reviewer; alerts and a list for 1–2 star reviews                                                            | Stage 148 (`git log --grep "Stage 148"`) |

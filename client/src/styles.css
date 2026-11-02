@@ -3295,6 +3295,25 @@ textarea {
   flex-wrap: wrap;
   gap: 8px;
 }
+/* The store's reply under a review (stage 148). */
+.review-reply {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent);
+  background: var(--bg);
+  border-radius: 4px;
+}
+.review-reply p {
+  margin: 0 0 4px;
+}
+.admin-reply {
+  margin-top: 8px;
+}
+.admin-reply textarea {
+  width: 100%;
+  min-width: 220px;
+  margin-top: 6px;
+}
 .review-body {
   white-space: pre-line;
   overflow-wrap: anywhere;

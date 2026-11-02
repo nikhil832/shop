@@ -1658,3 +1658,64 @@ ${button('See my store credit', url)}`,
   );
   return { subject, text, html };
 }
+
+// ---- Replies to reviews (stage 148, reviewReplies.js) ----
+
+// For the reviewer, the first time the store replies to their review.
+export function reviewReplyEmail(user, review, product, publicUrl = DEFAULT_PUBLIC_URL) {
+  const subject = `We replied to your review of ${product.title}`;
+  const firstName = user.name.split(/\s+/)[0];
+  const url = `${publicUrl}/p/${product.slug}#reviews`;
+  const yours = review.title || review.body || `${review.rating} stars`;
+  const text = [
+    `Hi ${firstName},`,
+    `Thanks for reviewing ${product.title}. You wrote: ${yours}`,
+    `Our reply: ${review.reply.text}`,
+    `It's shown under your review: ${url}`,
+    'Bazaar · a demo store',
+  ].join('\n\n');
+  const quote = 'margin:0 0 12px;padding:10px 14px;background:#f3f4f6;border-radius:6px;white-space:pre-wrap';
+  const html = layout(
+    subject,
+    `<p>Hi ${escapeHtml(firstName)},</p>
+<p style="margin-bottom:4px">Thanks for reviewing ${escapeHtml(product.title)}. You wrote:</p>
+<p style="${quote}">${escapeHtml(yours)}</p>
+<p style="margin-bottom:4px">Our reply:</p>
+<p style="${quote}">${escapeHtml(review.reply.text)}</p>
+${button('See it on the product page', url)}`,
+    "You're getting this email because you reviewed this product.",
+  );
+  return { subject, text, html };
+}
+
+// For the admins: a new (or newly lowered) review of 1 or 2 stars, to answer quickly.
+export function lowReviewEmail(review, product, publicUrl = DEFAULT_PUBLIC_URL) {
+  const subject = `${review.rating}-star review of ${product.title}`;
+  const url = `${publicUrl}/admin/reviews?status=reply`;
+  const lines = [
+    `${review.author} gave ${product.title} ${review.rating} ${review.rating === 1 ? 'star' : 'stars'}.`,
+    ...(review.title ? [`"${review.title}"`] : []),
+    ...(review.body ? [review.body] : []),
+  ];
+  const text = [...lines, `Reply to it: ${url}`, 'Bazaar · a demo store'].join('\n\n');
+  const html = layout(
+    subject,
+    `${lines.map((l) => `<p style="white-space:pre-wrap">${escapeHtml(l)}</p>`).join('\n')}
+${button('Reply to it', url)}`,
+    "You're getting this email because you're an admin of the store.",
+  );
+  return { subject, text, html };
+}
+
+export async function sendReviewReply(ctx, review, product) {
+  try {
+    const user = await ctx.db
+      .collection('users')
+      .findOne({ _id: review.userId }, { projection: { name: 1, email: 1 } });
+    if (!user || !product) return;
+    const email = reviewReplyEmail(user, review, product, ctx.config.mail?.publicUrl);
+    await ctx.mail.send({ to: { email: user.email, name: user.name }, ...email });
+  } catch (err) {
+    console.error(`Could not send the reply to review ${review._id}:`, err.message);
+  }
+}

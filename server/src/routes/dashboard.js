@@ -1,4 +1,5 @@
 import express from 'express';
+import { NEEDS_REPLY } from '../reviewReplies.js';
 import { UNCONFIRMED } from '../codConfirm.js';
 import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
@@ -116,6 +117,7 @@ export function dashboardRouter({ db, config }) {
       exchangesToReview,
       exchangesToShip,
       codToCall,
+      reviewsToReply,
     ] = await Promise.all([
       orders
         .aggregate([
@@ -264,6 +266,7 @@ export function dashboardRouter({ db, config }) {
       db.collection('exchanges').countDocuments({ status: 'requested' }),
       db.collection('exchanges').countDocuments({ status: 'approved' }),
       orders.countDocuments(UNCONFIRMED(now)),
+      db.collection('reviews').countDocuments(NEEDS_REPLY),
     ]);
     // Profit from cost prices (profit.js), this period and the one before.
     const [profit, profitBefore, customers] = await Promise.all([
@@ -394,6 +397,8 @@ export function dashboardRouter({ db, config }) {
       exchanges: { toReview: exchangesToReview, toShip: exchangesToShip },
       // Cash on Delivery orders not confirmed a day after ordering, to call about (stage 147, codConfirm.js).
       codToCall,
+      // Shown reviews of 1–2 stars the store hasn't replied to (stage 148, reviewReplies.js).
+      reviewsToReply,
     });
   });
 

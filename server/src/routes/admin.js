@@ -1,4 +1,5 @@
 import { quantityDiscountField } from '../quantityDiscounts.js';
+import { NEEDS_REPLY, toReply } from '../reviewReplies.js';
 import { UNCONFIRMED } from '../codConfirm.js';
 import { restockDaysField } from '../restockReminders.js';
 import { LOW, lowStockAtField } from '../lowStock.js';
@@ -263,7 +264,8 @@ const noteBody = z.object({
 });
 
 const reviewQuery = z.object({
-  status: z.enum(['visible', 'hidden', 'flagged']).optional(),
+  // `reply`: shown low reviews without a store reply yet (stage 148, reviewReplies.js).
+  status: z.enum(['visible', 'hidden', 'flagged', 'reply']).optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
 const reviewVisibility = z.object({ hidden: z.boolean() });
@@ -1136,6 +1138,7 @@ export function adminRouter(ctx) {
     const person = new Map(people.map((u) => [u._id.toString(), { name: u.name, email: u.email }]));
     return docs.map((r) => ({
       ...toReview(r),
+      reply: toReply(r, true),
       screening: toScreening(r),
       product: product.get(r.productId.toString()) ?? null,
       customer: person.get(r.userId.toString()) ?? null,
@@ -1145,8 +1148,15 @@ export function adminRouter(ctx) {
   router.get('/admin/reviews', async (req, res) => {
     const query = parse(reviewQuery, req.query);
     // Flagged by screening (screening.js) and not dealt with yet: newest first like the rest.
-    const filter = query.status === 'flagged' ? FLAGGED : query.status ? { hidden: query.status === 'hidden' } : {};
-    const [docs, total, counts, flagged] = await Promise.all([
+    const filter =
+      query.status === 'flagged'
+        ? FLAGGED
+        : query.status === 'reply'
+          ? NEEDS_REPLY
+          : query.status
+            ? { hidden: query.status === 'hidden' }
+            : {};
+    const [docs, total, counts, flagged, needsReply] = await Promise.all([
       reviews
         .find(filter)
         .sort({ createdAt: -1, _id: -1 })
@@ -1156,6 +1166,7 @@ export function adminRouter(ctx) {
       reviews.countDocuments(filter),
       reviews.aggregate([{ $group: { _id: '$hidden', n: { $sum: 1 } } }]).toArray(),
       reviews.countDocuments(FLAGGED),
+      reviews.countDocuments(NEEDS_REPLY),
     ]);
     res.json({
       items: await reviewDetails(docs),
@@ -1166,6 +1177,7 @@ export function adminRouter(ctx) {
         visible: counts.find((c) => c._id === false)?.n ?? 0,
         hidden: counts.find((c) => c._id === true)?.n ?? 0,
         flagged,
+        reply: needsReply,
       },
     });
   });

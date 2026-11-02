@@ -13,7 +13,88 @@ const FILTERS = [
   ['visible', 'Visible'],
   ['hidden', 'Hidden'],
   ['flagged', 'Flagged'],
+  ['reply', 'Needs a reply'],
 ];
+
+// The store's public reply to a review (stage 148): shown on the product page as "Reply from Bazaar"; the reviewer is
+// emailed the first time. A form per review, opened from its <summary>.
+function ReplyBox({ review, onChange }) {
+  const [state, setState] = useState({ busy: false, error: null });
+  const reply = review.reply;
+  const who = review.customer?.name ?? review.author;
+
+  async function run(change) {
+    setState({ busy: true, error: null });
+    try {
+      await change();
+      setState({ busy: false, error: null });
+      onChange();
+    } catch (err) {
+      setState({ busy: false, error: err.message });
+    }
+  }
+  const save = (e) => {
+    e.preventDefault();
+    const text = new FormData(e.currentTarget).get('reply');
+    run(() => request(`/admin/reviews/${review.id}/reply`, { method: 'PUT', body: { text } }));
+  };
+  const remove = () =>
+    window.confirm('Remove this reply from the product page?') &&
+    run(() => request(`/admin/reviews/${review.id}/reply`, { method: 'DELETE' }));
+
+  return (
+    <div className="admin-reply">
+      {reply && (
+        <div className="review-reply">
+          <p className="small">
+            <strong>Your reply</strong>{' '}
+            <span className="muted">
+              {reply.by ? `by ${reply.by}, ` : ''}
+              {formatDate(reply.updatedAt)}
+            </span>
+          </p>
+          <p className="review-body">{reply.text}</p>
+          {reply.reviewEditedSince && <p className="small muted">The customer has edited their review since.</p>}
+        </div>
+      )}
+      <details>
+        <summary className="small">{reply ? 'Edit reply' : 'Reply'}</summary>
+        <form key={reply?.updatedAt ?? 'new'} onSubmit={save} aria-label={`Reply to ${who}'s review`}>
+          <label className="sr-only" htmlFor={`reply-${review.id}`}>
+            Reply to {who}
+          </label>
+          <textarea
+            id={`reply-${review.id}`}
+            name="reply"
+            rows="3"
+            maxLength="1000"
+            required
+            defaultValue={reply?.text ?? ''}
+          />
+          <p className="muted small">
+            Shown under the review as &ldquo;Reply from Bazaar&rdquo;.
+            {!reply && ' The customer is emailed it.'}
+          </p>
+          {state.error && (
+            <p className="error small" role="alert">
+              {state.error}
+            </p>
+          )}
+          <div className="notice-actions">
+            <button type="submit" className="btn small primary" disabled={state.busy}>
+              Save reply
+            </button>
+            {reply && (
+              <button type="button" className="btn small" disabled={state.busy} onClick={remove}>
+                Remove reply
+              </button>
+            )}
+          </div>
+        </form>
+      </details>
+    </div>
+  );
+}
 
 // "What customers say" on product pages (stage 60), on or off for the whole store. Shown only when the server has an
 // API key. Saved as soon as it's ticked; back as it was if that fails.
@@ -157,7 +238,8 @@ export default function AdminReviews() {
       <p className="muted small">
         Hiding a review removes it from the product page and its rating. Nothing is deleted. When the writing assistant
         is on, new reviews are checked for abuse, spam and personal details, and doubtful ones are listed under Flagged
-        (never hidden for you).
+        (never hidden for you). Shown reviews of 1 or 2 stars without a reply are under Needs a reply, and admins are
+        emailed about each new one.
       </p>
       <ReviewSummariesSwitch />
       <ReviewRewards />
@@ -180,7 +262,11 @@ export default function AdminReviews() {
       {(error || loadError) && <p className="error">{error ?? loadError.message}</p>}
       {data?.items.length === 0 && (
         <p className="muted">
-          {status === 'flagged' ? 'Nothing flagged. Every checked review looks fine.' : 'No reviews here yet.'}
+          {status === 'flagged'
+            ? 'Nothing flagged. Every checked review looks fine.'
+            : status === 'reply'
+              ? 'Every shown 1 or 2 star review has a reply.'
+              : 'No reviews here yet.'}
         </p>
       )}
       {data?.items.length > 0 && (
@@ -204,6 +290,7 @@ export default function AdminReviews() {
                     {r.body && <span className="review-excerpt">{r.body}</span>}
                     <ReviewPhotos review={r} />
                     <ScreeningFlag kind="review" post={r} onChange={() => setVersion((v) => v + 1)} />
+                    <ReplyBox review={r} onChange={() => setVersion((v) => v + 1)} />
                   </td>
                   <td>
                     {r.product ? <Link to={`/p/${r.product.slug}`}>{r.product.title}</Link> : 'Deleted product'}

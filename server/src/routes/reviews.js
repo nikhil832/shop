@@ -1,4 +1,5 @@
 import express from 'express';
+import { noteLowReview, toReply } from '../reviewReplies.js';
 import { z } from 'zod';
 import { requireUser } from '../auth.js';
 import { ObjectId } from 'mongodb';
@@ -56,6 +57,8 @@ export const toReview = (doc) => ({
   fit: doc.fit ?? null,
   // How many other customers found it helpful (reviewVotes).
   helpful: doc.helpful ?? 0,
+  // The store's public reply (stage 148, reviewReplies.js): { text, at, updatedAt } or null.
+  reply: toReply(doc),
   hidden: doc.hidden,
   createdAt: doc.createdAt,
   updatedAt: doc.updatedAt,
@@ -123,7 +126,8 @@ export async function inTransaction(client, work) {
   }
 }
 
-export function reviewsRouter({ db, client }) {
+export function reviewsRouter(ctx) {
+  const { db, client } = ctx;
   const products = db.collection('products');
   const reviews = db.collection('reviews');
   const orders = db.collection('orders');
@@ -215,9 +219,12 @@ export function reviewsRouter({ db, client }) {
       throw new HttpError(403, 'You can review this once an order with it has been delivered to you');
     }
     const now = new Date();
+    // The review before this save, for the low-rating alert (stage 148); null for a new one.
+    let before = null;
     try {
       const doc = await inTransaction(client, async (session) => {
         const old = await reviews.findOne({ productId, userId }, { session });
+        before = old;
         const fields = { ...input, author: shortName(req.user.name), updatedAt: now };
         if (old) {
           await reviews.updateOne({ _id: old._id }, { $set: fields }, { session });
@@ -230,6 +237,8 @@ export function reviewsRouter({ db, client }) {
         await changeRating(db, productId, { sum: input.rating, count: 1 }, session);
         return { _id: insertedId, ...review };
       });
+      // Shown reviews only: a hidden one being edited isn't on the product page.
+      if (!doc.hidden) await noteLowReview(ctx, doc, before);
       res.json(toReview(doc));
     } catch (err) {
       // Two first reviews sent at the same moment: the unique index lets only one in.
