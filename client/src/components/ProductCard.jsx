@@ -39,6 +39,19 @@ function QuickAdd({ product }) {
   );
 }
 
+const BADGES = { new: 'New', bestseller: 'Bestseller' };
+
+// "New" or "Bestseller" (stage 150, from the server's `badge`); nothing for null. `category` names the bestseller's
+// category on the product page ("Bestseller in Books").
+export function ProductBadge({ badge, category = null, className = '' }) {
+  if (!BADGES[badge]) return null;
+  return (
+    <span className={`product-badge ${badge} ${className}`}>
+      {badge === 'bestseller' && category ? `Bestseller in ${category}` : BADGES[badge]}
+    </span>
+  );
+}
+
 // A product in a grid or row: one link to its page (picture, name, rating, price), and "Add" under it when it can be
 // bought straight away. The link and the button are siblings, as a button inside a link isn't allowed.
 export default function ProductCard({ product }) {
@@ -73,6 +86,8 @@ export default function ProductCard({ product }) {
           )}
         </div>
       </Link>
+      {/* "New" or "Bestseller" (stage 150), beside the link rather than in it, so its name stays the product's. */}
+      <ProductBadge badge={product.badge} className="card-badge" />
       {quickAdd && (
         <div className="card-actions">
           <QuickAdd product={product} />

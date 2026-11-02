@@ -1,4 +1,5 @@
 import express from 'express';
+import { refreshBadges } from './badges.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -46,6 +47,8 @@ const ctx = {
   ai: aiClient(config.ai),
 };
 const app = createApp(ctx);
+// Bestseller badges from the start, not only after the first minute (badges.js).
+await refreshBadges(db).catch((err) => console.error(err));
 
 // Every minute: start and end scheduled sales, release the stock of online orders whose 30-minute payment window has
 // passed, remind those still unpaid after 10 minutes, then email customers waiting for products that are back in stock (which that release can cause), drop
@@ -56,6 +59,8 @@ const app = createApp(ctx);
 const sweeper = setInterval(async () => {
   // First, so a sale starting or ending now is in the prices the emails below read.
   await runSales(ctx).catch((err) => console.error(err));
+  // Bestsellers per category for the badges (badges.js), kept in memory.
+  await refreshBadges(ctx.db).catch((err) => console.error(err));
   // Once a day, every shown product's price into the price history (priceHistory.js).
   await recordDailyPrices(ctx).catch((err) => console.error(err));
   await expireUnpaidOrders(ctx).catch((err) => console.error(err));

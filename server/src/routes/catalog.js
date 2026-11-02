@@ -1,4 +1,5 @@
 import express from 'express';
+import { badgeOf } from '../badges.js';
 import { ObjectId } from 'mongodb';
 import { optionsOf, toVariant } from '../variants.js';
 import { z } from 'zod';
@@ -262,6 +263,8 @@ export const toProductCard = (doc) => ({
   comingSoon: doc.comingSoon && doc.stock === 0 ? { expected: doc.comingSoon.expected ?? null } : null,
   // "Buy N or more, P% off each" (stage 99), or null.
   quantityDiscount: doc.quantityDiscount ?? null,
+  // "New" or "Bestseller" (stage 150, badges.js): 'new' | 'bestseller' | null.
+  badge: badgeOf(doc),
 });
 
 // "Goes well with" (stage 114): products have `addOns`, up to MAX_ADD_ONS product ids an admin picked, in their order.

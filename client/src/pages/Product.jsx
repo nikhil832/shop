@@ -22,6 +22,7 @@ import { reportSeen } from '../productStats.js';
 import { expectedText, formatPrice, quantityOfferText, saleEndsIn } from '../format.js';
 import { useFetch } from '../useFetch.js';
 import NotFound from './NotFound.jsx';
+import { ProductBadge } from '../components/ProductCard.jsx';
 
 // `variant` is the chosen size/colour of a product that has them (null until chosen); its own stock limits the quantity.
 // `missing` names the options still to choose ("size", or "colour and size").
@@ -243,6 +244,8 @@ export default function Product() {
         <div className="product-info">
           <span className="brand">{product.brand}</span>
           <h1>{product.title}</h1>
+          {/* "New" or "Bestseller in <category>" (stage 150). */}
+          <ProductBadge badge={product.badge} category={product.category?.name} className="page-badge" />
           <Rating rating={product.rating} />
           <PriceTag price={shown.price} mrp={shown.mrp} large from={!variant && product.priceFrom} />
           {product.sale && (

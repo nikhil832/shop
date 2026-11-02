@@ -520,6 +520,8 @@ export function adminRouter(ctx) {
         images: body.images.length ? body.images : [image(slug, categoryIcon(category), body.brand)],
         imageAlts: storedAlts(body.imageAlts, body.images),
         rating: { avg: 0, count: 0 },
+        // First shown now, for the "New" badge (stage 150, badges.js).
+        ...(body.active && { firstShownAt: now }),
         createdAt: now,
         updatedAt: now,
       };
@@ -573,6 +575,8 @@ export function adminRouter(ctx) {
       if (fields.title && fields.title !== current.title) update.slug = await freeSlug(fields.title, _id);
       if (fields.active) unset.draftSlug = '';
     }
+    // A hidden product shown for the first time is "New" from now (stage 150, badges.js).
+    if (fields.active && !current.active && !current.firstShownAt) update.firstShownAt = update.updatedAt;
     if (variants?.length) {
       checkVariantImages(variants, fields.images ?? current.images);
       // The product's price, MRP and stock follow its variants.

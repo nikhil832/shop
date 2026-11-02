@@ -517,6 +517,8 @@ export function productImportRouter(ctx) {
             slug,
             images: [image(slug, categoryIcon(category), doc.brand)],
             rating: { avg: 0, count: 0 },
+            // First shown now, for the "New" badge (stage 150, badges.js).
+            ...(doc.active && { firstShownAt: now }),
             createdAt: now,
             updatedAt: now,
           },
@@ -531,7 +533,13 @@ export function productImportRouter(ctx) {
       }
       for (const { product, set, variants } of writes.updates) {
         // Variant stock and the product's totals change together (the variants invariant).
-        const $set = { ...set, ...(variants && { variants, ...variantTotals(variants) }), updatedAt: now };
+        const $set = {
+          ...set,
+          ...(variants && { variants, ...variantTotals(variants) }),
+          // A hidden product shown for the first time is "New" from now (stage 150).
+          ...(set.active && !product.active && !product.firstShownAt && { firstShownAt: now }),
+          updatedAt: now,
+        };
         await products.updateOne({ _id: product._id }, { $set }, { session });
         // `product` was read in this transaction, so it is exactly what the save changes.
         const entries = savedEntries(

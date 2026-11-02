@@ -683,6 +683,7 @@ button.header-link {
   opacity: 0.55;
 }
 .card {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -4194,6 +4195,35 @@ textarea {
 }
 
 /* ---- Coming soon (stage 92) ---- */
+/* "New" and "Bestseller" (stage 150): fixed colours, readable in both themes. */
+.product-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+.product-badge.bestseller {
+  background: #fef3c7;
+  color: #78350f;
+  border-color: #d97706;
+}
+.product-badge.new {
+  background: #dbeafe;
+  color: #1e3a8a;
+  border-color: #3b82f6;
+}
+.page-badge {
+  align-self: flex-start;
+  margin-bottom: 6px;
+}
+.card-badge {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  pointer-events: none;
+}
 .ribbon.soon {
   background: var(--accent-soft);
   color: var(--accent-strong);
